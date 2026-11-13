@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Laboratorio di Keplero – Prof Tech Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#080d1c; --panel:#121a33; --panel2:#1a2445; --line:#2b3866;
+  --text:#eef2ff; --muted:#a9b4d8; --sun:#ffc94d; --planet:#4dc3ff;
+  --pink:#ff6fb5; --green:#5ee3a1; --accent:#8f7bff;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:"Atkinson Hyperlegible",system-ui,sans-serif;font-size:17px;line-height:1.45}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;padding:14px 20px;border-bottom:1px solid var(--line);background:linear-gradient(90deg,#0d1430,#16113a)}
+h1{font-family:"Space Grotesk",sans-serif;font-size:1.35rem;margin:0;letter-spacing:.2px}
+h1 small{display:block;font-family:"Atkinson Hyperlegible",system-ui,sans-serif;font-weight:400;font-size:.8rem;color:var(--muted)}
+nav{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
+nav button,.btn{font:inherit;font-weight:700;border:2px solid var(--line);background:var(--panel);color:var(--text);padding:9px 14px;border-radius:12px;cursor:pointer;min-height:44px}
+nav button[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:#0b0b1e}
+.btn:hover,nav button:hover{border-color:var(--accent)}
+.btn.primary{background:var(--sun);border-color:var(--sun);color:#1b1400}
+.btn.small{padding:6px 10px;min-height:38px;font-size:.9rem}
+main{padding:16px 20px 30px;max-width:1400px;margin:0 auto}
+.law-title{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin:4px 0 12px}
+.law-title h2{font-family:"Space Grotesk",sans-serif;margin:0;font-size:1.45rem}
+.law-title p{margin:0;color:var(--muted)}
+.statement{background:var(--panel2);border-left:6px solid var(--sun);padding:10px 14px;border-radius:10px;margin-bottom:14px;font-size:1.05rem}
+.layout{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(290px,1fr);gap:16px;align-items:start}
+@media (max-width:900px){.layout{grid-template-columns:1fr}}
+.stage{background:#050915;border:1px solid var(--line);border-radius:16px;overflow:hidden;position:relative}
+canvas{display:block;width:100%;touch-action:none}
+.stage-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px;border-top:1px solid var(--line);background:var(--panel)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:14px}
+.card h3{margin:0 0 10px;font-size:1.05rem;font-family:"Space Grotesk",sans-serif}
+.ctrl{margin-bottom:14px}
+.ctrl label{display:flex;justify-content:space-between;font-weight:700;margin-bottom:4px}
+.ctrl output{font-family:"Space Grotesk",sans-serif;color:var(--sun);font-size:1.1rem}
+.hint{color:var(--muted);font-size:.88rem;margin-top:2px}
+input[type=range]{width:100%;height:34px;background:transparent;-webkit-appearance:none;appearance:none}
+input[type=range]::-webkit-slider-runnable-track{height:10px;border-radius:6px;background:linear-gradient(90deg,var(--accent),var(--pink))}
+input[type=range]::-moz-range-track{height:10px;border-radius:6px;background:linear-gradient(90deg,var(--accent),var(--pink))}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:30px;height:30px;border-radius:50%;background:#fff;border:4px solid var(--accent);margin-top:-10px;cursor:grab}
+input[type=range]::-moz-range-thumb{width:24px;height:24px;border-radius:50%;background:#fff;border:4px solid var(--accent);cursor:grab}
+input[type=range]:focus-visible{outline:3px solid var(--sun);outline-offset:2px;border-radius:8px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{font:inherit;font-size:.9rem;border:2px solid var(--line);background:var(--panel2);color:var(--text);padding:6px 10px;border-radius:999px;cursor:pointer;min-height:38px}
+.chips button.on{background:var(--planet);border-color:var(--planet);color:#04121c;font-weight:700}
+.toggle{display:flex;align-items:center;gap:8px;margin:6px 0;cursor:pointer}
+.toggle input{width:22px;height:22px;accent-color:var(--accent)}
+.big{font-family:"Space Grotesk",sans-serif;font-size:1.25rem;font-weight:700}
+.readout{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.readout div{background:var(--panel2);border-radius:10px;padding:8px 10px}
+.readout span{display:block;color:var(--muted);font-size:.82rem}
+.meter{height:16px;background:#0a1128;border-radius:9px;overflow:hidden;border:1px solid var(--line)}
+.meter i{display:block;height:100%;background:linear-gradient(90deg,var(--green),var(--sun),var(--pink));width:50%;transition:width .08s linear}
+.bars{display:grid;grid-template-columns:auto 1fr 1fr;gap:4px 8px;align-items:center;font-size:.85rem}
+.bars .hd{color:var(--muted);font-weight:700}
+.bars .b{height:14px;border-radius:4px;background:#0a1128;position:relative}
+.bars .b i{position:absolute;left:0;top:0;bottom:0;border-radius:4px}
+.bars .row-on{color:var(--sun);font-weight:700}
+.observe{background:linear-gradient(135deg,#1c2350,#2a1840);border:1px solid #4a3b8f}
+.observe ol{margin:0;padding-left:20px}
+.observe li{margin-bottom:6px}
+details.teacher{margin-top:14px;background:var(--panel);border:1px dashed #5a6aa6;border-radius:14px;padding:10px 14px}
+details.teacher summary{cursor:pointer;font-weight:700;color:var(--sun)}
+details.teacher p,details.teacher li{color:#d7ddf5}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+th,td{padding:5px 6px;text-align:right;border-bottom:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left}
+th{color:var(--muted);font-weight:700}
+tr.me td{color:var(--pink);font-weight:700}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.seg{display:flex;border:2px solid var(--line);border-radius:12px;overflow:hidden}
+.seg button{flex:1;font:inherit;font-size:.9rem;font-weight:700;background:var(--panel2);color:var(--text);border:0;padding:8px;cursor:pointer;min-height:40px}
+.seg button.on{background:var(--accent);color:#0b0b1e}
+.quiz-opts{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+.quiz-opts button{flex:1;min-width:80px}
+.fb{min-height:1.4em;font-weight:700}
+.fb.ok{color:var(--green)} .fb.ko{color:var(--pink)}
+.hidden{display:none!important}
+footer{color:var(--muted);font-size:.8rem;text-align:center;padding:14px}
+</style>
+</head>
+<body>
+<header>
+  <h1>🪐 Laboratorio di Keplero<small>Simulatore delle tre leggi del moto dei pianeti · Prof Tech Lab</small></h1>
+  <nav role="tablist" aria-label="Leggi di Keplero">
+    <button role="tab" data-tab="legge-1" aria-selected="true">1ª legge · Orbite</button>
+    <button role="tab" data-tab="legge-2" aria-selected="false">2ª legge · Aree</button>
+    <button role="tab" data-tab="legge-3" aria-selected="false">3ª legge · Periodi</button>
+    <button id="fsBtn" title="Schermo intero (per la LIM)">⛶ LIM</button>
+  </nav>
+</header>
+
+<main>
+<!-- ============ LEGGE 1 ============ -->
+<section id="legge-1" class="panel">
+  <div class="law-title"><h2>1ª legge – Le orbite sono ellissi</h2><p>Gioca con l'eccentricità e guarda come cambia la forma dell'orbita.</p></div>
+  <div class="statement">I pianeti girano attorno al Sole su orbite a forma di <b>ellisse</b>, e il Sole non sta al centro ma in uno dei due <b>fuochi</b>.</div>
+  <div class="layout">
+    <div>
+      <div class="stage"><canvas id="cv1" aria-label="Orbita ellittica con il Sole in un fuoco"></canvas>
+        <div class="stage-bar">
+          <button class="btn" id="pen1">⏸ Ferma la matita</button>
+          <span class="hint">Puoi anche trascinare la matita sull'orbita con il dito o il mouse.</span>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <h3>🎛️ Comandi</h3>
+        <div class="ctrl">
+          <label for="e1">Eccentricità (e) <output id="e1o">0.40</output></label>
+          <input type="range" id="e1" min="0" max="0.97" step="0.01" value="0.4">
+          <div class="hint">0 = cerchio perfetto · vicino a 1 = ellisse molto schiacciata</div>
+        </div>
+        <div class="ctrl">
+          <label>Orbite reali</label>
+          <div class="chips" id="presets1"></div>
+          <div class="hint" id="presetName1">Orbita inventata da te</div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="string1" checked> Mostra lo “spago” (metodo del giardiniere)</label>
+        <label class="toggle"><input type="checkbox" id="axes1" checked> Mostra assi e fuochi</label>
+      </div>
+      <div class="card">
+        <h3>📏 Misure</h3>
+        <div class="readout">
+          <div><span>Spago dal Sole (d₁)</span><b class="big" id="d1">–</b></div>
+          <div><span>Spago dall'altro fuoco (d₂)</span><b class="big" id="d2">–</b></div>
+          <div style="grid-column:1/3"><span>d₁ + d₂ (lunghezza totale dello spago)</span><b class="big" id="dsum" style="color:var(--green)">–</b></div>
+          <div style="grid-column:1/3"><span>Punto più lontano ÷ punto più vicino al Sole</span><b class="big" id="ratio1">–</b></div>
+        </div>
+      </div>
+      <div class="card observe">
+        <h3>🔍 Cosa osservare</h3>
+        <ol>
+          <li>Muovi la matita: d₁ e d₂ cambiano, ma la loro <b>somma resta sempre uguale</b>. Perché?</li>
+          <li>Premi “Terra”: sembra un cerchio! Quanto vale il rapporto lontano/vicino?</li>
+          <li>Premi “Cometa di Halley”: dove va più vicina al Sole? Come si chiama quel punto?</li>
+          <li>Cosa succede ai due fuochi quando e = 0?</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+  <details class="teacher"><summary>📘 Note per la docente</summary>
+    <ul>
+      <li><b>Metodo del giardiniere:</b> due chiodi (i fuochi) e uno spago chiuso; la matita tesa traccia un'ellisse perché d₁ + d₂ = 2a (asse maggiore) è costante. È replicabile in classe con cartoncino, due puntine e uno spago: ottimo aggancio con disegno tecnico.</li>
+      <li><b>Eccentricità:</b> e = c / a, dove c è la distanza centro–fuoco. Rapporto afelio/perielio = (1 + e) / (1 − e).</li>
+      <li><b>Misconcezione frequente:</b> le stagioni NON dipendono dalla distanza Terra–Sole. L'orbita terrestre è quasi circolare (e ≈ 0,017) e la Terra è più vicina al Sole a inizio gennaio, in pieno inverno boreale. Le stagioni dipendono dall'inclinazione dell'asse terrestre.</li>
+      <li>Nei libri le orbite sono spesso disegnate molto schiacciate: qui gli studenti vedono le proporzioni reali.</li>
+    </ul>
+  </details>
+</section>
+
+<!-- ============ LEGGE 2 ============ -->
+<section id="legge-2" class="panel hidden">
+  <div class="law-title"><h2>2ª legge – Aree uguali in tempi uguali</h2><p>Il pianeta accelera vicino al Sole e rallenta lontano.</p></div>
+  <div class="statement">La linea che unisce il Sole al pianeta “spazza” <b>aree uguali in tempi uguali</b>. Per questo il pianeta va <b>più veloce quando è vicino al Sole</b> e più piano quando è lontano.</div>
+  <div class="layout">
+    <div>
+      <div class="stage"><canvas id="cv2" aria-label="Orbita con settori di area uguale"></canvas>
+        <div class="stage-bar">
+          <button class="btn primary" id="play2">⏸ Pausa</button>
+          <button class="btn" id="reset2">↺ Ricomincia</button>
+          <label class="toggle"><input type="checkbox" id="vec2" checked> Freccia della velocità</label>
+        </div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <h3>📊 Confronto tra i settori (ognuno dura lo stesso tempo)</h3>
+        <div class="bars" id="bars2"></div>
+        <div class="hint" style="margin-top:8px">Le aree sono tutte uguali, ma la strada percorsa no: in uno stesso tempo, vicino al Sole il pianeta percorre più strada → va più veloce.</div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <h3>🎛️ Comandi</h3>
+        <div class="ctrl">
+          <label for="e2">Eccentricità (e) <output id="e2o">0.50</output></label>
+          <input type="range" id="e2" min="0" max="0.9" step="0.01" value="0.5">
+        </div>
+        <div class="ctrl">
+          <label>Numero di intervalli di tempo uguali</label>
+          <div class="seg" id="n2"><button data-n="6">6</button><button data-n="8" class="on">8</button><button data-n="12">12</button><button data-n="16">16</button></div>
+        </div>
+        <div class="ctrl">
+          <label for="sp2">Durata di un giro <output id="sp2o">12 s</output></label>
+          <input type="range" id="sp2" min="4" max="40" step="1" value="12">
+        </div>
+      </div>
+      <div class="card">
+        <h3>🚀 Strumenti di bordo</h3>
+        <div class="hint" style="margin-bottom:8px">Immagina un pianeta con orbita grande come quella della Terra (a = 1 UA).</div>
+        <div class="readout">
+          <div><span>Distanza dal Sole</span><b class="big" id="r2">–</b></div>
+          <div><span>Velocità</span><b class="big" id="v2">–</b></div>
+        </div>
+        <div style="margin-top:10px"><span class="hint">Tachimetro</span><div class="meter"><i id="m2"></i></div></div>
+        <div class="hint" style="margin-top:6px" id="vrange2"></div>
+      </div>
+      <div class="card observe">
+        <h3>🔍 Cosa osservare</h3>
+        <ol>
+          <li>Guarda i settori colorati: alcuni sono “corti e larghi”, altri “lunghi e stretti”. Le barre delle aree però sono uguali!</li>
+          <li>Dove la freccia della velocità è più lunga? E il tachimetro?</li>
+          <li>Porta e a 0: cosa succede alla velocità? E alla strada percorsa nei settori?</li>
+          <li>Pattinatore: quando chiude le braccia gira più veloce. Ti ricorda qualcosa?</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+  <details class="teacher"><summary>📘 Note per la docente</summary>
+    <ul>
+      <li>Il moto è calcolato risolvendo l'equazione di Keplero (M = E − e·sin E), non è un'animazione “a occhio”: le aree mostrate sono misurate davvero sul disegno.</li>
+      <li>La velocità segue la formula vis-viva v = √(GM·(2/r − 1/a)); per a = 1 UA la velocità media è circa 29,8 km/s, quella reale della Terra.</li>
+      <li>Fisicamente la seconda legge esprime la conservazione del momento angolare: il paragone col pattinatore che chiude le braccia è adatto alla secondaria di primo grado.</li>
+      <li>Con N = 12 ogni settore corrisponde, per la Terra, a circa un mese.</li>
+    </ul>
+  </details>
+</section>
+
+<!-- ============ LEGGE 3 ============ -->
+<section id="legge-3" class="panel hidden">
+  <div class="law-title"><h2>3ª legge – Più lontano, più lento</h2><p>Crea il tuo pianeta e sfida quelli veri in una gara attorno al Sole.</p></div>
+  <div class="statement">Il quadrato del periodo (T, il tempo per fare un giro) è proporzionale al cubo della distanza media dal Sole (a). Usando <b>anni</b> e <b>UA</b>: <b>T² = a³</b>, cioè T = √(a³).</div>
+  <div class="layout">
+    <div>
+      <div class="stage"><canvas id="cv3" aria-label="Gara tra pianeti attorno al Sole"></canvas>
+        <div class="stage-bar">
+          <button class="btn primary" id="play3">⏸ Pausa</button>
+          <button class="btn" id="reset3">🏁 Allinea e riparti</button>
+          <span class="big" id="time3" style="margin-left:auto">0,0 anni</span>
+        </div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+          <h3 style="margin:0">📈 Grafico</h3>
+          <div class="seg" id="chartMode" style="flex:1;min-width:240px"><button data-m="curve" class="on">T rispetto ad a</button><button data-m="line">T² rispetto ad a³</button></div>
+        </div>
+        <canvas id="ch3" aria-label="Grafico periodo e distanza"></canvas>
+        <div class="hint" id="chartHint">La curva sale sempre più ripida: raddoppiare la distanza fa quasi triplicare il periodo.</div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <h3>🎛️ Il tuo pianeta</h3>
+        <div class="ctrl">
+          <label for="a3">Distanza dal Sole (a) <output id="a3o">2,00 UA</output></label>
+          <input type="range" id="a3" min="0" max="1000" step="1" value="0">
+          <div class="hint">1 UA = distanza Terra–Sole ≈ 150 milioni di km</div>
+        </div>
+        <div class="readout">
+          <div><span>Periodo T = √(a³)</span><b class="big" id="T3" style="color:var(--pink)">–</b></div>
+          <div><span>Giri completati</span><b class="big" id="L3">0</b></div>
+        </div>
+        <div class="ctrl" style="margin-top:12px">
+          <label for="sp3">Velocità del tempo <output id="sp3o">0,5 anni/s</output></label>
+          <input type="range" id="sp3" min="0" max="1000" step="1" value="0">
+        </div>
+      </div>
+      <div class="card">
+        <h3>📋 Tabella dei pianeti visibili</h3>
+        <table><thead><tr><th>Pianeta</th><th>a (UA)</th><th>T (anni)</th><th>giri</th><th>T²÷a³</th></tr></thead><tbody id="tb3"></tbody></table>
+        <div class="hint" style="margin-top:6px">Per i pianeti veri usiamo i periodi misurati: T²÷a³ è sempre quasi esattamente 1!</div>
+      </div>
+      <div class="card observe">
+        <h3>🎯 Sfida: prevedi il periodo</h3>
+        <div id="qText"></div>
+        <div class="quiz-opts" id="qOpts"></div>
+        <div class="fb" id="qFb"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn small" id="qTry">🔭 Verifica nel simulatore</button>
+          <button class="btn small" id="qNext">➡️ Nuova sfida</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <details class="teacher"><summary>📘 Note per la docente</summary>
+    <ul>
+      <li>Distanze (semiassi maggiori) e periodi dei pianeti sono valori reali; le orbite sono disegnate circolari perché per questa legge conta solo il semiasse maggiore.</li>
+      <li>La costante T²/a³ = 1 vale solo con anni e UA e solo per corpi che orbitano attorno al Sole: Newton mostrò che dipende dalla massa della stella (per le lune di Giove la costante è diversa).</li>
+      <li>Il grafico T² rispetto ad a³ diventa una retta: buon momento per parlare di proporzionalità diretta e di linearizzazione dei dati.</li>
+      <li>Nella sfida le risposte sbagliate corrispondono a due errori tipici: pensare T proporzionale ad a, oppure ad a².</li>
+    </ul>
+  </details>
+</section>
+</main>
+<footer>Prof Tech Lab · Simulatore didattico. Le dimensioni di Sole e pianeti non sono in scala con le orbite.</footer>
+
+<script>
+(() => {
+const TAU = Math.PI * 2;
+const fmt = (x, d = 2) => x.toLocaleString('it-IT', { minimumFractionDigits: d, maximumFractionDigits: d });
+
+// ---------- matematica orbitale ----------
+function solveKepler(M, e) {
+  M = ((M % TAU) + TAU) % TAU;
+  let E = e > 0.8 ? Math.PI : M;
+  for (let i = 0; i < 50; i++) {
+    const d = (E - e * Math.sin(E) - M) / (1 - e * Math.cos(E));
+    E -= d;
+    if (Math.abs(d) < 1e-12) break;
+  }
+  return E;
+}
+
+// ---------- canvas ----------
+function fit(cv, ratioFn) {
+  const dpr = window.devicePixelRatio || 1;
+  const w = cv.clientWidth || 600;
+  const h = Math.round(w * ratioFn(w));
+  if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) {
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); cv.style.height = h + 'px';
+  }
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { ctx, w, h };
+}
+const stageRatio = w => w < 600 ? 0.9 : 0.62;
+const STARS = Array.from({ length: 110 }, () => [Math.random(), Math.random(), Math.random() * 1.3 + 0.2, Math.random()]);
+function bg(ctx, w, h) {
+  ctx.fillStyle = '#050915'; ctx.fillRect(0, 0, w, h);
+  for (const [x, y, r, a] of STARS) { ctx.globalAlpha = 0.25 + a * 0.5; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x * w, y * h, r, 0, TAU); ctx.fill(); }
+  ctx.globalAlpha = 1;
+}
+function sun(ctx, x, y, r) {
+  const g = ctx.createRadialGradient(x, y, 0, x, y, r * 3);
+  g.addColorStop(0, 'rgba(255,215,90,0.9)'); g.addColorStop(0.35, 'rgba(255,170,40,0.35)'); g.addColorStop(1, 'rgba(255,150,30,0)');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r * 3, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#ffd34d'; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+}
+function planetDot(ctx, x, y, r, col) {
+  ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 1.5; ctx.stroke();
+}
+function label(ctx, txt, x, y, col = '#eef2ff', align = 'center', size = 14) {
+  ctx.font = `700 ${size}px "Atkinson Hyperlegible", sans-serif`;
+  ctx.textAlign = align; ctx.textBaseline = 'middle';
+  ctx.lineJoin = 'round'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(5,9,21,.85)'; ctx.strokeText(txt, x, y);
+  ctx.fillStyle = col; ctx.fillText(txt, x, y);
+}
+function arrow(ctx, x1, y1, x2, y2, col, wdt = 3) {
+  const ang = Math.atan2(y2 - y1, x2 - x1), hl = 10;
+  ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = wdt;
+  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x2, y2);
+  ctx.lineTo(x2 - hl * Math.cos(ang - 0.45), y2 - hl * Math.sin(ang - 0.45));
+  ctx.lineTo(x2 - hl * Math.cos(ang + 0.45), y2 - hl * Math.sin(ang + 0.45));
+  ctx.closePath(); ctx.fill();
+}
+
+// ---------- tabs ----------
+let active = 'legge-1';
+const tabs = document.querySelectorAll('nav [data-tab]');
+function show(id) {
+  if (!document.getElementById(id)) id = 'legge-1';
+  active = id;
+  tabs.forEach(b => b.setAttribute('aria-selected', b.dataset.tab === id));
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('hidden', p.id !== id));
+  try { if (location.hash !== '#' + id) history.replaceState(null, '', '#' + id); } catch (e) {}
+}
+tabs.forEach(b => b.addEventListener('click', () => show(b.dataset.tab)));
+window.addEventListener('hashchange', () => show(location.hash.slice(1)));
+if (location.hash) show(location.hash.slice(1));
+document.getElementById('fsBtn').addEventListener('click', () => {
+  try {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else { const p = document.documentElement.requestFullscreen?.(); if (p && p.catch) p.catch(() => {}); }
+  } catch (e) {}
+});
+
+// =====================================================
+// LEGGE 1
+// =====================================================
+const L1 = { e: 0.4, E: 0.8, pen: true, drag: false, geo: null };
+const PRESETS1 = [
+  ['Cerchio', 0], ['Venere', 0.007], ['Terra', 0.017], ['Marte', 0.093], ['Mercurio', 0.206], ['Plutone', 0.249], ['Cometa di Halley', 0.967]
+];
+const e1 = document.getElementById('e1'), e1o = document.getElementById('e1o');
+const pre1 = document.getElementById('presets1'), preName1 = document.getElementById('presetName1');
+PRESETS1.forEach(([n, e]) => {
+  const b = document.createElement('button'); b.textContent = n; b.dataset.e = e;
+  b.addEventListener('click', () => { L1.e = e; e1.value = e; upd1(); });
+  pre1.appendChild(b);
+});
+function upd1() {
+  e1o.textContent = fmt(L1.e, L1.e < 0.1 && L1.e > 0 ? 3 : 2);
+  let found = null;
+  pre1.querySelectorAll('button').forEach(b => { const on = Math.abs(+b.dataset.e - L1.e) < 1e-9; b.classList.toggle('on', on); if (on) found = b.textContent; });
+  preName1.textContent = found ? (found === 'Cerchio' ? 'Un cerchio è un’ellisse con e = 0' : `Questa è la forma reale dell’orbita: ${found} (e = ${fmt(L1.e, 3)})`) : 'Orbita inventata da te';
+  const ratio = (1 + L1.e) / (1 - L1.e);
+  document.getElementById('ratio1').textContent = ratio < 10 ? `${fmt(ratio, 2)} volte` : `${fmt(ratio, 0)} volte`;
+}
+e1.addEventListener('input', () => { L1.e = +e1.value; upd1(); });
+const penBtn = document.getElementById('pen1');
+penBtn.addEventListener('click', () => { L1.pen = !L1.pen; penBtn.textContent = L1.pen ? '⏸ Ferma la matita' : '▶ Muovi la matita'; });
+const cv1 = document.getElementById('cv1');
+function pick1(ev) {
+  const g = L1.geo; if (!g) return;
+  const r = cv1.getBoundingClientRect();
+  const x = ev.clientX - r.left, y = ev.clientY - r.top;
+  L1.E = Math.atan2(-(y - g.cy) / Math.max(g.b, 1), (x - g.cx) / g.a);
+}
+cv1.addEventListener('pointerdown', ev => { L1.drag = true; cv1.setPointerCapture(ev.pointerId); pick1(ev); });
+cv1.addEventListener('pointermove', ev => { if (L1.drag) pick1(ev); });
+['pointerup', 'pointercancel'].forEach(t => cv1.addEventListener(t, () => { L1.drag = false; }));
+upd1();
+
+function draw1(dt) {
+  const { ctx, w, h } = fit(cv1, stageRatio);
+  bg(ctx, w, h);
+  const e = L1.e, a = Math.min(w * 0.42, h * 0.43), b = a * Math.sqrt(1 - e * e), c = a * e;
+  const cx = w / 2, cy = h / 2 + 6;
+  L1.geo = { a, b, cx, cy };
+  if (L1.pen && !L1.drag) L1.E = (L1.E + dt * 0.7) % TAU;
+  const F1 = [cx + c, cy], F2 = [cx - c, cy];
+  const showAxes = document.getElementById('axes1').checked;
+  if (showAxes) {
+    ctx.setLineDash([6, 6]); ctx.strokeStyle = 'rgba(169,180,216,.45)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(cx - a - 10, cy); ctx.lineTo(cx + a + 10, cy); ctx.moveTo(cx, cy - b - 10); ctx.lineTo(cx, cy + b + 10); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#a9b4d8'; ctx.beginPath(); ctx.arc(cx, cy, 3, 0, TAU); ctx.fill();
+    label(ctx, 'centro', cx, cy + 16, '#a9b4d8', 'center', 12);
+  }
+  // orbita
+  ctx.strokeStyle = '#4dc3ff'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.ellipse(cx, cy, a, Math.max(b, 0.5), 0, 0, TAU); ctx.stroke();
+  // fuoco vuoto
+  ctx.strokeStyle = '#ff6fb5'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(F2[0], F2[1], 6, 0, TAU); ctx.stroke();
+  if (showAxes) label(ctx, 'fuoco vuoto', F2[0], F2[1] + 22, '#ff6fb5', 'center', 13);
+  sun(ctx, F1[0], F1[1], 11);
+  if (showAxes) label(ctx, 'Sole (fuoco)', F1[0], F1[1] + 26, '#ffc94d', 'center', 13);
+  // perielio / afelio
+  planetDot(ctx, cx + a, cy, 4, '#5ee3a1'); planetDot(ctx, cx - a, cy, 4, '#5ee3a1');
+  label(ctx, 'perielio', cx + a, cy - 16, '#5ee3a1', 'center', 13);
+  label(ctx, 'afelio', cx - a, cy - 16, '#5ee3a1', 'center', 13);
+  // matita
+  const P = [cx + a * Math.cos(L1.E), cy - b * Math.sin(L1.E)];
+  const d1 = Math.hypot(P[0] - F1[0], P[1] - F1[1]), d2 = Math.hypot(P[0] - F2[0], P[1] - F2[1]);
+  if (document.getElementById('string1').checked) {
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#ffc94d'; ctx.beginPath(); ctx.moveTo(F1[0], F1[1]); ctx.lineTo(P[0], P[1]); ctx.stroke();
+    ctx.strokeStyle = '#ff6fb5'; ctx.beginPath(); ctx.moveTo(F2[0], F2[1]); ctx.lineTo(P[0], P[1]); ctx.stroke();
+    label(ctx, 'd₁', (F1[0] + P[0]) / 2, (F1[1] + P[1]) / 2 - 10, '#ffc94d');
+    label(ctx, 'd₂', (F2[0] + P[0]) / 2, (F2[1] + P[1]) / 2 - 10, '#ff6fb5');
+  }
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(P[0], P[1], 8, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#8f7bff'; ctx.beginPath(); ctx.arc(P[0], P[1], 4, 0, TAU); ctx.fill();
+  label(ctx, '✏️', P[0] + 14, P[1] - 14, '#fff', 'center', 16);
+  // misure: spago lungo 20 cm (2a = 20 cm)
+  const k = 10 / a;
+  document.getElementById('d1').textContent = fmt(d1 * k, 1) + ' cm';
+  document.getElementById('d2').textContent = fmt(d2 * k, 1) + ' cm';
+  document.getElementById('dsum').textContent = fmt((d1 + d2) * k, 1) + ' cm  ✔ sempre uguale';
+}
+
+// =====================================================
+// LEGGE 2
+// =====================================================
+const L2 = { e: 0.5, N: 8, t: 0, play: true, lap: 20 / 1, sectors: [] };
+L2.lap = 12;
+const e2 = document.getElementById('e2'), e2o = document.getElementById('e2o');
+const bars2 = document.getElementById('bars2');
+let barRows = [];
+function build2() {
+  const e = L2.e, b = Math.sqrt(1 - e * e), N = L2.N;
+  // perimetro (approssimazione numerica)
+  const S = [];
+  let perim = 0; { let prev = null; for (let i = 0; i <= 2000; i++) { const E = TAU * i / 2000, p = [Math.cos(E), b * Math.sin(E)]; if (prev) perim += Math.hypot(p[0] - prev[0], p[1] - prev[1]); prev = p; } }
+  for (let k = 0; k < N; k++) {
+    const E0 = k === 0 ? 0 : solveKepler(TAU * k / N, e);
+    const E1 = k === N - 1 ? TAU : solveKepler(TAU * (k + 1) / N, e);
+    // area misurata (formula di Gauss/shoelace) e lunghezza dell'arco
+    const pts = [[e, 0]]; let len = 0, prev = null;
+    for (let s = 0; s <= 200; s++) { const E = E0 + (E1 - E0) * s / 200, p = [Math.cos(E), b * Math.sin(E)]; pts.push(p); if (prev) len += Math.hypot(p[0] - prev[0], p[1] - prev[1]); prev = p; }
+    let A = 0; for (let i = 0; i < pts.length; i++) { const p = pts[i], q = pts[(i + 1) % pts.length]; A += p[0] * q[1] - q[0] * p[1]; }
+    S.push({ E0, E1, area: Math.abs(A) / 2 / (Math.PI * b) * 100, len: len / perim * 100 });
+  }
+  L2.sectors = S;
+  const maxLen = Math.max(...S.map(s => s.len)), maxA = Math.max(...S.map(s => s.area));
+  bars2.innerHTML = '<div class="hd">Settore</div><div class="hd">Area spazzata</div><div class="hd">Strada percorsa</div>';
+  barRows = S.map((s, k) => {
+    const col = k % 2 ? '#ff6fb5' : '#4dc3ff';
+    const n = document.createElement('div'); n.textContent = (k + 1);
+    const a = document.createElement('div'); a.className = 'b'; a.title = fmt(s.area, 1) + '% dell’ellisse';
+    a.innerHTML = `<i style="width:${s.area / maxA * 100}%;background:${col}"></i>`;
+    const l = document.createElement('div'); l.className = 'b'; l.title = fmt(s.len, 1) + '% dell’orbita';
+    l.innerHTML = `<i style="width:${s.len / maxLen * 100}%;background:#5ee3a1"></i>`;
+    bars2.append(n, a, l); return n;
+  });
+  const vmax = 29.78 * Math.sqrt((1 + e) / (1 - e)), vmin = 29.78 * Math.sqrt((1 - e) / (1 + e));
+  document.getElementById('vrange2').textContent = `In questa orbita la velocità va da ${fmt(vmin, 1)} km/s (afelio) a ${fmt(vmax, 1)} km/s (perielio).`;
+}
+function reset2() { L2.t = 0; }
+e2.addEventListener('input', () => { L2.e = +e2.value; e2o.textContent = fmt(L2.e); build2(); reset2(); });
+document.querySelectorAll('#n2 button').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('#n2 button').forEach(x => x.classList.toggle('on', x === b));
+  L2.N = +b.dataset.n; build2(); reset2();
+}));
+const sp2 = document.getElementById('sp2');
+sp2.addEventListener('input', () => { L2.lap = +sp2.value; document.getElementById('sp2o').textContent = sp2.value + ' s'; });
+const play2 = document.getElementById('play2');
+play2.addEventListener('click', () => { L2.play = !L2.play; play2.textContent = L2.play ? '⏸ Pausa' : '▶ Avvia'; });
+document.getElementById('reset2').addEventListener('click', reset2);
+build2();
+
+function draw2(dt) {
+  const cv = document.getElementById('cv2');
+  const { ctx, w, h } = fit(cv, stageRatio);
+  bg(ctx, w, h);
+  if (L2.play) L2.t += dt / L2.lap;
+  const e = L2.e, a = Math.min(w * 0.42, h * 0.44), bb = Math.sqrt(1 - e * e), b = a * bb;
+  const cx = w / 2, cy = h / 2;
+  const X = E => cx + a * Math.cos(E), Y = E => cy - b * Math.sin(E);
+  const sx = cx + a * e, sy = cy;
+  const lap = Math.floor(L2.t), ph = L2.t - lap, N = L2.N, cur = Math.min(N - 1, Math.floor(ph * N));
+  const Enow = solveKepler(TAU * ph, e);
+  const sector = (E0, E1, fill, stroke) => {
+    ctx.beginPath(); ctx.moveTo(sx, sy);
+    const steps = 60; for (let s = 0; s <= steps; s++) { const E = E0 + (E1 - E0) * s / steps; ctx.lineTo(X(E), Y(E)); }
+    ctx.closePath(); ctx.fillStyle = fill; ctx.fill(); ctx.strokeStyle = stroke; ctx.lineWidth = 1.2; ctx.stroke();
+  };
+  L2.sectors.forEach((s, k) => {
+    const col = k % 2 ? '255,111,181' : '77,195,255';
+    if (k < cur || (lap >= 1 && k !== cur)) sector(s.E0, s.E1, `rgba(${col},${lap >= 1 && k > cur ? 0.16 : 0.32})`, `rgba(${col},.7)`);
+  });
+  const sc = L2.sectors[cur];
+  if (sc) { const col = cur % 2 ? '255,111,181' : '77,195,255'; sector(sc.E0, Math.max(sc.E0, Enow), `rgba(${col},.6)`, `rgba(${col},1)`); }
+  // orbita
+  ctx.strokeStyle = 'rgba(238,242,255,.55)'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.ellipse(cx, cy, a, Math.max(b, .5), 0, 0, TAU); ctx.stroke();
+  // "foto" a tempi uguali
+  L2.sectors.forEach(s => { ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(X(s.E0), Y(s.E0), 3, 0, TAU); ctx.fill(); });
+  sun(ctx, sx, sy, 11);
+  label(ctx, 'perielio', cx + a + 4, cy - 18, '#5ee3a1', 'right', 13);
+  label(ctx, 'afelio', cx - a - 4, cy - 18, '#5ee3a1', 'left', 13);
+  // pianeta
+  const px = X(Enow), py = Y(Enow);
+  const r = 1 - e * Math.cos(Enow), v = Math.sqrt(2 / r - 1);
+  ctx.strokeStyle = 'rgba(255,201,77,.8)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(px, py); ctx.stroke();
+  if (document.getElementById('vec2').checked) {
+    let tx = -a * Math.sin(Enow), ty = -b * Math.cos(Enow); const tl = Math.hypot(tx, ty) || 1; tx /= tl; ty /= tl;
+    const L = 26 * v * Math.min(1, a / 220) + 10;
+    arrow(ctx, px, py, px + tx * L, py + ty * L, '#5ee3a1', 3);
+  }
+  planetDot(ctx, px, py, 9, '#4dc3ff');
+  // strumenti
+  document.getElementById('r2').textContent = fmt(r, 2) + ' UA';
+  document.getElementById('v2').textContent = fmt(29.78 * v, 1) + ' km/s';
+  const vmax = Math.sqrt((1 + e) / (1 - e)), vmin = Math.sqrt((1 - e) / (1 + e));
+  document.getElementById('m2').style.width = (e < 0.005 ? 50 : 8 + 92 * (v - vmin) / (vmax - vmin)) + '%';
+  barRows.forEach((n, k) => n.classList.toggle('row-on', k === cur));
+}
+
+// =====================================================
+// LEGGE 3
+// =====================================================
+const PLANETS = [
+  { n: 'Mercurio', s: 'Me', a: 0.3871, T: 0.2408, c: '#b9b9c4' },
+  { n: 'Venere', s: 'V', a: 0.7233, T: 0.6152, c: '#e8c27a' },
+  { n: 'Terra', s: 'T', a: 1.0, T: 1.0, c: '#4da6ff' },
+  { n: 'Marte', s: 'Ma', a: 1.5237, T: 1.8808, c: '#ff6b4d' },
+  { n: 'Giove', s: 'G', a: 5.2034, T: 11.862, c: '#d9a066' },
+  { n: 'Saturno', s: 'S', a: 9.5371, T: 29.457, c: '#e6d38a' },
+  { n: 'Urano', s: 'U', a: 19.191, T: 84.011, c: '#7fe0e0' },
+  { n: 'Nettuno', s: 'N', a: 30.069, T: 164.79, c: '#6f8bff' }
+];
+const AMIN = 0.2, AMAX = 40, SPMIN = 0.05, SPMAX = 50;
+const a3 = document.getElementById('a3'), sp3 = document.getElementById('sp3');
+const fromLog = (v, lo, hi) => lo * Math.pow(hi / lo, v / 1000);
+const toLog = (x, lo, hi) => Math.round(1000 * Math.log(x / lo) / Math.log(hi / lo));
+const L3 = { a: 2, sp: 0.5, time: 0, play: true, mode: 'curve' };
+a3.value = toLog(2, AMIN, AMAX); sp3.value = toLog(0.5, SPMIN, SPMAX);
+const myT = () => Math.pow(L3.a, 1.5);
+function visible3() { const lim = Math.max(1.6, L3.a * 1.15); return PLANETS.filter(p => p.a <= lim); }
+function nice(x) { return x < 1 ? fmt(x, 2) : x < 10 ? fmt(x, 2) : x < 100 ? fmt(x, 1) : fmt(x, 0); }
+function setA3(a) { L3.a = a; a3.value = toLog(a, AMIN, AMAX); upd3(); }
+function upd3() {
+  document.getElementById('a3o').textContent = nice(L3.a) + ' UA';
+  const T = myT();
+  document.getElementById('T3').textContent = T < 1 ? `${fmt(T * 365.25, 0)} giorni` : `${nice(T)} anni`;
+  const s = L3.sp; document.getElementById('sp3o').textContent = (s < 1 ? fmt(s, 2) : s < 10 ? fmt(s, 1) : fmt(s, 0)) + ' anni/s';
+  buildTable3();
+}
+let tbRows = [];
+function buildTable3() {
+  const tb = document.getElementById('tb3'); tb.innerHTML = '';
+  const rows = visible3().map(p => ({ ...p, me: false }));
+  rows.push({ n: 'Il tuo pianeta', a: L3.a, T: myT(), c: '#ff5fd2', me: true });
+  rows.sort((x, y) => x.a - y.a);
+  tbRows = rows.map(p => {
+    const tr = document.createElement('tr'); if (p.me) tr.className = 'me';
+    tr.innerHTML = `<td><span class="dot" style="background:${p.c}"></span>${p.n}</td><td>${nice(p.a)}</td><td>${nice(p.T)}</td><td class="laps">0</td><td>${fmt(p.T * p.T / (p.a * p.a * p.a), 3)}</td>`;
+    tb.appendChild(tr); return { el: tr.querySelector('.laps'), T: p.T, me: p.me };
+  });
+}
+a3.addEventListener('input', () => { L3.a = fromLog(+a3.value, AMIN, AMAX); upd3(); });
+sp3.addEventListener('input', () => { L3.sp = fromLog(+sp3.value, SPMIN, SPMAX); upd3(); });
+const play3 = document.getElementById('play3');
+play3.addEventListener('click', () => { L3.play = !L3.play; play3.textContent = L3.play ? '⏸ Pausa' : '▶ Avvia'; });
+document.getElementById('reset3').addEventListener('click', () => { L3.time = 0; });
+document.querySelectorAll('#chartMode button').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('#chartMode button').forEach(x => x.classList.toggle('on', x === b));
+  L3.mode = b.dataset.m;
+  document.getElementById('chartHint').textContent = L3.mode === 'curve'
+    ? 'La curva sale sempre più ripida: raddoppiare la distanza fa quasi triplicare il periodo.'
+    : 'Elevando T al quadrato e a al cubo i punti si mettono tutti su una retta: T² e a³ sono direttamente proporzionali.';
+}));
+upd3();
+
+function draw3(dt) {
+  const cv = document.getElementById('cv3');
+  const { ctx, w, h } = fit(cv, stageRatio);
+  bg(ctx, w, h);
+  if (L3.play) L3.time += dt * L3.sp;
+  const vis = visible3(), maxA = Math.max(1.6, L3.a * 1.15);
+  const R = Math.min(w, h) * 0.46, cx = w / 2, cy = h / 2;
+  const rr = a => a / maxA * R;
+  // linea di partenza
+  ctx.setLineDash([4, 6]); ctx.strokeStyle = 'rgba(94,227,161,.45)'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + R + 8, cy); ctx.stroke(); ctx.setLineDash([]);
+  label(ctx, '🏁', cx + R + 14, cy, '#fff', 'center', 14);
+  const all = vis.map(p => ({ ...p, me: false })).concat([{ n: 'Il tuo pianeta', s: 'Tu', a: L3.a, T: myT(), c: '#ff5fd2', me: true }]);
+  all.forEach(p => {
+    ctx.strokeStyle = p.me ? 'rgba(255,95,210,.8)' : 'rgba(169,180,216,.35)'; ctx.lineWidth = p.me ? 2.5 : 1.2;
+    if (p.me) ctx.setLineDash([7, 5]);
+    ctx.beginPath(); ctx.arc(cx, cy, rr(p.a), 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+  });
+  sun(ctx, cx, cy, Math.max(5, Math.min(11, R * 0.04)));
+  all.forEach(p => {
+    const th = TAU * L3.time / p.T, r = rr(p.a);
+    const x = cx + r * Math.cos(th), y = cy - r * Math.sin(th);
+    planetDot(ctx, x, y, p.me ? 9 : 6, p.c);
+    if (r > 18 || p.me) label(ctx, p.me ? 'Tu' : p.n, x, y - (p.me ? 18 : 15), p.c, 'center', p.me ? 14 : 12);
+  });
+  const t = L3.time;
+  document.getElementById('time3').textContent = `⏱ ${t < 10 ? fmt(t, 2) : fmt(t, 1)} anni`;
+  document.getElementById('L3').textContent = Math.floor(t / myT());
+  tbRows.forEach(r => r.el.textContent = Math.floor(t / r.T));
+  drawChart3(all, maxA);
+}
+function niceStep(max) { const raw = max / 5, p = Math.pow(10, Math.floor(Math.log10(raw))), m = raw / p; return (m < 1.5 ? 1 : m < 3.5 ? 2 : m < 7.5 ? 5 : 10) * p; }
+function drawChart3(pts, maxA) {
+  const cv = document.getElementById('ch3');
+  const { ctx, w, h } = fit(cv, ww => ww < 600 ? 0.75 : 0.5);
+  ctx.fillStyle = '#0a1128'; ctx.fillRect(0, 0, w, h);
+  const line = L3.mode === 'line';
+  const fx = a => line ? a * a * a : a, fy = T => line ? T * T : T;
+  const xMax = fx(maxA) * 1.02, yMax = fy(Math.pow(maxA, 1.5)) * 1.05;
+  const L = 58, Rm = 16, T = 14, B = 40;
+  const X = v => L + v / xMax * (w - L - Rm), Y = v => h - B - v / yMax * (h - B - T);
+  ctx.font = '12px "Atkinson Hyperlegible", sans-serif'; ctx.fillStyle = '#a9b4d8'; ctx.strokeStyle = 'rgba(169,180,216,.15)'; ctx.lineWidth = 1;
+  const sx = niceStep(xMax), sy = niceStep(yMax);
+  const tick = v => v >= 1000 ? Math.round(v).toLocaleString('it-IT') : (Math.round(v * 100) / 100).toLocaleString('it-IT');
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  for (let v = 0; v <= xMax + 1e-9; v += sx) { ctx.beginPath(); ctx.moveTo(X(v), T); ctx.lineTo(X(v), h - B); ctx.stroke(); ctx.fillText(tick(v), X(v), h - B + 5); }
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  for (let v = 0; v <= yMax + 1e-9; v += sy) { ctx.beginPath(); ctx.moveTo(L, Y(v)); ctx.lineTo(w - Rm, Y(v)); ctx.stroke(); ctx.fillText(tick(v), L - 6, Y(v)); }
+  ctx.strokeStyle = '#a9b4d8'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(L, T); ctx.lineTo(L, h - B); ctx.lineTo(w - Rm, h - B); ctx.stroke();
+  ctx.fillStyle = '#eef2ff'; ctx.font = '700 13px "Atkinson Hyperlegible", sans-serif'; ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
+  ctx.fillText(line ? 'a³ (UA³)' : 'a (UA)', w - Rm, h - 4);
+  ctx.save(); ctx.translate(14, T + (h - B - T) / 2); ctx.rotate(-Math.PI / 2); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(line ? 'T² (anni²)' : 'T (anni)', 0, 0); ctx.restore();
+  // legge teorica
+  ctx.strokeStyle = 'rgba(143,123,255,.9)'; ctx.lineWidth = 2; ctx.setLineDash([6, 4]); ctx.beginPath();
+  for (let i = 0; i <= 120; i++) { const a = maxA * 1.02 * i / 120, x = X(fx(a)), y = Y(fy(Math.pow(a, 1.5))); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+  ctx.stroke(); ctx.setLineDash([]);
+  pts.forEach(p => {
+    const x = X(fx(p.a)), y = Y(fy(p.T));
+    planetDot(ctx, x, y, p.me ? 7 : 5, p.c);
+    label(ctx, p.me ? 'Tu' : p.s, x + 9, y - 10, p.c, 'left', 12);
+  });
+}
+
+// ---------- sfida ----------
+const QUIZ = [0.25, 4, 9, 16, 25];
+let qA = null, qLast = null;
+function newQuiz() {
+  do { qA = QUIZ[Math.floor(Math.random() * QUIZ.length)]; } while (qA === qLast); qLast = qA;
+  const right = Math.pow(qA, 1.5);
+  const opts = [right, qA, qA * qA].sort(() => Math.random() - 0.5);
+  document.getElementById('qText').innerHTML = `Un pianeta orbita a <b>a = ${fmt(qA, qA < 1 ? 2 : 0)} UA</b> dal Sole. Quanti anni impiega a fare un giro?`;
+  const box = document.getElementById('qOpts'); box.innerHTML = '';
+  opts.forEach(o => {
+    const b = document.createElement('button'); b.className = 'btn'; b.textContent = fmt(o, o < 1 ? (o < 0.1 ? 4 : 3) : 0) + ' anni';
+    b.addEventListener('click', () => {
+      const fb = document.getElementById('qFb');
+      if (o === right) { fb.className = 'fb ok'; fb.textContent = `✔ Giusto! a³ = ${fmt(qA ** 3, qA < 1 ? 4 : 0)}, e √${fmt(qA ** 3, qA < 1 ? 4 : 0)} = ${fmt(right, qA < 1 ? 3 : 0)} anni.`; }
+      else if (o === qA) { fb.className = 'fb ko'; fb.textContent = '✘ Così il periodo crescerebbe come la distanza. Ma più lontano il pianeta va anche più piano! Riprova.'; }
+      else { fb.className = 'fb ko'; fb.textContent = '✘ Troppo! Hai fatto a². Ricorda: T² = a³, quindi T = √(a³). Riprova.'; }
+    });
+    box.appendChild(b);
+  });
+  document.getElementById('qFb').textContent = '';
+}
+document.getElementById('qNext').addEventListener('click', newQuiz);
+document.getElementById('qTry').addEventListener('click', () => { setA3(qA); L3.time = 0; });
+newQuiz();
+
+// ---------- loop ----------
+let last = performance.now();
+function loop(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  try {
+    if (active === 'legge-1') draw1(dt);
+    else if (active === 'legge-2') draw2(dt);
+    else draw3(dt);
+  } catch (err) { console.error(err); }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+})();
+</script>
+<script src="a11y.js"></script>
+</body>
+</html>

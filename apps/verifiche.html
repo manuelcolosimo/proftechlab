@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Generatore di verifiche</title>
+<link rel="stylesheet" href="ptl.css">
+<style>
+:root { --accent: #8e5bd0; }
+.layout { display: grid; grid-template-columns: 340px 1fr; gap: 16px; align-items: start; }
+.pannello { display: grid; gap: 12px; }
+.pannello label { display: grid; gap: 4px; font-weight: 700; font-size: 15px; }
+.pannello input[type="text"], .pannello textarea, .pannello select { width: 100%; font: 400 17px var(--font-body); border: 2px solid var(--ink); border-radius: 8px; padding: 6px 8px; }
+.pannello textarea { min-height: 120px; }
+.mazzi-sel { display: grid; gap: 4px; max-height: 180px; overflow: auto; background: #fff; border: 2px solid var(--squares); border-radius: 8px; padding: 6px; }
+.mazzi-sel label { display: flex; gap: 8px; align-items: center; font-weight: 400; }
+.anteprima { background: #fff; border: 2px solid var(--ink); border-radius: 8px; padding: 26px 30px; font-family: "Times New Roman", Georgia, serif; font-size: 16px; color: #111; min-height: 400px; box-shadow: 4px 5px 0 rgba(31,42,68,.15); }
+.anteprima h2 { font-size: 20px; margin: 0 0 4px; }
+.anteprima .intest { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 20px; margin: 10px 0 16px; font-size: 15px; }
+.anteprima ol { padding-left: 1.3em; display: grid; gap: 14px; }
+.anteprima .righe { border-bottom: 1px solid #999; height: 26px; }
+.anteprima .opz { list-style: none; padding: 0; margin: 6px 0 0; display: grid; gap: 3px; }
+.anteprima .fila { display: inline-block; border: 2px solid #111; padding: 0 8px; font-weight: bold; margin-left: 8px; }
+.schede { display: flex; gap: 6px; flex-wrap: wrap; }
+@media (max-width: 860px) { .layout { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header class="app-bar"><h1>Generatore di verifiche</h1><span class="sub">Dai mazzi di Ripasso furbo alla verifica stampabile</span></header>
+<div class="container">
+  <details class="card" id="guida" open>
+    <summary style="cursor:pointer;font:400 24px var(--font-hand)">📘 Come funziona, in 4 passi</summary>
+    <ol style="margin:8px 0 0;padding-left:1.3em;display:grid;gap:6px;font-size:16px">
+      <li><b>Scegli le domande.</b> Spunta uno o più mazzi di <a href="ripasso-furbo.html">Ripasso furbo</a> salvati su questo dispositivo, oppure incolla le domande (una per riga: <i>domanda ; risposta</i>). Se le incolli, puoi salvarle come nuovo mazzo: così gli studenti le ripassano con le flashcard prima della verifica.</li>
+      <li><b>Imposta la verifica:</b> titolo, quante domande (pescate a caso), tipo e quante versioni (file A, B, C con ordine diverso).</li>
+      <li><b>Premi «Genera»</b> e controlla l'anteprima di ogni fila e del correttore. Rigenera se una domanda non ti convince.</li>
+      <li><b>Scarica in Word</b>: il file è modificabile, così puoi sistemare le domande, aggiungere immagini o cambiare i punteggi. In alternativa copia il testo.</li>
+    </ol>
+    <p class="nota" style="margin:8px 0 0">Nella scelta multipla le risposte sbagliate sono le risposte giuste di altre domande dello stesso elenco: funzionano bene quando le risposte sono brevi e simili tra loro. Rileggi sempre prima di stampare.</p>
+  </details>
+  <div class="layout">
+    <div class="card pannello">
+      <b style="font-family:var(--font-hand);font-size:24px;font-weight:400">1. Le domande</b>
+      <div><span class="nota">Dai mazzi di Ripasso furbo salvati su questo dispositivo:</span><div class="mazzi-sel" id="mazzi"></div></div>
+      <div class="row"><a class="btn" href="ripasso-furbo.html" style="text-decoration:none;font-size:18px">🧠 Apri Ripasso furbo</a></div>
+      <label>…oppure incollale qui (una per riga: domanda ; risposta)<textarea id="incolla" placeholder="Che cos'è la duttilità? ; La capacità di essere tirato in fili"></textarea></label>
+      <div class="row"><input type="text" id="nuovo-mazzo-nome" placeholder="Nome del nuovo mazzo" style="flex:1;min-width:150px"><button class="btn" id="salva-mazzo" style="font-size:17px">🧠 Salva come mazzo di Ripasso furbo</button></div>
+      <b style="font-family:var(--font-hand);font-size:24px;font-weight:400">2. La verifica</b>
+      <label>Titolo <input type="text" id="titolo" value="Verifica di Tecnologia"></label>
+      <label>Numero di domande <select id="quante"></select></label>
+      <label>Tipo di domande
+        <select id="tipo"><option value="sm">Scelta multipla (4 opzioni)</option><option value="ap">Risposta aperta</option><option value="mix">Metà e metà</option></select></label>
+      <label>Versioni <select id="file"><option value="1">Una sola</option><option value="2" selected>File A e B</option><option value="3">File A, B e C</option></select></label>
+      <label style="display:flex;gap:8px;align-items:center;font-weight:400"><input type="checkbox" id="punti" checked> Mostra il punteggio (1 punto per domanda)</label>
+      <div class="row"><button class="btn primary" id="genera">⚙️ Genera</button></div>
+      <p class="feedback" id="msg" aria-live="polite"></p>
+      <p class="nota">Per la scelta multipla le opzioni sbagliate sono prese dalle altre risposte dello stesso elenco: con almeno 8 domande vengono più credibili. Rileggi sempre la verifica prima di stamparla.</p>
+    </div>
+    <div style="display:grid;gap:10px">
+      <div class="schede" id="schede"></div>
+      <div class="anteprima" id="anteprima"><p style="color:#777">Scegli le domande e premi «Genera»: qui vedrai l'anteprima.</p></div>
+      <div class="row">
+        <button class="btn giallo" id="scarica">📝 Scarica in Word (tutte le file + correttore)</button>
+        <button class="btn" id="copia">📋 Copia il testo</button>
+      </div>
+      <p class="nota">Il file Word (.docx) si apre con Word, Pages, LibreOffice o Google Documenti: puoi cambiare testo, punteggi e impaginazione prima di stampare. Ogni fila e il correttore iniziano su una pagina nuova.</p>
+    </div>
+  </div>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const esc = t => String(t).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+let dati = { mazzi: [] }; try { dati = JSON.parse(localStorage.getItem("ripassoFurbo")) || dati; } catch (e) {}
+$("mazzi").innerHTML = (dati.mazzi || []).map(m => `<label><input type="checkbox" value="${m.id}"> ${esc(m.nome)} <span class="nota">(${m.carte.length})</span></label>`).join("") || `<span class="nota">Nessun mazzo trovato: aprili prima in Ripasso furbo, oppure incolla le domande qui sotto.</span>`;
+function domande() {
+  const sel = [...$("mazzi").querySelectorAll("input:checked")].map(x => x.value);
+  let out = [];
+  (dati.mazzi || []).filter(m => sel.includes(m.id)).forEach(m => m.carte.forEach(c => out.push({ f: c.f, r: c.r })));
+  $("incolla").value.split("\n").forEach(r => { const p = r.includes("\t") ? r.split("\t") : r.split(";"); if (p.length >= 2 && p[0].trim() && p.slice(1).join(";").trim()) out.push({ f: p[0].trim(), r: p.slice(1).join(";").trim() }); });
+  const visti = new Set(); return out.filter(d => { const k = d.f.toLowerCase(); if (visti.has(k)) return false; visti.add(k); return true; });
+}
+let sceltaQuante = 10;
+function aggiornaQuante() { const n = domande().length, v = sceltaQuante; $("quante").innerHTML = Array.from({ length: Math.max(1, n) }, (_, i) => i + 1).map(i => `<option ${i === Math.min(v, n) ? "selected" : ""}>${i}</option>`).join(""); }
+$("quante").addEventListener("change", () => { sceltaQuante = +$("quante").value; });
+/* Mazzo scelto da Ripasso furbo (link "Crea una verifica da questo mazzo") */
+(function () {
+  const m = location.hash.match(/^#mazzo-(.+)$/); if (!m) return;
+  const box = $("mazzi").querySelector(`input[value="${CSS.escape(m[1])}"]`);
+  if (box) { box.checked = true; const mz = dati.mazzi.find(x => x.id === m[1]); if (mz) $("titolo").value = "Verifica · " + mz.nome; }
+})();
+$("salva-mazzo").addEventListener("click", () => {
+  const righe = $("incolla").value.split("\n").map(r => r.includes("\t") ? r.split("\t") : r.split(";")).filter(p => p.length >= 2 && p[0].trim() && p.slice(1).join(";").trim());
+  if (!righe.length) { $("msg").textContent = "Prima incolla delle domande nel formato domanda ; risposta."; $("msg").className = "feedback ko"; return; }
+  const uid = () => Math.random().toString(36).slice(2, 10);
+  const mz = { id: uid(), nome: ($("nuovo-mazzo-nome").value.trim() || $("titolo").value.trim() || "Mazzo dalla verifica").slice(0, 60), materia: "", sessione: 0,
+    carte: righe.map(p => ({ id: uid(), f: p[0].trim(), r: p.slice(1).join(";").trim(), img: "", box: 1, ultima: -1 })) };
+  let tutti = { mazzi: [] }; try { tutti = JSON.parse(localStorage.getItem("ripassoFurbo")) || tutti; } catch (e) {}
+  tutti.mazzi.unshift(mz);
+  try { localStorage.setItem("ripassoFurbo", JSON.stringify(tutti)); } catch (e) { $("msg").textContent = "Spazio pieno: non sono riuscito a salvare il mazzo."; $("msg").className = "feedback ko"; return; }
+  dati = tutti; $("incolla").value = "";
+  $("mazzi").innerHTML = dati.mazzi.map(m => `<label><input type="checkbox" value="${m.id}" ${m.id === mz.id ? "checked" : ""}> ${esc(m.nome)} <span class="nota">(${m.carte.length})</span></label>`).join("");
+  aggiornaQuante(); $("msg").textContent = `✔ Mazzo «${mz.nome}» salvato in Ripasso furbo (${mz.carte.length} carte): da lì puoi condividerlo con gli studenti.`; $("msg").className = "feedback ok";
+});
+$("mazzi").addEventListener("change", aggiornaQuante); $("incolla").addEventListener("input", aggiornaQuante); setTimeout(aggiornaQuante, 0);
+/* Generatore casuale con seme: le versioni sono riproducibili */
+function rng(seed) { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
+const mescola = (a, r) => { const b = a.slice(); for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; } return b; };
+let versioni = [], attiva = 0;
+$("genera").addEventListener("click", () => {
+  const tutte = domande(), n = Math.min(+$("quante").value, tutte.length);
+  if (!n) { $("msg").textContent = "Scegli almeno un mazzo o incolla delle domande."; $("msg").className = "feedback ko"; return; }
+  const tipo = $("tipo").value, nf = +$("file").value, seme = Date.now() % 100000;
+  const scelte = mescola(tutte, rng(seme)).slice(0, n);
+  const tipi = scelte.map((_, i) => tipo === "mix" ? (i % 2 ? "ap" : "sm") : tipo);
+  const risposte = tutte.map(d => d.r);
+  if (tipi.includes("sm") && new Set(risposte).size < 4) { $("msg").textContent = "Per la scelta multipla servono almeno 4 risposte diverse."; $("msg").className = "feedback ko"; return; }
+  versioni = Array.from({ length: nf }, (_, v) => {
+    const r = rng(seme + 7919 * (v + 1));
+    const ordine = v === 0 ? scelte.map((_, i) => i) : mescola(scelte.map((_, i) => i), r);
+    return { nome: "ABC"[v], items: ordine.map(i => {
+      const d = scelte[i], t = tipi[i];
+      if (t === "ap") return { t, f: d.f, r: d.r };
+      const altre = mescola([...new Set(risposte.filter(x => x !== d.r))], r).slice(0, 3);
+      const opz = mescola([d.r, ...altre], r);
+      return { t, f: d.f, r: d.r, opz, giusta: opz.indexOf(d.r) };
+    }) };
+  });
+  attiva = 0; $("msg").textContent = `✔ Pronta: ${n} ${n === 1 ? "domanda" : "domande"}, ${nf === 1 ? "una versione" : nf + " versioni"}.`; $("msg").className = "feedback ok"; mostra();
+});
+function htmlVersione(v, conTitolo) {
+  const punti = $("punti").checked;
+  return `<h2>${esc($("titolo").value)}${versioni.length > 1 ? `<span class="fila">FILA ${v.nome}</span>` : ""}</h2>
+  <div class="intest"><span>Nome e cognome: ______________________</span><span>Classe: ______ Data: __________</span>${punti ? `<span>Punteggio: ______ / ${v.items.length}</span>` : ""}</div>
+  <ol>${v.items.map(it => `<li><div>${esc(it.f)}</div>${it.t === "sm" ? `<ul class="opz">${it.opz.map((o, k) => `<li>☐ ${"abcd"[k]}) ${esc(o)}</li>`).join("")}</ul>` : `<div class="righe"></div><div class="righe"></div>`}</li>`).join("")}</ol>`;
+}
+function htmlCorrettore() {
+  return `<h2>Correttore · ${esc($("titolo").value)}</h2>` + versioni.map(v => `<h3>${versioni.length > 1 ? "Fila " + v.nome : "Risposte"}</h3><ol>${v.items.map(it => `<li>${it.t === "sm" ? `<b>${"abcd"[it.giusta]})</b> ` : ""}${esc(it.r)}</li>`).join("")}</ol>`).join("");
+}
+function mostra() {
+  $("schede").innerHTML = versioni.map((v, i) => `<button class="tab" data-i="${i}" aria-selected="${i === attiva}">${versioni.length > 1 ? "Fila " + v.nome : "Verifica"}</button>`).join("") + `<button class="tab" data-i="-1" aria-selected="${attiva === -1}">✔ Correttore</button>`;
+  $("schede").querySelectorAll("button").forEach(b => b.addEventListener("click", () => { attiva = +b.dataset.i; mostra(); }));
+  $("anteprima").innerHTML = attiva === -1 ? htmlCorrettore() : htmlVersione(versioni[attiva]);
+}
+function documento() {
+  return `<!DOCTYPE html><html lang="it"><head><meta charset="utf-8"><title>${esc($("titolo").value)}</title><style>
+  body{font-family:"Times New Roman",Georgia,serif;font-size:15pt;color:#111;max-width:180mm;margin:12mm auto}h2{font-size:18pt;margin:0 0 4px}
+  .intest{display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;margin:10px 0 16px;font-size:13pt}ol{padding-left:1.3em}ol>li{margin-bottom:14px;break-inside:avoid}
+  .righe{border-bottom:1px solid #888;height:28px}.opz{list-style:none;padding:0;margin:6px 0 0}.fila{border:2px solid #111;padding:0 8px;margin-left:10px;font-size:14pt}
+  .pagina{break-after:page;page-break-after:always}</style></head><body>` +
+    versioni.map(v => `<section class="pagina">${htmlVersione(v)}</section>`).join("") + `<section>${htmlCorrettore()}</section></body></html>`;
+}
+
+/* ===== Esportazione in Word (.docx) senza librerie esterne: XML di Word + archivio ZIP non compresso ===== */
+const CRC_T = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(b) { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = CRC_T[(c ^ b[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+function zip(files) {
+  const enc = new TextEncoder(), parti = [], centrale = []; let off = 0;
+  const d = new Date(), dt = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate(), tm = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1);
+  for (const f of files) {
+    const nome = enc.encode(f.nome), dati = typeof f.dati === "string" ? enc.encode(f.dati) : f.dati, crc = crc32(dati);
+    const h = new DataView(new ArrayBuffer(30));
+    h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint16(8, 0, true);
+    h.setUint16(10, tm, true); h.setUint16(12, dt, true); h.setUint32(14, crc, true); h.setUint32(18, dati.length, true); h.setUint32(22, dati.length, true);
+    h.setUint16(26, nome.length, true); h.setUint16(28, 0, true);
+    parti.push(new Uint8Array(h.buffer), nome, dati);
+    const c = new DataView(new ArrayBuffer(46));
+    c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x0800, true); c.setUint16(10, 0, true);
+    c.setUint16(12, tm, true); c.setUint16(14, dt, true); c.setUint32(16, crc, true); c.setUint32(20, dati.length, true); c.setUint32(24, dati.length, true);
+    c.setUint16(28, nome.length, true); c.setUint32(42, off, true);
+    centrale.push(new Uint8Array(c.buffer), nome);
+    off += 30 + nome.length + dati.length;
+  }
+  const dimC = centrale.reduce((s, x) => s + x.length, 0), fine = new DataView(new ArrayBuffer(22));
+  fine.setUint32(0, 0x06054b50, true); fine.setUint16(8, files.length, true); fine.setUint16(10, files.length, true); fine.setUint32(12, dimC, true); fine.setUint32(16, off, true);
+  const tutto = [...parti, ...centrale, new Uint8Array(fine.buffer)], out = new Uint8Array(tutto.reduce((s, x) => s + x.length, 0));
+  let p = 0; for (const x of tutto) { out.set(x, p); p += x.length; } return out;
+}
+const X = t => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+function par(testo, o = {}) {
+  const rPr = `<w:rPr>${o.b ? "<w:b/>" : ""}${o.sz ? `<w:sz w:val="${o.sz}"/><w:szCs w:val="${o.sz}"/>` : ""}${o.col ? `<w:color w:val="${o.col}"/>` : ""}</w:rPr>`;
+  const pPr = `<w:pPr>${o.keep ? "<w:keepNext/>" : ""}${o.ind ? `<w:ind w:left="${o.ind}"/>` : ""}<w:spacing w:before="${o.prima || 0}" w:after="${o.dopo === undefined ? 80 : o.dopo}"/>${o.bordo ? '<w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="999999"/></w:pBdr>' : ""}</w:pPr>`;
+  return `<w:p>${pPr}<w:r>${rPr}<w:t xml:space="preserve">${X(testo)}</w:t></w:r></w:p>`;
+}
+const salto = () => `<w:p><w:r><w:br w:type="page"/></w:r></w:p>`;
+function docxVerifica() {
+  const titolo = $("titolo").value, punti = $("punti").checked; let body = "";
+  versioni.forEach((v, iv) => {
+    if (iv) body += salto();
+    body += par(titolo + (versioni.length > 1 ? `   –   FILA ${v.nome}` : ""), { b: true, sz: 32, dopo: 160 });
+    body += par("Nome e cognome: ___________________________   Classe: _____   Data: _________", { dopo: 60 });
+    if (punti) body += par(`Punteggio: ______ / ${v.items.length}`, { dopo: 200 });
+    v.items.forEach((it, i) => {
+      body += par(`${i + 1}. ${it.f}`, { b: true, prima: 160, keep: true });
+      if (it.t === "sm") it.opz.forEach((o, k) => body += par(`☐  ${"abcd"[k]})  ${o}`, { ind: 360, dopo: 40, keep: k < it.opz.length - 1 }));
+      else { const riga = "_".repeat(68); body += par(riga, { ind: 360, dopo: 60, prima: 120, col: "999999" }); body += par(riga, { ind: 360, dopo: 60, prima: 120, col: "999999" }); }
+    });
+  });
+  body += salto() + par("Correttore · " + titolo, { b: true, sz: 30, dopo: 160 });
+  versioni.forEach(v => {
+    if (versioni.length > 1) body += par("Fila " + v.nome, { b: true, prima: 160 });
+    v.items.forEach((it, i) => body += par(`${i + 1}. ${it.t === "sm" ? "abcd"[it.giusta] + ") " : ""}${it.r}`, { ind: 240, dopo: 40 }));
+  });
+  const W = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"';
+  const documento = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document ${W}><w:body>${body}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="567" w:footer="567" w:gutter="0"/></w:sectPr></w:body></w:document>`;
+  const stili = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles ${W}><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:eastAsia="Arial" w:cs="Arial"/><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="it-IT"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="80" w:line="276" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style></w:styles>`;
+  return zip([
+    { nome: "[Content_Types].xml", dati: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>` },
+    { nome: "_rels/.rels", dati: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>` },
+    { nome: "word/_rels/document.xml.rels", dati: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>` },
+    { nome: "word/document.xml", dati: documento },
+    { nome: "word/styles.xml", dati: stili }
+  ]);
+}
+
+$("scarica").addEventListener("click", async () => {
+  if (!versioni.length) { $("msg").textContent = "Prima genera la verifica."; $("msg").className = "feedback ko"; return; }
+  const base = $("titolo").value.replace(/[^a-z0-9àèéìòù ]/gi, "").trim().replace(/\s+/g, "-") || "verifica";
+  const salva = async (nome, dati) => { try { if (window.parent !== window && typeof window.parent.ptlSalva === "function") return await window.parent.ptlSalva(nome, dati); return null; } catch (e) { return e && e.code ? e.code : null; } };
+  let r = await salva(base + ".docx", docxVerifica());
+  if (r === "extension_not_enabled" || r === "rejected_extension") {
+    r = await salva(base + ".html", documento());
+    $("msg").textContent = r === "saved" ? "Il formato Word non è disponibile qui: ho salvato una pagina da aprire nel browser e stampare." : "Salvataggio non disponibile qui: usa «Copia il testo».";
+    $("msg").className = "feedback " + (r === "saved" ? "ok" : "ko"); return;
+  }
+  $("msg").textContent = r === "saved" ? "✔ File Word salvato: aprilo con Word, Pages o Google Documenti e modificalo come vuoi." : r === "declined" ? "Salvataggio annullato." : "Salvataggio non disponibile qui: usa «Copia il testo».";
+  $("msg").className = "feedback " + (r === "saved" ? "ok" : r === "declined" ? "" : "ko");
+});
+$("copia").addEventListener("click", async () => {
+  if (!versioni.length) return;
+  const t = versioni.map(v => `${$("titolo").value}${versioni.length > 1 ? " – Fila " + v.nome : ""}\n\n` + v.items.map((it, i) => `${i + 1}. ${it.f}` + (it.t === "sm" ? "\n" + it.opz.map((o, k) => `   ${"abcd"[k]}) ${o}`).join("\n") : "\n   ______________________")).join("\n\n")).join("\n\n\n") +
+    "\n\n\nCORRETTORE\n" + versioni.map(v => (versioni.length > 1 ? "Fila " + v.nome + ": " : "") + v.items.map((it, i) => `${i + 1}${it.t === "sm" ? "abcd"[it.giusta] : " (aperta)"}`).join(", ")).join("\n");
+  try { await navigator.clipboard.writeText(t); $("msg").textContent = "✔ Testo copiato: incollalo in un documento."; $("msg").className = "feedback ok"; } catch (e) { $("msg").textContent = "Copia non riuscita."; $("msg").className = "feedback ko"; }
+});
+</script>
+<script src="a11y.js"></script>
+</body>
+</html>

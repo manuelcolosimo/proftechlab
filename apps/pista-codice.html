@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pista Codice</title>
+<link rel="stylesheet" href="ptl.css">
+<style>
+:root { --accent: var(--cod); }
+.parti { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.parte { background: var(--label); border: 3px solid var(--ink); border-radius: 18px; padding: 18px; display: grid; gap: 10px; box-shadow: 5px 6px 0 rgba(31,42,68,.15); text-decoration: none; color: var(--ink); }
+.parte.base { border-color: var(--cod); }
+.parte.pro { border-color: #8e5bd0; }
+.parte h2 { margin: 0; font-family: var(--font-chalk); font-size: 44px; line-height: 1; }
+.parte .etich { font: 400 18px var(--font-hand); color: #fff; padding: 2px 12px; border-radius: 99px; justify-self: start; }
+.parte ul { margin: 0; padding-left: 1.1em; font-size: 16px; color: var(--muted); }
+.barra { height: 18px; border: 2px solid var(--ink); border-radius: 99px; overflow: hidden; background: #fff; }
+.barra div { height: 100%; }
+.stato { font-family: var(--font-hand); font-size: 21px; }
+.parte .btn { justify-self: start; }
+.consiglio { font-family: var(--font-hand); font-size: 20px; color: #8e5bd0; margin: 0; }
+@media (max-width: 760px) { .parti { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header class="app-bar"><h1>Pista Codice</h1><span class="sub">Coding con il kart · 49 livelli in due parti</span></header>
+<div class="container">
+  <p class="consegna">Si parte dalla <b>Parte 1</b>: comandi semplici, cicli, cancelli e condizioni. Poi la <b>Parte 2 PRO</b>: movimento relativo come i robot veri, blocchi annidati, funzioni e variabili.</p>
+  <div class="parti">
+    <a class="parte base" href="pista-base.html">
+      <span class="etich" style="background:var(--cod)">Parte 1 · Base</span>
+      <h2>🏎️ Prime gare</h2>
+      <ul><li>Sequenze e numeri</li><li>Ripeti</li><li>Cancelli e azioni</li><li>Trova il bug</li><li>Condizioni SE / ALTRIMENTI</li></ul>
+      <div class="barra"><div id="b-base" style="background:var(--cod);width:0"></div></div>
+      <span class="stato" id="s-base"></span>
+      <span class="btn primary" style="background:var(--cod)">Gioca la Parte 1 →</span>
+    </a>
+    <a class="parte pro" href="pista-pro.html">
+      <span class="etich" style="background:#8e5bd0">Parte 2 · PRO</span>
+      <h2>🏁 Campionato PRO</h2>
+      <ul><li>Avanti e gira, dal punto di vista del pilota</li><li>Cicli con più blocchi, poi annidati</li><li>Ripeti finché e sensori</li><li>Funzioni, labirinti, variabili, contatori</li></ul>
+      <div class="barra"><div id="b-pro" style="background:#8e5bd0;width:0"></div></div>
+      <span class="stato" id="s-pro"></span>
+      <p class="consiglio" id="c-pro"></p>
+      <span class="btn primary" style="background:#8e5bd0">Gioca la Parte 2 →</span>
+    </a>
+  </div>
+  <p class="nota">Puoi usare tutti i blocchi che vuoi nella Parte 2: le stelle premiano i programmi più corti. Nella Parte 1 alcuni livelli hanno pochi spazi apposta, per far scoprire il blocco Ripeti.</p>
+</div>
+<script>
+function leggi(k) { try { return JSON.parse(localStorage.getItem(k)) || null; } catch (e) { return null; } }
+const TOT_BASE = 24, TOT_PRO = 25;
+const b = leggi("pistaCodice"), p = leggi("pistaCodicePro");
+const fb = b && b.stars ? Object.keys(b.stars).length : 0, fp = p && p.stars ? Object.keys(p.stars).length : 0;
+document.getElementById("b-base").style.width = Math.min(100, fb / TOT_BASE * 100) + "%";
+document.getElementById("b-pro").style.width = Math.min(100, fp / TOT_PRO * 100) + "%";
+document.getElementById("s-base").textContent = fb ? `${fb} livelli su ${TOT_BASE} completati` : `${TOT_BASE} livelli`;
+document.getElementById("s-pro").textContent = fp ? `${fp} livelli su ${TOT_PRO} completati` : `${TOT_PRO} livelli`;
+document.getElementById("c-pro").textContent = fb < TOT_BASE ? "Consigliata dopo aver finito la Parte 1" : "Pronto per la PRO!";
+</script>
+<script src="a11y.js"></script>
+</body>
+</html>

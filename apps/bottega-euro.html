@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bottega degli Euro</title>
+<link rel="stylesheet" href="ptl.css">
+<style>
+:root { --accent: var(--mat); }
+.negozio { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.bancone { background: #f3e2c7; border: 3px solid var(--wood); border-radius: 14px; padding: 14px; display: grid; gap: 10px; align-content: start; min-height: 240px; }
+.bancone h2, .portafoglio h2 { margin: 0; font-family: var(--font-hand); font-weight: 400; font-size: 26px; }
+.articoli { display: flex; gap: 12px; flex-wrap: wrap; }
+.articolo { background: #fff; border: 2px solid var(--ink); border-radius: 12px; padding: 8px 12px; display: grid; justify-items: center; min-width: 110px; }
+.articolo .emo { font-size: 46px; line-height: 1.1; }
+.cartellino { font-family: var(--font-hand); font-size: 24px; background: var(--giallo); padding: 0 10px; border-radius: 6px; transform: rotate(-3deg); border: 1.5px dashed var(--ink); }
+.vassoio { background: rgba(255,255,255,.6); border: 2px dashed var(--wood); border-radius: 12px; min-height: 110px; padding: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.vassoio:empty::before { content: "Tocca i soldi del portafoglio per metterli qui"; font-family: var(--font-hand); font-size: 20px; color: var(--muted); }
+.totale { font-family: var(--font-hand); font-size: 28px; }
+.portafoglio { background: #e9eef5; border: 3px solid var(--ink); border-radius: 14px; padding: 14px; display: grid; gap: 10px; align-content: start; }
+.soldi { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.pezzo { border: 0; background: none; padding: 0; cursor: pointer; }
+.pezzo svg { display: block; }
+.pezzo:active { transform: scale(.94); }
+@media (max-width: 760px) { .negozio { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header class="app-bar"><h1>Bottega degli Euro</h1><span class="sub">Pagare e dare il resto · primaria</span></header>
+<div class="container">
+  <div class="card">
+    <div class="livelli" id="livelli"></div>
+    <p class="nota" id="contatore"></p>
+    <p class="consegna" id="consegna"></p>
+    <div class="row" style="margin-top:10px">
+      <button class="btn primary" id="verifica">✔ Controlla</button>
+      <button class="btn" id="svuota">Svuota il bancone</button>
+      <label class="row nota"><input type="checkbox" id="aiuto"> Mostra il totale</label>
+    </div>
+    <p class="feedback" id="feedback" aria-live="polite"></p>
+  </div>
+  <div class="negozio">
+    <div class="bancone">
+      <h2>🏪 Il bancone</h2>
+      <div class="articoli" id="articoli"></div>
+      <div class="vassoio" id="vassoio" aria-label="Soldi sul bancone"></div>
+      <div class="totale" id="totale" aria-live="polite"></div>
+    </div>
+    <div class="portafoglio">
+      <h2>👛 Il portafoglio</h2>
+      <div class="soldi" id="soldi"></div>
+      <p class="nota">Soldi finti per giocare. Tocca una moneta o una banconota sul bancone per rimetterla nel portafoglio.</p>
+    </div>
+  </div>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const TAGLI = [5000, 2000, 1000, 500, 200, 100, 50, 20, 10, 5, 2, 1];
+const euro = c => "€ " + (c / 100).toFixed(2).replace(".", ",");
+const nomeTaglio = c => c >= 100 ? (c / 100) + " €" : c + " cent";
+function svgPezzo(c) {
+  if (c >= 500) {
+    const col = { 500: "#9aa7a0", 1000: "#e07f74", 2000: "#6d8fd6", 5000: "#f0a04b" }[c];
+    return `<svg width="96" height="52" viewBox="0 0 96 52" role="img" aria-label="${nomeTaglio(c)}"><rect x="1" y="1" width="94" height="50" rx="5" fill="${col}" stroke="#1f2a44" stroke-width="2"/><rect x="8" y="8" width="80" height="36" rx="3" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="2"/><circle cx="26" cy="26" r="11" fill="rgba(255,255,255,.45)"/><text x="64" y="34" text-anchor="middle" font-family="Patrick Hand,cursive" font-size="24" fill="#1f2a44">${c / 100}€</text></svg>`;
+  }
+  const r = { 200: 25, 100: 23, 50: 23, 20: 21, 10: 19, 5: 20, 2: 18, 1: 16 }[c];
+  const s = r * 2 + 4;
+  let fill = c < 10 ? "#c27c3a" : c < 100 ? "#e0b43c" : null;
+  let body;
+  if (c === 100) body = `<circle cx="${s / 2}" cy="${s / 2}" r="${r}" fill="#d4d8dd" stroke="#1f2a44" stroke-width="2"/><circle cx="${s / 2}" cy="${s / 2}" r="${r * .68}" fill="#e0b43c"/>`;
+  else if (c === 200) body = `<circle cx="${s / 2}" cy="${s / 2}" r="${r}" fill="#e0b43c" stroke="#1f2a44" stroke-width="2"/><circle cx="${s / 2}" cy="${s / 2}" r="${r * .68}" fill="#d4d8dd"/>`;
+  else body = `<circle cx="${s / 2}" cy="${s / 2}" r="${r}" fill="${fill}" stroke="#1f2a44" stroke-width="2"/>`;
+  const label = c >= 100 ? `${c / 100}€` : `${c}c`;
+  return `<svg width="${s}" height="${s}" viewBox="0 0 ${s} ${s}" role="img" aria-label="${nomeTaglio(c)}">${body}<text x="${s / 2}" y="${s / 2 + 6}" text-anchor="middle" font-family="Patrick Hand,cursive" font-size="${Math.max(13, r * .72)}" fill="#1f2a44">${label}</text></svg>`;
+}
+const ARTICOLI = [["🍎", "Mela"], ["✏️", "Matita"], ["📒", "Quaderno"], ["🧃", "Succo"], ["🍕", "Pizzetta"], ["⚽", "Pallone"], ["🎒", "Zaino"], ["📚", "Libro"], ["🧸", "Orsetto"], ["🖍️", "Pastelli"], ["🍦", "Gelato"], ["🪁", "Aquilone"], ["🥐", "Brioche"], ["🧩", "Puzzle"]];
+const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const pick = () => ARTICOLI[rnd(0, ARTICOLI.length - 1)];
+function minimoPezzi(c) { let n = 0; for (const t of TAGLI) { n += Math.floor(c / t); c %= t; } return n; }
+
+const LIV = [
+  { titolo: "Monete da 1 e 2 euro", tagli: [200, 100], aiuto: true, gen: () => ({ prezzi: [rnd(1, 9) * 100] }) },
+  { titolo: "Anche le banconote", tagli: [5000, 2000, 1000, 500, 200, 100], aiuto: true, gen: () => ({ prezzi: [rnd(6, 60) * 100] }) },
+  { titolo: "Euro e mezzo", tagli: [1000, 500, 200, 100, 50], aiuto: true, gen: () => ({ prezzi: [rnd(1, 15) * 100 + 50] }) },
+  { titolo: "I centesimi", tagli: [1000, 500, 200, 100, 50, 20, 10], aiuto: false, gen: () => ({ prezzi: [rnd(1, 12) * 100 + rnd(1, 9) * 10] }) },
+  { titolo: "Tutti i centesimi", tagli: TAGLI, aiuto: false, gen: () => ({ prezzi: [rnd(0, 15) * 100 + rnd(1, 99)] }) },
+  { titolo: "Meno pezzi possibile", tagli: TAGLI, aiuto: false, minimo: true, gen: () => ({ prezzi: [rnd(1, 30) * 100 + rnd(1, 9) * 10] }) },
+  { titolo: "Dai il resto", tagli: TAGLI, aiuto: false, resto: true, gen: () => { const p = rnd(1, 18) * 100 + rnd(0, 1) * 50; return { prezzi: [p], paga: [500, 1000, 2000].find(x => x > p) }; } },
+  { titolo: "Resto con i centesimi", tagli: TAGLI, aiuto: false, resto: true, gen: () => { const p = rnd(1, 45) * 100 + rnd(1, 19) * 5; return { prezzi: [p], paga: [500, 1000, 2000, 5000].find(x => x > p) }; } },
+  { titolo: "La lista della spesa", tagli: TAGLI, aiuto: false, gen: () => ({ prezzi: Array.from({ length: rnd(2, 3) }, () => rnd(0, 6) * 100 + rnd(1, 9) * 10) }) },
+  { titolo: "Spesa e resto", tagli: TAGLI, aiuto: false, resto: true, gen: () => { const prezzi = Array.from({ length: rnd(2, 3) }, () => rnd(0, 4) * 100 + rnd(1, 9) * 10); const t = prezzi.reduce((x, y) => x + y, 0); return { prezzi, paga: [500, 1000, 2000].find(x => x > t) }; } },
+  { titolo: "Il resto più veloce", tagli: TAGLI, aiuto: false, resto: true, minimo: true, gen: () => { const p = rnd(1, 18) * 100 + rnd(1, 19) * 5; return { prezzi: [p], paga: [500, 1000, 2000].find(x => x > p) }; } }
+];
+const PER = 5;
+let prog = []; try { prog = JSON.parse(localStorage.getItem("bottegaEuro-prog")) || []; } catch (e) {}
+let liv = Math.min(prog.length, LIV.length - 1), dom = 0, sf = null, vassoio = [];
+const fb = (t, c) => { $("feedback").textContent = t; $("feedback").className = "feedback " + c; };
+const somma = () => vassoio.reduce((a, b) => a + b, 0);
+
+function disegnaLiv() {
+  $("livelli").innerHTML = LIV.map((l, i) => `<button title="${l.titolo}" class="${prog.includes(i) ? "fatto" : ""} ${i === liv ? "attivo" : ""}" ${i > 0 && !prog.includes(i - 1) && !prog.includes(i) ? "disabled" : ""} aria-label="Livello ${i + 1}: ${l.titolo}">${i + 1}</button>`).join("");
+  $("livelli").querySelectorAll("button").forEach((b, i) => b.addEventListener("click", () => { liv = i; dom = 0; nuova(); }));
+}
+function disegnaVassoio() {
+  $("vassoio").innerHTML = "";
+  vassoio.slice().sort((a, b) => b - a).forEach(c => {
+    const b = document.createElement("button"); b.className = "pezzo"; b.innerHTML = svgPezzo(c); b.setAttribute("aria-label", "Togli " + nomeTaglio(c));
+    b.addEventListener("click", () => { vassoio.splice(vassoio.indexOf(c), 1); disegnaVassoio(); });
+    $("vassoio").appendChild(b);
+  });
+  $("totale").textContent = $("aiuto").checked ? "Sul bancone: " + euro(somma()) : "";
+}
+function nuova() {
+  const L = LIV[liv]; sf = L.gen(); vassoio = []; $("aiuto").checked = !!L.aiuto;
+  sf.totale = sf.prezzi.reduce((a, b) => a + b, 0);
+  const arts = sf.prezzi.map(p => [...pick(), p]);
+  $("articoli").innerHTML = arts.map(([e, n, p]) => `<div class="articolo"><span class="emo" aria-hidden="true">${e}</span><span>${n}</span><span class="cartellino">${euro(p)}</span></div>`).join("");
+  if (L.resto) {
+    sf.target = sf.paga - sf.totale;
+    $("consegna").innerHTML = `Sei tu il negoziante! Il cliente ${sf.prezzi.length > 1 ? "compra tutto quello che c'è sul bancone" : `spende <b>${euro(sf.totale)}</b>`} e ti dà <b>${euro(sf.paga)}</b>. Metti sul bancone il <b>resto</b>${L.minimo ? ", usando <b>meno pezzi possibile</b>" : ""}.`;
+  } else if (sf.prezzi.length > 1) {
+    sf.target = sf.totale; $("consegna").innerHTML = `Compri tutto quello che c'è sul bancone. <b>Paga il prezzo giusto</b>, senza resto.`;
+  } else {
+    sf.target = sf.totale; $("consegna").innerHTML = L.minimo ? `Paga <b>${euro(sf.totale)}</b> usando <b>meno pezzi possibile</b>.` : `Paga esattamente <b>${euro(sf.totale)}</b>.`;
+  }
+  $("soldi").innerHTML = "";
+  L.tagli.slice().sort((a, b) => b - a).forEach(c => {
+    const b = document.createElement("button"); b.className = "pezzo"; b.innerHTML = svgPezzo(c); b.setAttribute("aria-label", "Metti " + nomeTaglio(c));
+    b.addEventListener("click", () => { if (vassoio.length >= 40) return; vassoio.push(c); disegnaVassoio(); fb("", ""); });
+    $("soldi").appendChild(b);
+  });
+  $("contatore").textContent = `Livello ${liv + 1} · ${L.titolo} · domanda ${dom + 1} di ${PER}`;
+  fb("", ""); disegnaLiv(); disegnaVassoio();
+}
+$("aiuto").addEventListener("change", disegnaVassoio);
+$("svuota").addEventListener("click", () => { vassoio = []; disegnaVassoio(); });
+$("verifica").addEventListener("click", () => {
+  const L = LIV[liv], s = somma();
+  if (!vassoio.length) { fb("Il bancone è vuoto: tocca i soldi del portafoglio.", "ko"); return; }
+  if (s < sf.target) { fb(`Non basta: mancano ${euro(sf.target - s)}.`, "ko"); return; }
+  if (s > sf.target) { fb(`Troppo: hai messo ${euro(s - sf.target)} in più.`, "ko"); return; }
+  if (L.minimo && vassoio.length > minimoPezzi(sf.target)) { fb(`La cifra è giusta! Ma si può fare con ${minimoPezzi(sf.target)} pezzi: tu ne hai usati ${vassoio.length}.`, "ko"); return; }
+  dom++;
+  if (dom >= PER) {
+    if (!prog.includes(liv)) prog.push(liv); try { localStorage.setItem("bottegaEuro-prog", JSON.stringify(prog)); } catch (e) {}
+    fb(liv < LIV.length - 1 ? "🎉 Livello completato!" : "🏆 Sei un vero negoziante!", "ok"); disegnaLiv();
+    if (liv < LIV.length - 1) setTimeout(() => { liv++; dom = 0; nuova(); }, 1500);
+  } else { fb("✔ Perfetto! Prossimo cliente…", "ok"); setTimeout(nuova, 1100); }
+});
+nuova();
+</script>
+<script src="a11y.js"></script>
+</body>
+</html>

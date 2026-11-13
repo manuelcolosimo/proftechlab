@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Che ore sono?</title>
+<link rel="stylesheet" href="ptl.css">
+<style>
+:root { --accent: var(--mat); }
+.gioco { display: grid; grid-template-columns: minmax(280px, 420px) 1fr; gap: 18px; align-items: start; }
+.cielo { border-radius: 18px; border: 3px solid var(--ink); padding: 16px; display: grid; justify-items: center; gap: 10px; transition: background 1s; position: relative; overflow: hidden; }
+.astro { position: absolute; top: 10px; right: 14px; font-size: 40px; }
+#orologio { width: 100%; max-width: 360px; touch-action: none; user-select: none; }
+#orologio .lancetta-m { cursor: grab; }
+.digitale { font-family: var(--font-hand); font-size: 44px; background: #101820; color: #7CFC9A; padding: 2px 18px; border-radius: 10px; letter-spacing: 2px; font-variant-numeric: tabular-nums; }
+.parole { font-family: var(--font-hand); font-size: 26px; text-align: center; background: rgba(255,255,255,.85); padding: 4px 12px; border-radius: 10px; }
+.momento { font-family: var(--font-hand); font-size: 20px; background: rgba(255,255,255,.85); padding: 2px 10px; border-radius: 99px; }
+.scelte { display: grid; gap: 8px; }
+.scelte .btn { text-align: left; }
+.scelte .btn.giusta { background: var(--ok); color: #fff; }
+.scelte .btn.sbagliata { background: var(--ko); color: #fff; }
+.mostra { display: flex; gap: 8px; flex-wrap: wrap; }
+@media (max-width: 760px) { .gioco { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header class="app-bar"><h1>Che ore sono?</h1><span class="sub">Leggere l'orologio · primaria</span></header>
+<div class="container">
+  <div class="tabs" role="tablist">
+    <button class="tab" id="tab-sfide" aria-selected="true">Sfide</button>
+    <button class="tab" id="tab-libero" aria-selected="false">Orologio libero</button>
+  </div>
+  <div class="gioco">
+    <div class="cielo" id="cielo">
+      <span class="astro" id="astro" aria-hidden="true">☀️</span>
+      <svg id="orologio" viewBox="0 0 300 300" role="img" aria-label="Orologio con le lancette">
+        <circle cx="150" cy="150" r="142" fill="#fff" stroke="#1f2a44" stroke-width="8"/>
+        <g id="tacche"></g><g id="numeri"></g>
+        <line id="lh" x1="150" y1="150" x2="150" y2="85" stroke="#d64545" stroke-width="10" stroke-linecap="round"/>
+        <g class="lancetta-m" id="gm">
+          <line id="lm" x1="150" y1="150" x2="150" y2="35" stroke="#2f6fd6" stroke-width="7" stroke-linecap="round"/>
+          <circle id="presa" cx="150" cy="35" r="16" fill="#2f6fd6" fill-opacity=".25" stroke="#2f6fd6" stroke-width="2"/>
+        </g>
+        <circle cx="150" cy="150" r="9" fill="#1f2a44"/>
+      </svg>
+      <div class="digitale" id="digitale" aria-live="polite">08:00</div>
+      <div class="parole" id="parole"></div>
+      <div class="momento" id="momento"></div>
+      <div class="mostra">
+        <label class="row nota" style="background:rgba(255,255,255,.85);padding:2px 8px;border-radius:8px"><input type="checkbox" id="mostra-dig" checked> Orologio digitale</label>
+        <label class="row nota" style="background:rgba(255,255,255,.85);padding:2px 8px;border-radius:8px"><input type="checkbox" id="mostra-par" checked> Ora in parole</label>
+      </div>
+      <p class="nota" style="background:rgba(255,255,255,.85);padding:2px 8px;border-radius:8px;margin:0">Trascina la lancetta <b style="color:#2f6fd6">blu</b> (minuti): la <b style="color:#d64545">rossa</b> (ore) la segue.</p>
+    </div>
+    <div class="card" id="box-sfida">
+      <div class="livelli" id="livelli"></div>
+      <p class="nota" id="contatore"></p>
+      <p class="consegna" id="consegna"></p>
+      <div class="scelte" id="scelte"></div>
+      <div class="row" id="numero-box" hidden style="margin-top:8px"><input type="number" id="numero" min="0" max="600"> minuti</div>
+      <div class="row" style="margin-top:12px"><button class="btn primary" id="verifica">✔ Controlla</button></div>
+      <p class="feedback" id="feedback" aria-live="polite"></p>
+    </div>
+  </div>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const NUM = ["zero","uno","due","tre","quattro","cinque","sei","sette","otto","nove","dieci","undici","dodici","tredici","quattordici","quindici","sedici","diciassette","diciotto","diciannove","venti"];
+const DECINE = { 20: "venti", 30: "trenta", 40: "quaranta", 50: "cinquanta" };
+function numParola(n) {
+  if (n <= 20) return NUM[n];
+  const d = Math.floor(n / 10) * 10, u = n % 10; let base = DECINE[d];
+  if (u === 0) return base;
+  if (u === 1 || u === 8) base = base.slice(0, -1);
+  return base + (u === 3 ? "tré" : NUM[u]);
+}
+const ORE = ["dodici","una","due","tre","quattro","cinque","sei","sette","otto","nove","dieci","undici"];
+function oraParola(h) { const k = h % 12; return k === 1 ? "l'una" : "le " + ORE[k]; }
+function inParole(tot) {
+  tot = ((tot % 1440) + 1440) % 1440;
+  const h = Math.floor(tot / 60), m = tot % 60;
+  const speciale = hh => hh % 24 === 12 ? "mezzogiorno" : hh % 24 === 0 ? "mezzanotte" : null;
+  const nome = hh => speciale(hh) || oraParola(hh);
+  const verbo = hh => (speciale(hh) ? "è " : (hh % 12 === 1 ? "è " : "sono "));
+  if (m === 0) return cap(verbo(h) + nome(h) + (speciale(h) ? "" : " in punto"));
+  if (m === 15) return cap(verbo(h) + nome(h) + " e un quarto");
+  if (m === 30) return cap(verbo(h) + nome(h) + " e mezza");
+  if (m === 45) return cap(verbo(h + 1) + nome(h + 1) + " meno un quarto");
+  if (m > 30 && m % 5 === 0) return cap(verbo(h + 1) + nome(h + 1) + " meno " + numParola(60 - m));
+  return cap(verbo(h) + nome(h) + " e " + (m === 1 ? "un minuto" : numParola(m)));
+}
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+const pad = n => String(n).padStart(2, "0");
+const dig = t => { t = ((t % 1440) + 1440) % 1440; return pad(Math.floor(t / 60)) + ":" + pad(t % 60); };
+function momento(t) {
+  const h = Math.floor((((t % 1440) + 1440) % 1440) / 60);
+  if (h < 6) return ["Notte", "🌙", "linear-gradient(#0b1633,#27345e)"];
+  if (h < 12) return ["Mattina", "🌤️", "linear-gradient(#bfe3ff,#fff5d6)"];
+  if (h < 14) return ["Mezzogiorno", "☀️", "linear-gradient(#8fd0ff,#e7f6ff)"];
+  if (h < 18) return ["Pomeriggio", "☀️", "linear-gradient(#a7d8ff,#ffe6b3)"];
+  if (h < 21) return ["Sera", "🌇", "linear-gradient(#ff9e6b,#6a4c93)"];
+  return ["Notte", "🌙", "linear-gradient(#0b1633,#27345e)"];
+}
+
+/* Disegno quadrante */
+(function () {
+  let t = "", n = "";
+  for (let i = 0; i < 60; i++) {
+    const a = i * 6 * Math.PI / 180, r1 = i % 5 ? 128 : 120;
+    t += `<line x1="${150 + Math.sin(a) * r1}" y1="${150 - Math.cos(a) * r1}" x2="${150 + Math.sin(a) * 136}" y2="${150 - Math.cos(a) * 136}" stroke="#1f2a44" stroke-width="${i % 5 ? 1.5 : 4}"/>`;
+  }
+  for (let i = 1; i <= 12; i++) {
+    const a = i * 30 * Math.PI / 180;
+    n += `<text x="${150 + Math.sin(a) * 100}" y="${150 - Math.cos(a) * 100 + 11}" text-anchor="middle" font-family="Patrick Hand,cursive" font-size="32" fill="#1f2a44">${i}</text>`;
+  }
+  $("tacche").innerHTML = t; $("numeri").innerHTML = n;
+})();
+
+let tempo = 8 * 60, passo = 1, nascondiOra = false;
+function disegna() {
+  const m = ((tempo % 60) + 60) % 60, h = ((tempo / 60) % 12 + 12) % 12;
+  $("gm").setAttribute("transform", `rotate(${m * 6} 150 150)`);
+  $("lh").setAttribute("transform", `rotate(${h * 30} 150 150)`);
+  const [nome, ico, bg] = momento(tempo);
+  $("cielo").style.background = bg; $("astro").textContent = ico;
+  const tr = Math.round(tempo);
+  $("digitale").textContent = dig(tr); $("parole").textContent = inParole(tr); $("momento").textContent = nome;
+  $("digitale").hidden = nascondiOra || !$("mostra-dig").checked;
+  $("parole").hidden = nascondiOra || !$("mostra-par").checked;
+  $("momento").hidden = nascondiOra && !mostraMomento;
+}
+$("mostra-dig").addEventListener("change", disegna); $("mostra-par").addEventListener("change", disegna);
+
+/* Trascinamento della lancetta dei minuti */
+let trascina = false, ultimoMin = 0;
+const svg = $("orologio");
+function angoloMin(e) {
+  const r = svg.getBoundingClientRect();
+  const x = (e.clientX - r.left) / r.width * 300 - 150, y = (e.clientY - r.top) / r.height * 300 - 150;
+  let a = Math.atan2(x, -y) * 180 / Math.PI; if (a < 0) a += 360; return a / 6;
+}
+svg.addEventListener("pointerdown", e => { if (bloccaLancette) return; trascina = true; svg.setPointerCapture(e.pointerId); ultimoMin = ((tempo % 60) + 60) % 60; muovi(e); });
+svg.addEventListener("pointermove", e => { if (trascina) muovi(e); });
+svg.addEventListener("pointerup", () => { if (!trascina) return; trascina = false; tempo = ((Math.round(tempo / passo) * passo) % 1440 + 1440) % 1440; disegna(); });
+function muovi(e) {
+  let m = angoloMin(e);
+  let delta = m - ultimoMin; if (delta > 30) delta -= 60; if (delta < -30) delta += 60;
+  tempo += delta; ultimoMin = m;
+  tempo = ((tempo % 1440) + 1440) % 1440;
+  disegna();
+}
+
+/* Sfide */
+const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const LIV = [
+  { tipo: "metti", passo: 60, titolo: "Ore intere", gen: () => rnd(1, 12) * 60 },
+  { tipo: "metti", passo: 30, titolo: "Mezz'ore", gen: () => rnd(1, 12) * 60 + 30 * rnd(0, 1) },
+  { tipo: "metti", passo: 15, titolo: "Quarti d'ora", gen: () => rnd(1, 12) * 60 + 15 * rnd(1, 3) },
+  { tipo: "metti", passo: 5, titolo: "Cinque minuti", gen: () => rnd(1, 12) * 60 + 5 * rnd(1, 11) },
+  { tipo: "metti", passo: 1, titolo: "Al minuto", gen: () => rnd(1, 12) * 60 + rnd(1, 59) },
+  { tipo: "leggi", passo: 15, titolo: "Leggi i quarti", gen: () => rnd(1, 12) * 60 + 15 * rnd(0, 3) },
+  { tipo: "leggi", passo: 5, titolo: "Leggi i cinque minuti", gen: () => rnd(1, 12) * 60 + 5 * rnd(1, 11) },
+  { tipo: "durata", passo: 5, titolo: "Quando finisce?" },
+  { tipo: "manca", passo: 5, titolo: "Quanto manca?" },
+  { tipo: "metti24", passo: 5, titolo: "Orario a 24 ore", gen: () => rnd(13, 23) * 60 + 5 * rnd(0, 11) },
+  { tipo: "leggi24", passo: 5, titolo: "Mattina o pomeriggio?", gen: () => rnd(7, 21) * 60 + 5 * rnd(0, 11) }
+];
+const EVENTI = [["La lezione", "inizia", 30, 60], ["La ricreazione", "inizia", 10, 20], ["Il film", "comincia", 60, 120], ["La partita", "comincia", 45, 90], ["La gita in pullman", "parte", 25, 75]];
+const PER = 5;
+let prog = []; try { prog = JSON.parse(localStorage.getItem("cheOre-prog")) || []; } catch (e) {}
+let liv = Math.min(prog.length, LIV.length - 1), dom = 0, sf = null, modo = "sfide", bloccaLancette = false, scelta = null, mostraMomento = false;
+
+function disegnaLiv() {
+  $("livelli").innerHTML = LIV.map((l, i) => `<button title="${l.titolo}" class="${prog.includes(i) ? "fatto" : ""} ${i === liv ? "attivo" : ""}" ${i > 0 && !prog.includes(i - 1) && !prog.includes(i) ? "disabled" : ""} aria-label="Livello ${i + 1}: ${l.titolo}">${i + 1}</button>`).join("");
+  $("livelli").querySelectorAll("button").forEach((b, i) => b.addEventListener("click", () => { liv = i; dom = 0; nuova(); }));
+}
+const fb = (t, c) => { $("feedback").textContent = t; $("feedback").className = "feedback " + c; };
+function nuova() {
+  const L = LIV[liv]; passo = L.passo; sf = { tipo: L.tipo }; scelta = null;
+  $("scelte").innerHTML = ""; $("numero-box").hidden = true; bloccaLancette = false; nascondiOra = false; mostraMomento = false;
+  if (L.tipo === "metti") {
+    sf.target = L.gen(); tempo = 6 * 60; nascondiOra = true;
+    const testo = inParole(sf.target).replace(/^(Sono|È) /, "").replace(/^mezzogiorno|^mezzanotte/, m => sf.target % 60 === 0 && sf.target % 720 === 0 ? "le dodici" : m).replace(/^./, c => c.toUpperCase());
+    $("consegna").innerHTML = `Sposta le lancette: <b>${testo}</b>`;
+  }
+  if (L.tipo === "leggi") {
+    sf.target = L.gen(); tempo = sf.target; bloccaLancette = true; nascondiOra = true;
+    const opz = new Set([sf.target]);
+    while (opz.size < 3) { const d = [-60, 60, L.passo, -L.passo, 30, -30][rnd(0, 5)]; opz.add(((sf.target + d - 60) % 720 + 720) % 720 + 60); }
+    const arr = [...opz].sort(() => Math.random() - .5);
+    $("consegna").innerHTML = "Guarda l'orologio: <b>che ore sono?</b>";
+    $("scelte").innerHTML = arr.map(t => `<button class="btn" data-t="${t}">${inParole(t)}</button>`).join("");
+    $("scelte").querySelectorAll("button").forEach(b => b.addEventListener("click", () => { $("scelte").querySelectorAll("button").forEach(x => x.style.outline = ""); b.style.outline = "4px solid var(--ink)"; scelta = +b.dataset.t; }));
+  }
+  if (L.tipo === "metti24") {
+    sf.target = L.gen(); tempo = 6 * 60; nascondiOra = true;
+    $("consegna").innerHTML = `L'orologio digitale segna <b>${dig(sf.target)}</b>. Che ora è sull'orologio con le lancette? Spostale tu.`;
+  }
+  if (L.tipo === "leggi24") {
+    sf.target = L.gen(); tempo = sf.target; bloccaLancette = true; nascondiOra = true; mostraMomento = true;
+    const opz = [sf.target, (sf.target + 720) % 1440, (sf.target + 5 * [1, -1, 2][rnd(0, 2)] + 1440) % 1440].sort(() => Math.random() - .5);
+    $("consegna").innerHTML = "Guarda le lancette <b>e il cielo</b>: che ora è in formato 24 ore?";
+    $("scelte").innerHTML = opz.map(t => `<button class="btn" data-t="${t}">${dig(t)}</button>`).join("");
+    $("scelte").querySelectorAll("button").forEach(b => b.addEventListener("click", () => { $("scelte").querySelectorAll("button").forEach(x => x.style.outline = ""); b.style.outline = "4px solid var(--ink)"; scelta = +b.dataset.t; }));
+  }
+  if (L.tipo === "durata") {
+    const [chi, verbo, a, b] = EVENTI[rnd(0, EVENTI.length - 1)];
+    const inizio = rnd(8, 17) * 60 + 5 * rnd(0, 11), dur = 5 * rnd(a / 5, b / 5);
+    sf.target = inizio + dur; tempo = inizio; nascondiOra = true;
+    $("consegna").innerHTML = `${chi} ${verbo} alle <b>${dig(inizio)}</b> e dura <b>${dur} minuti</b>. Sposta le lancette sull'ora in cui finisce.`;
+  }
+  if (L.tipo === "manca") {
+    const ora = rnd(8, 17) * 60 + 5 * rnd(0, 11), m = 5 * rnd(1, 18);
+    sf.target = m; tempo = ora; bloccaLancette = true; $("numero-box").hidden = false; $("numero").value = "";
+    $("consegna").innerHTML = `Sono le <b>${dig(ora)}</b>. L'appuntamento è alle <b>${dig(ora + m)}</b>. Quanti minuti mancano?`;
+  }
+  $("contatore").textContent = `Livello ${liv + 1} · ${L.titolo} · domanda ${dom + 1} di ${PER}`;
+  fb("", ""); disegnaLiv(); disegna();
+}
+$("verifica").addEventListener("click", () => {
+  if (modo !== "sfide") return;
+  let ok = false;
+  if (sf.tipo === "metti" || sf.tipo === "durata" || sf.tipo === "metti24") {
+    ok = ((Math.round(tempo) - sf.target) % 720 + 720) % 720 === 0;
+    if (!ok) { const dm = ((tempo % 60) + 60) % 60 === ((sf.target % 60) + 60) % 60; fb(dm ? "I minuti vanno bene: controlla la lancetta corta delle ore." : "Non ancora: guarda bene la lancetta lunga dei minuti.", "ko"); return; }
+  }
+  if (sf.tipo === "leggi" || sf.tipo === "leggi24") {
+    if (scelta === null) { fb("Scegli una risposta.", "ko"); return; }
+    ok = sf.tipo === "leggi24" ? scelta === sf.target : ((scelta - sf.target) % 720 + 720) % 720 === 0;
+    $("scelte").querySelectorAll("button").forEach(b => { if (+b.dataset.t === sf.target) b.classList.add("giusta"); else if (+b.dataset.t === scelta) b.classList.add("sbagliata"); });
+    if (!ok) { fb(sf.tipo === "leggi24" && Math.abs(scelta - sf.target) === 720 ? "Le lancette sono giuste, ma guarda il cielo: è mattina o pomeriggio?" : "Quasi! La risposta giusta è in verde. Riprova con la prossima.", "ko"); dom = Math.max(0, dom); setTimeout(nuova, 1800); return; }
+  }
+  if (sf.tipo === "manca") {
+    if ($("numero").value === "") { fb("Scrivi i minuti nella casella.", "ko"); return; }
+    ok = +$("numero").value === sf.target;
+    if (!ok) { fb("Non ancora. Prova a contare a salti di 5 minuti sull'orologio.", "ko"); return; }
+  }
+  nascondiOra = false; disegna();
+  dom++;
+  if (dom >= PER) {
+    if (!prog.includes(liv)) prog.push(liv); try { localStorage.setItem("cheOre-prog", JSON.stringify(prog)); } catch (e) {}
+    fb(liv < LIV.length - 1 ? "🎉 Livello completato!" : "🏆 Sei un maestro dell'orologio!", "ok"); disegnaLiv();
+    if (liv < LIV.length - 1) setTimeout(() => { liv++; dom = 0; nuova(); }, 1500);
+  } else { fb(sf.tipo === "manca" ? "✔ Giusto!" : "✔ Giusto! " + inParole(Math.round(tempo)), "ok"); setTimeout(nuova, 1400); }
+});
+function setModo(m) {
+  modo = m; $("tab-sfide").setAttribute("aria-selected", m === "sfide"); $("tab-libero").setAttribute("aria-selected", m === "libero");
+  $("box-sfida").hidden = m !== "sfide";
+  document.querySelector(".mostra").hidden = m !== "libero";
+  if (m === "libero") { passo = 1; bloccaLancette = false; nascondiOra = false; disegna(); } else nuova();
+}
+$("tab-sfide").addEventListener("click", () => setModo("sfide"));
+$("tab-libero").addEventListener("click", () => setModo("libero"));
+setModo("sfide");
+</script>
+<script src="a11y.js"></script>
+</body>
+</html>

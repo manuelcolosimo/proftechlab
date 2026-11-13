@@ -1,0 +1,920 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Parolandia</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Fredoka:wght@500;600;700&display=swap">
+<style>
+/* Layout: quaderno a quadretti (chiaro) / lavagna (scuro). Mappa per classi → schede illustrate → esercizi uno alla volta */
+:root{
+  --paper:#f7f9fc; --grid:#dfe8f4; --card:#ffffff; --line:#cdd9e8;
+  --ink:#1c2f52; --ink-soft:#56688a;
+  --blue:#2350c4; --red:#cf2e3b; --green:#1d8048; --sun:#b57f00; --sun-solid:#f2b705;
+  --blue-bg:#e6edfc; --red-bg:#fbe7e8; --green-bg:#e3f4ea; --sun-bg:#fdf3d4;
+  --on-accent:#ffffff;
+  --f-display:"Fredoka","Baloo 2","Trebuchet MS",system-ui,sans-serif;
+  --f-body:"Atkinson Hyperlegible","Verdana",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#1a2722; --grid:#22332c; --card:#21312b; --line:#365046;
+  --ink:#eef3ea; --ink-soft:#a9bbb0;
+  --blue:#93b4ff; --red:#ff8a8a; --green:#7fdc9f; --sun:#ffd45e; --sun-solid:#ffd45e;
+  --blue-bg:#263a52; --red-bg:#4a2a2d; --green-bg:#21452f; --sun-bg:#4a3f1f;
+  --on-accent:#13201b; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#1a2722; --grid:#22332c; --card:#21312b; --line:#365046;
+  --ink:#eef3ea; --ink-soft:#a9bbb0;
+  --blue:#93b4ff; --red:#ff8a8a; --green:#7fdc9f; --sun:#ffd45e; --sun-solid:#ffd45e;
+  --blue-bg:#263a52; --red-bg:#4a2a2d; --green-bg:#21452f; --sun-bg:#4a3f1f;
+  --on-accent:#13201b; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:19px;line-height:1.5;
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:24px 24px;min-height:100vh}
+.wrap{max-width:880px;margin:0 auto;padding-block:20px 48px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance;font-weight:600}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
+.hl{color:var(--blue);font-weight:700;background:var(--blue-bg);padding:0 .25em;border-radius:6px}
+.c-red{--c:var(--red);--cb:var(--red-bg)} .c-blue{--c:var(--blue);--cb:var(--blue-bg)}
+.c-green{--c:var(--green);--cb:var(--green-bg)} .c-sun{--c:var(--sun);--cb:var(--sun-bg)}
+
+/* header */
+header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.brand{display:flex;align-items:center;gap:12px}
+.brand h1{font-size:2.3rem;line-height:1;letter-spacing:.5px}
+.brand h1 span{color:var(--red)}
+.brand p{margin:4px 0 0;color:var(--ink-soft);font-size:1rem}
+.total{font-family:var(--f-display);background:var(--card);border:2px solid var(--line);border-radius:999px;padding:6px 16px;font-size:1.05rem;font-variant-numeric:tabular-nums}
+.total b{color:var(--sun)}
+
+/* schede classi */
+.tabs-wrap{overflow-x:auto;margin:0 -4px;padding:4px}
+.tabs{display:flex;gap:8px;min-width:max-content}
+.tab{background:var(--card);border:2px solid var(--line);border-radius:14px;padding:8px 14px;text-align:left;line-height:1.2}
+.tab b{display:block;font-family:var(--f-display);font-weight:600;font-size:1.02rem}
+.tab small{color:var(--ink-soft);font-size:.82rem;font-variant-numeric:tabular-nums}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.tab[aria-selected="true"] small{color:var(--paper);opacity:.8}
+
+/* mappa */
+.tappa{margin-top:24px}
+.tappa-h{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.tappa-h h2{font-size:1.35rem}
+.tappa-h small{color:var(--ink-soft);font-size:.95rem}
+.levels{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+.lv{display:flex;gap:12px;align-items:center;text-align:left;background:var(--card);border:2px solid var(--line);border-radius:16px;padding:12px 14px;min-height:84px;transition:transform .12s}
+.lv:hover:not(:disabled){transform:translateY(-2px);border-color:var(--c)}
+.lv .n{flex:none;width:46px;height:46px;border-radius:50%;display:grid;place-items:center;font-family:var(--f-display);font-size:1.3rem;font-weight:700;background:var(--cb);color:var(--c)}
+.lv .t{min-width:0}
+.lv .t b{display:block;font-family:var(--f-display);font-weight:600;font-size:1.06rem;line-height:1.2}
+.lv .t span{display:block;color:var(--ink-soft);font-size:.86rem;line-height:1.3}
+.stars{color:var(--sun-solid);letter-spacing:2px;font-size:1rem}
+.stars .off{color:var(--line)}
+.lv:disabled{opacity:.55;cursor:not-allowed}
+.lv:disabled .n{background:var(--grid);color:var(--ink-soft)}
+footer{margin-top:36px;color:var(--ink-soft);font-size:.9rem;display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+.linkbtn{background:none;border:none;text-decoration:underline;color:var(--ink-soft);padding:4px 0;font-size:.9rem}
+
+/* pagina */
+.bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.bar .back{background:var(--card);border:2px solid var(--line);border-radius:999px;padding:6px 14px;font-size:.95rem}
+.bar .lvname{font-family:var(--f-display);font-size:1.02rem;color:var(--ink-soft)}
+.sheet{position:relative;background:var(--card);border:2px solid var(--line);border-radius:18px;padding:22px 22px 22px 44px}
+.sheet::before{content:"";position:absolute;left:26px;top:0;bottom:0;width:2px;background:var(--red);opacity:.5}
+.eyebrow{font-family:var(--f-display);text-transform:uppercase;letter-spacing:1.5px;font-size:.8rem;color:var(--c,var(--blue))}
+
+/* scheda spiegazione */
+.lesson{background:var(--card);border:2px solid var(--line);border-radius:20px;overflow:hidden}
+.lesson-head{background:var(--c);color:var(--on-accent);padding:16px 22px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.lesson-head h2{font-size:1.65rem;line-height:1.15}
+.lesson-head .step{font-family:var(--f-display);font-size:.95rem;background:color-mix(in srgb,var(--on-accent) 22%,transparent);padding:4px 12px;border-radius:999px;font-variant-numeric:tabular-nums}
+.lesson-body{padding:20px 22px 22px;display:flex;flex-direction:column;gap:16px}
+.lesson-body p{margin:0;max-width:62ch;font-size:1.15rem}
+.texts{display:flex;flex-direction:column;gap:8px}
+.dots{display:flex;gap:6px}
+.dots i{width:10px;height:10px;border-radius:50%;background:var(--line)}
+.dots i.on{background:var(--c,var(--blue))}
+.nav{display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+.btn{border:none;border-radius:14px;padding:12px 22px;font-family:var(--f-display);font-weight:600;font-size:1.1rem;background:var(--blue);color:var(--on-accent);min-height:52px}
+.btn.ghost{background:var(--card);color:var(--ink);border:2px solid var(--line)}
+.btn.go{background:var(--green)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.speak{background:var(--blue-bg);color:var(--blue);border:none;border-radius:999px;padding:6px 14px;font-size:.92rem;font-weight:700;align-self:flex-start}
+
+/* mascotte e trucco */
+.trick{display:flex;gap:12px;align-items:flex-end}
+.trick svg{flex:none;width:56px;height:70px}
+.bubble{position:relative;background:var(--sun-bg);border-radius:16px 16px 16px 4px;padding:12px 16px;font-size:1.05rem;min-width:0}
+.bubble b{display:block;font-family:var(--f-display);color:var(--sun);font-size:.85rem;text-transform:uppercase;letter-spacing:1px}
+
+/* ---- componenti visivi ---- */
+.vis{display:flex;flex-direction:column;gap:10px}
+.pop>*{animation:pop .4s cubic-bezier(.3,1.5,.6,1) both;animation-delay:calc(var(--i,0)*70ms)}
+@keyframes pop{from{transform:scale(.5) translateY(8px)}to{transform:none}}
+/* lettere */
+.v-letters{display:flex;flex-wrap:wrap;gap:8px}
+.lt{width:46px;height:52px;border-radius:10px;display:grid;place-items:center;font-family:var(--f-display);font-weight:700;font-size:1.5rem;background:var(--blue-bg);color:var(--blue)}
+.lt.v{background:var(--red-bg);color:var(--red)}
+.v-letters.big .lt{width:76px;height:86px;font-size:2.6rem;border-radius:16px}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:.95rem;color:var(--ink-soft)}
+.legend span::before{content:"";display:inline-block;width:14px;height:14px;border-radius:4px;margin-right:6px;vertical-align:-2px;background:var(--k)}
+/* sillabe */
+.v-syl{display:flex;flex-direction:column;gap:10px}
+.syl-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.sy{font-family:var(--f-display);font-weight:600;font-size:1.6rem;padding:6px 14px;border-radius:12px;letter-spacing:1px}
+.sy:nth-child(odd){background:var(--blue-bg);color:var(--blue)}
+.sy:nth-child(even){background:var(--sun-bg);color:var(--sun)}
+.clap{margin-left:8px;font-family:var(--f-display);color:var(--ink-soft);font-size:1rem;white-space:nowrap}
+.clap b{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--ink);color:var(--paper);margin-left:4px}
+/* giusto / sbagliato */
+.v-vs{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.vs-h{font-family:var(--f-display);font-size:.9rem;text-transform:uppercase;letter-spacing:1px}
+.vs-h.ok{color:var(--green)} .vs-h.no{color:var(--red)}
+.vs{border-radius:12px;padding:10px 14px;font-family:var(--f-display);font-size:1.25rem;display:flex;gap:10px;align-items:center;min-width:0;overflow-wrap:anywhere}
+.vs.ok{background:var(--green-bg);color:var(--green)}
+.vs.no{background:var(--red-bg);color:var(--red)}
+.vs.no span{text-decoration:line-through;text-decoration-thickness:3px}
+.vs i{font-style:normal;font-weight:700;flex:none}
+/* gruppi */
+.v-groups{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.grp{border-radius:14px;overflow:hidden;border:2px solid var(--gc)}
+.grp h4{margin:0;background:var(--gc);color:var(--on-accent);font-family:var(--f-display);font-weight:600;font-size:1rem;padding:8px 12px;line-height:1.25}
+.grp ul{list-style:none;margin:0;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.grp li{font-size:1.08rem}
+.g0{--gc:var(--red)} .g1{--gc:var(--blue)} .g2{--gc:var(--green)} .g3{--gc:var(--sun)}
+/* tabella */
+.tbl{overflow-x:auto;border:2px solid var(--line);border-radius:14px}
+.tbl table{border-collapse:collapse;width:100%;font-size:1.02rem}
+.tbl th{background:var(--cb,var(--blue-bg));color:var(--c,var(--blue));font-family:var(--f-display);font-weight:600;text-align:left;padding:8px 12px;white-space:nowrap}
+.tbl td{padding:8px 12px;border-top:1px solid var(--line);vertical-align:top}
+.tbl td:first-child{font-weight:700}
+/* frase analizzata */
+.v-sent{display:flex;flex-wrap:wrap;gap:14px 10px;align-items:flex-start;padding:6px 0}
+.chunk{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
+.chunk .w{font-family:var(--f-display);font-size:1.45rem;font-weight:500;padding:2px 10px 4px;border-bottom:5px solid var(--sc,transparent);border-radius:8px 8px 0 0;background:var(--sb,transparent)}
+.chunk .l{font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--sc,var(--ink-soft));text-align:center;max-width:16ch;line-height:1.2}
+.k-s{--sc:var(--red);--sb:var(--red-bg)} .k-p{--sc:var(--blue);--sb:var(--blue-bg)}
+.k-o{--sc:var(--green);--sb:var(--green-bg)} .k-x{--sc:var(--sun);--sb:var(--sun-bg)}
+/* linea del tempo */
+.v-time{list-style:none;margin:0;padding:0;display:flex;position:relative}
+.v-time::before{content:"";position:absolute;left:0;right:0;top:34px;height:4px;background:var(--line);border-radius:2px}
+.v-time li{flex:1;display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;position:relative;min-width:0}
+.v-time .when{font-size:.85rem;color:var(--ink-soft);font-weight:700;text-transform:uppercase;letter-spacing:.6px;height:22px}
+.v-time .dot{width:18px;height:18px;border-radius:50%;background:var(--c,var(--blue));border:4px solid var(--card);box-shadow:0 0 0 2px var(--c,var(--blue))}
+.v-time .vb{font-family:var(--f-display);font-size:1.25rem;font-weight:600}
+.v-time .tn{font-size:.82rem;color:var(--ink-soft)}
+.v-time li.now .vb{color:var(--c)}
+/* trasformazioni */
+.v-swap{display:flex;flex-direction:column;gap:8px}
+.sw{display:grid;grid-template-columns:1fr auto 1fr auto;gap:10px;align-items:center;background:var(--paper);border-radius:12px;padding:10px 14px}
+.sw .a,.sw .b{font-size:1.1rem;min-width:0}
+.sw .ar{color:var(--ink-soft);font-weight:700;font-size:1.3rem}
+.badge{font-family:var(--f-display);font-size:.85rem;font-weight:600;border-radius:999px;padding:3px 10px;white-space:nowrap}
+.badge.ok{background:var(--green-bg);color:var(--green)} .badge.no{background:var(--red-bg);color:var(--red)}
+/* carte da girare */
+.v-reveal{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.rv{border:2px dashed var(--c,var(--blue));background:var(--cb,var(--blue-bg));border-radius:14px;padding:14px;text-align:left;display:flex;flex-direction:column;gap:6px;min-height:88px}
+.rv .rq{font-family:var(--f-display);font-size:1.12rem;font-weight:500}
+.rv .ra{font-size:1.02rem}
+.rv .tap{font-size:.82rem;color:var(--ink-soft);font-weight:700;text-transform:uppercase;letter-spacing:.8px}
+.rv[aria-expanded="true"]{border-style:solid;background:var(--card)}
+/* equazioni */
+.v-eq{display:flex;flex-direction:column;gap:8px}
+.eq{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.eq .t{font-family:var(--f-display);font-size:1.3rem;padding:4px 12px;border-radius:10px;background:var(--blue-bg);color:var(--blue)}
+.eq .t.r{background:var(--green-bg);color:var(--green);font-weight:600}
+.eq .op{font-weight:700;color:var(--ink-soft);font-size:1.2rem}
+/* gradini */
+.v-steps{display:flex;align-items:flex-end;gap:8px}
+.stp{flex:1;border-radius:12px 12px 0 0;display:flex;flex-direction:column;justify-content:flex-end;padding:10px;min-width:0;background:var(--sc);color:var(--on-accent)}
+.stp b{font-family:var(--f-display);font-size:1.2rem;line-height:1.15;overflow-wrap:anywhere}
+.stp small{font-size:.8rem;text-transform:uppercase;letter-spacing:.6px;font-weight:700;opacity:.9}
+/* parole chip */
+.v-chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font-family:var(--f-display);font-size:1.35rem;padding:6px 16px;border-radius:999px;background:var(--cb,var(--blue-bg));color:var(--c,var(--blue));font-weight:600}
+/* esempio */
+.example{background:var(--paper);border:2px dashed var(--line);border-radius:12px;padding:12px 16px;font-size:1.2rem;font-family:var(--f-display)}
+
+/* esercizi */
+.progress{display:flex;gap:6px;flex:1;min-width:140px}
+.progress i{flex:1;height:10px;border-radius:6px;background:var(--grid)}
+.progress i.ok{background:var(--green)} .progress i.no{background:var(--red)} .progress i.cur{background:var(--blue)}
+.q{font-size:1.4rem;font-family:var(--f-display);font-weight:500;margin:6px 0 18px;line-height:1.4}
+.blank{display:inline-block;min-width:3.2em;border-bottom:3px solid var(--ink);text-align:center;padding:0 .2em}
+.blank.ok{color:var(--green);border-color:var(--green)}
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.opt{background:var(--card);border:3px solid var(--line);border-radius:14px;padding:14px;font-size:1.22rem;font-family:var(--f-display);font-weight:500;min-height:64px}
+.opt:hover:not(:disabled){border-color:var(--blue)}
+.opt.ok{border-color:var(--green);background:var(--green-bg)}
+.opt.no{border-color:var(--red);background:var(--red-bg)}
+.opt:disabled{cursor:default}
+.tokens{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+.tok{background:var(--card);border:3px solid var(--line);border-radius:12px;padding:10px 16px;font-size:1.3rem;font-family:var(--f-display);min-width:52px}
+.tok.letter{width:60px;height:64px;padding:0;font-size:1.8rem;font-weight:600}
+.tok.sel{border-color:var(--blue);background:var(--blue-bg)}
+.tok.ok{border-color:var(--green);background:var(--green-bg)}
+.tok.no{border-color:var(--red);background:var(--red-bg)}
+.tok.miss{border-color:var(--green);border-style:dashed}
+.tok:disabled{cursor:default}
+.fb{margin-top:18px;border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.fb.ok{background:var(--green-bg)} .fb.no{background:var(--red-bg)}
+.fb h3{font-size:1.3rem}
+.fb.ok h3{color:var(--green)} .fb.no h3{color:var(--red)}
+.fb p{margin:0;font-size:1.05rem}
+.fb .row{display:flex;justify-content:flex-end}
+
+/* risultato */
+.result{text-align:center;padding:10px 0;display:flex;flex-direction:column;align-items:center;gap:6px}
+.result svg{width:84px;height:104px}
+.result .big{font-size:3.2rem;color:var(--sun-solid);letter-spacing:6px}
+.result .big .off{color:var(--line)}
+.result h2{font-size:2rem}
+.result p{font-size:1.15rem;color:var(--ink-soft);margin:0 auto;max-width:46ch}
+.result .nav{justify-content:center;margin-top:12px}
+
+/* ripasso */
+.modal{position:fixed;inset:0;background:color-mix(in srgb,var(--ink) 45%,transparent);display:grid;place-items:center;z-index:20;
+  padding:16px max(16px,env(safe-area-inset-right,0px)) 16px max(16px,env(safe-area-inset-left,0px))}
+.modal .lesson{max-width:680px;width:100%;max-height:88vh;overflow:auto}
+@media (max-width:560px){
+  body{font-size:17px}
+  .sheet{padding:18px 16px 18px 34px}
+  .sheet::before{left:18px}
+  .q{font-size:1.22rem}
+  .tok.letter{width:52px;height:58px}
+  .brand h1{font-size:1.9rem}
+  .lesson-head{padding:14px 16px} .lesson-body{padding:16px}
+  .lesson-head h2{font-size:1.4rem}
+  .v-letters.big .lt{width:58px;height:66px;font-size:2rem}
+  .sw{grid-template-columns:1fr auto;}
+  .sw .ar{display:none}
+  .sw .b{grid-column:1}
+  .v-time{flex-direction:column;gap:10px;padding-left:8px}
+  .v-time::before{left:16px;right:auto;top:0;bottom:0;width:4px;height:auto}
+  .v-time li{flex-direction:row;text-align:left;gap:10px}
+  .v-time .when{order:3;height:auto;font-size:.75rem}
+  .v-time .dot{order:0} .v-time .vb{order:1} .v-time .tn{order:2}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="wrap" id="app"></div>
+
+<script>
+(function(){
+/* ---------- utilità ---------- */
+const $=h=>{const d=document.createElement('div');d.innerHTML=h.trim();return d.firstElementChild};
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const md=s=>esc(s).replace(/\*(.+?)\*/g,'<span class="hl">$1</span>');
+const plain=s=>String(s).replace(/\*/g,'').replace(/_{3}/g,'…');
+const canSpeak='speechSynthesis' in window;
+function speak(t){try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(plain(t));u.lang='it-IT';u.rate=.9;speechSynthesis.speak(u)}catch(e){}}
+const MASCOT=`<svg viewBox="0 0 60 76" aria-hidden="true"><circle cx="30" cy="28" r="24" fill="var(--red)"/><path d="M40 46 Q43 64 18 74 Q33 61 26 50 Z" fill="var(--red)"/><circle cx="22" cy="24" r="6" fill="#fff"/><circle cx="38" cy="24" r="6" fill="#fff"/><circle cx="23" cy="25" r="3" fill="#1c2f52"/><circle cx="39" cy="25" r="3" fill="#1c2f52"/><path d="M21 35 Q30 43 39 35" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/></svg>`;
+
+// C = scelta multipla (la prima risposta è quella giusta, poi vengono mescolate). T = tocca le parti giuste.
+const C=(q,a,w,h)=>({t:'c',q,a,o:[a,...w],h});
+const T=(q,s,a,h)=>({t:'tap',q,w:s.includes('|')?s.split('|'):s.split(' '),a,h});
+const spell=(pairs,h)=>pairs.map(([a,b])=>C('Come si scrive?',a,[b],h));
+// componenti visivi delle spiegazioni
+const V={
+ letters:(s,big)=>({k:'letters',s,big}), syl:w=>({k:'syl',w}), vs:rows=>({k:'vs',rows}),
+ groups:g=>({k:'groups',g}), table:(head,rows)=>({k:'table',head,rows}), sent:parts=>({k:'sent',parts}),
+ time:items=>({k:'time',items}), swap:rows=>({k:'swap',rows}), reveal:items=>({k:'reveal',items}),
+ eq:rows=>({k:'eq',rows}), steps:items=>({k:'steps',items}), chips:items=>({k:'chips',items}), ex:t=>({k:'ex',t})
+};
+
+/* ---------- generatori (livelli 1 e 2) ---------- */
+const VOC='AEIOU',CONS='BCDFGLMNPRSTVZ';
+const W1=['LUNA','MELA','SOLE','CASA','PANE','TOPO','FATA','NIDO','RANA','VASO','PERA','DADO','RUOTA','PALLA','LIBRO'];
+function genL1(){
+  const tapV=()=>{const w=pick(W1),L=[...w];return {t:'tap',letters:true,q:`Tocca tutte le *vocali* di ${w}.`,w:L,a:L.map((c,i)=>VOC.includes(c)?i:-1).filter(i=>i>=0),h:'Le vocali sono 5: A, E, I, O, U.'}};
+  const tapC=()=>{const w=pick(W1),L=[...w];return {t:'tap',letters:true,q:`Tocca tutte le *consonanti* di ${w}.`,w:L,a:L.map((c,i)=>VOC.includes(c)?-1:i).filter(i=>i>=0),h:'Le consonanti sono tutte le lettere che non sono A, E, I, O, U.'}};
+  const vow=()=>C('Quale lettera è una *vocale*?',pick(VOC),shuffle([...CONS]).slice(0,2),'Le vocali sono 5: A, E, I, O, U.');
+  const con=()=>C('Quale lettera è una *consonante*?',pick(CONS),shuffle([...VOC]).slice(0,2),'Se non è A, E, I, O, U, è una consonante.');
+  const cnt=()=>{const w=pick(W1),vs=[...w].filter(c=>VOC.includes(c)),n=vs.length;return C(`Quante vocali ci sono in ${w}?`,String(n),[n-1,n+1,n+2].filter(x=>x>0).slice(0,2).map(String),`In ${w} le vocali sono: ${vs.join(', ')}.`)};
+  return shuffle([tapV(),vow(),tapC(),con(),cnt(),pick([tapV,tapC])()]);
+}
+const SIL=[['CA','SA'],['GAT','TO'],['PAL','LA'],['PA','NE'],['TA','VO','LO'],['FIO','RE'],['LI','BRO'],['MAM','MA'],['SCUO','LA'],['FAR','FAL','LA'],['E','LE','FAN','TE'],['PAL','LO','NE'],['GE','LA','TO'],['SO','LE'],['MA','TI','TA'],['TOR','TA'],['FI','NE','STRA']];
+function genL2(){
+  const divide=s=>{const w=s.join(''),pos=[];let p=0;s.slice(0,-1).forEach(x=>{p+=x.length;pos.push(p)});
+    const right=s.join(' - '),wrong=new Set();
+    pos.forEach((q,k)=>[-1,1].forEach(d=>{const np=pos.slice();np[k]=q+d;
+      if(!np.every((v,i)=>v>(i?np[i-1]:0)&&v<w.length))return;
+      const parts=[];let last=0;np.forEach(v=>{parts.push(w.slice(last,v));last=v});parts.push(w.slice(last));
+      const str=parts.join(' - ');if(str!==right)wrong.add(str)}));
+    return C(`Come si divide in sillabe *${w}*?`,right,shuffle([...wrong]).slice(0,2),`Si divide così: ${right}. Le doppie si separano sempre.`)};
+  const count=s=>{const n=s.length;return C(`Quante sillabe ha *${s.join('')}*?`,String(n),[n-1,n+1,n+2].filter(x=>x>0).slice(0,2).map(String),`Batti le mani: ${s.join(' - ')}. Sono ${n} sillabe.`)};
+  return shuffle(shuffle(SIL).slice(0,6).map((s,i)=>i<3?divide(s):count(s)));
+}
+
+/* ---------- struttura: classi → tappe → livelli ---------- */
+const GROUPS=[
+ {name:'Primaria 1ª–2ª',sub:'Lettere, parole, prime frasi'},
+ {name:'Primaria 3ª–5ª',sub:'Ortografia e parti del discorso'},
+ {name:'1ª media',sub:'Morfologia'},
+ {name:'2ª media',sub:'Analisi logica'},
+ {name:'3ª media',sub:'Analisi del periodo'}
+];
+const TAPPE=[
+ {g:0,name:'Lettere e suoni',sub:'Le basi per leggere e scrivere',color:'c-red'},
+ {g:0,name:'Scrivere giusto',sub:'Gli errori più comuni',color:'c-blue'},
+ {g:0,name:'Le parole',sub:'Che tipo di parola è?',color:'c-green'},
+ {g:0,name:'La frase',sub:'Mettere insieme le parole',color:'c-sun'},
+ {g:1,name:'Ortografia',sub:'Apostrofi, accenti, punteggiatura',color:'c-blue'},
+ {g:1,name:'Le parti del discorso',sub:'Pronomi, verbi, preposizioni e altro',color:'c-green'},
+ {g:2,name:'Nome e pronome',sub:'Come nascono le parole',color:'c-red'},
+ {g:2,name:'Il verbo',sub:'Modi, forme e usi',color:'c-blue'},
+ {g:2,name:'Ripasso',sub:'Tutte le parti del discorso',color:'c-sun'},
+ {g:3,name:'Il cuore della frase',sub:'Soggetto, predicato e dintorni',color:'c-red'},
+ {g:3,name:'I complementi',sub:'Le informazioni in più',color:'c-green'},
+ {g:4,name:'Le proposizioni',sub:'Come si costruisce un periodo',color:'c-blue'},
+ {g:4,name:'Le subordinate',sub:'Che lavoro fa ogni proposizione?',color:'c-sun'}
+];
+
+const LEVELS=[
+/* ===== PRIMARIA 1ª–2ª ===== */
+{tappa:0,title:'Vocali e consonanti',sub:'Le lettere dell\'alfabeto',up:true,gen:genL1,ex:[
+ {h:'Le lettere',p:['Le parole sono fatte di *lettere*.','L\'alfabeto italiano ha *21 lettere*.'],v:[V.letters('ABCDEFGHILMNOPQRSTUVZ'),{k:'legend'}]},
+ {h:'Le vocali',p:['Le *vocali* sono 5. Le diciamo con la bocca aperta e la voce può andare avanti a lungo: aaaaa!'],v:[V.letters('AEIOU',true)]},
+ {h:'Le consonanti',p:['Tutte le altre lettere sono *consonanti*. Da sole suonano poco: hanno bisogno di una vocale.','Guarda LUNA: L e N sono consonanti (blu), U e A sono vocali (rosse).'],v:[V.letters('LUNA',true)],trick:'A, E, I, O, U: le vocali non sono di più!'}]},
+{tappa:0,title:'Le sillabe',sub:'Dividere le parole in pezzetti',up:true,gen:genL2,ex:[
+ {h:'Pezzetti di parola',p:['Se diciamo una parola piano piano, la dividiamo in pezzetti: le *sillabe*.','Batti le mani a ogni pezzetto!'],v:[V.syl(['CA-SA','PA-NE'])]},
+ {h:'Ogni sillaba ha una vocale',p:['Ogni sillaba ha sempre *almeno una vocale*.'],v:[V.syl(['TA-VO-LO','FAR-FAL-LA','E-LE-FAN-TE'])]},
+ {h:'Le doppie si separano',p:['Quando ci sono due lettere uguali vicine, le *doppie*, una va di qua e una di là.'],v:[V.syl(['GAT-TO','PAL-LA','MAM-MA']),V.reveal([['Quante sillabe ha PALLONE?','PAL - LO - NE: 3 sillabe!'],['Come si divide SCUOLA?','SCUO - LA: 2 sillabe.']])],trick:'Doppie? Una di qua e una di là!'}]},
+{tappa:0,title:'CHE, CHI, GHE, GHI',sub:'Suono duro e suono dolce',up:true,ex:[
+ {h:'Duro o dolce?',p:['Ascolta la C di CANE: è un suono *duro*. Ascolta la C di CIAO: è un suono *dolce*.'],v:[V.groups([['Suono duro','CANE','GATTO','CHIAVE'],['Suono dolce','CIAO','GELATO','CENA']])]},
+ {h:'La tabella magica',p:['Davanti a E e I, la C e la G diventano dolci. Per farle tornare dure aggiungiamo la *H*.'],v:[V.table(['','con A, O, U','con E, I','con H + E, I'],[['C','CA · CO · CU','CE · CI','*CHE · CHI*'],['G','GA · GO · GU','GE · GI','*GHE · GHI*']])]},
+ {h:'Attenti agli errori',p:['Ecco come si scrive e come non si scrive.'],v:[V.vs([['CHIAVE','CIAVE'],['MUCCHE','MUCCE'],['SPAGHETTI','SPAGETTI']])],trick:'Suono duro davanti a E e I? Metti la H: CHE, CHI, GHE, GHI.'}],
+ pool:[...spell([['CHIAVE','CIAVE'],['CHIODO','CIODO'],['MUCCHE','MUCCE'],['FICHI','FICI'],['LAGHI','LAGI'],['GHEPARDO','GEPARDO'],['SPAGHETTI','SPAGETTI'],['RIGHELLO','RIGELLO'],['BANCHE','BANCE'],['OCHE','OCE'],['CHIESA','CIESA'],['PACCHETTO','PACCETTO']]),
+  C('Ascolta la C di *CENA*. Che suono è?','dolce, come in CIAO',['duro, come in CANE'],'Davanti a E la C senza H fa il suono dolce.'),
+  C('Ascolta *CHIOCCIOLA*. All\'inizio senti un suono...','duro, come in CANE',['dolce, come in CIAO'],'CHI ha la H: il suono è duro.')]},
+{tappa:0,title:'GN e GLI',sub:'Due suoni speciali',up:true,ex:[
+ {h:'Il suono GN',p:['GN fa un suono speciale, come in GNOMO e RAGNO.','Di solito *non serve la I*.'],v:[V.vs([['RAGNO','RAGNIO'],['LAVAGNA','LAVAGNIA'],['BAGNO','BAGNIO']])]},
+ {h:'Il suono GLI',p:['GLI fa un altro suono speciale, come in FOGLIA. Qui la *I serve sempre*.'],v:[V.vs([['FOGLIA','FOLIA'],['CONIGLIO','CONILIO'],['FAMIGLIA','FAMILLIA']])],trick:'GN di solito senza I. GLI sempre con la I.'}],
+ pool:spell([['RAGNO','RAGNIO'],['BAGNO','BAGNIO'],['LAVAGNA','LAVAGNIA'],['MONTAGNA','MONTAGNIA'],['CIGNO','CIGNIO'],['CASTAGNA','CASTAGNIA'],['FOGLIA','FOLIA'],['CONIGLIO','CONILIO'],['FAMIGLIA','FAMILLIA'],['AGLIO','ALIO'],['BOTTIGLIA','BOTTILIA'],['MAGLIA','MALIA']],'GN di solito senza I. GLI sempre con la I.')},
+{tappa:1,title:'Le doppie',sub:'Una lettera o due?',ex:[
+ {h:'Che cosa sono le doppie',p:['Alcune parole hanno due consonanti uguali vicine: le *doppie*. Quando le diciamo, la voce si ferma un attimo e la lettera suona più forte.'],v:[V.syl(['GAT-TO','PIZ-ZA','TET-TO'])]},
+ {h:'Una doppia cambia tutto',p:['Con o senza doppia, la parola può voler dire un\'altra cosa!'],v:[V.table(['Senza doppia','Con la doppia'],[['PALA: per scavare','PALLA: per giocare'],['CAPELLO: sulla testa','CAPPELLO: si mette in testa'],['NONA: al nono posto','NONNA: la mamma di mamma o papà']])],trick:'Di\' la parola piano. Se la voce si ferma e "spinge", è una doppia.'}],
+ pool:[...spell([['gatto','gato'],['mamma','mama'],['tetto','teto'],['pizza','piza'],['sasso','saso'],['bottiglia','botiglia'],['carrozza','carozza'],['pallone','palone'],['zucchero','zuchero'],['cammello','camello']],'Dilla piano: senti la voce che si ferma? È una doppia.'),
+  C('Gioco con la ___ in giardino.','palla',['pala'],'PALLA serve per giocare. PALA serve per scavare.'),
+  C('Metto il ___ in testa perché fa freddo.','cappello',['capello'],'CAPPELLO si mette in testa. CAPELLO è un pelo della testa.'),
+  C('La ___ mi racconta una storia.','nonna',['nona'],'NONNA è la mamma di mamma o papà. NONA vuol dire "al nono posto".'),
+  C('Il ___ abbaia al postino.','cane',['canne'],'CANE è l\'animale. CANNE sono piante lunghe e sottili.')]},
+{tappa:1,title:'La H del verbo avere',sub:'HO o O? HA o A?',tip:'Trucco: cambia con AVEVO, AVEVI, AVEVA, AVEVANO. Se funziona, ci vuole la H.',ex:[
+ {h:'Con la H o senza?',p:['Il verbo *avere* in quattro casi vuole la H. Le parole senza H sono altre parole.'],v:[V.groups([['Con la H: verbo avere','io HO','tu HAI','lui, lei HA','loro HANNO'],['Senza H: altre parole','O: vuol dire "oppure"','AI: ai nonni','A: vado a scuola','ANNO: 12 mesi']])]},
+ {h:'Il trucco di AVEVA',p:['Prova a cambiare la parola con AVEVO, AVEVI, AVEVA, AVEVANO.'],v:[V.swap([['Marco *ha* fame','Marco *aveva* fame',1],['Vado *a* scuola','Vado *aveva* scuola',0],['Io *ho* un cane','Io *avevo* un cane',1]])],trick:'Se con AVEVA la frase funziona, ci vuole la H!'}],
+ pool:[C('Io ___ un cane bianco.','ho',['o'],'"Io avevo un cane": funziona, quindi HO con la H.'),C('Vuoi il succo ___ il latte?','o',['ho'],'Qui vuol dire "oppure": senza H.'),
+  C('Marco ___ tanta fame.','ha',['a'],'"Marco aveva fame": funziona, quindi HA.'),C('Domani vado ___ scuola.','a',['ha'],'"Vado aveva scuola" non funziona: senza H.'),
+  C('I bambini ___ i pattini nuovi.','hanno',['anno'],'"I bambini avevano i pattini": funziona, quindi HANNO.'),C('Un ___ ha dodici mesi.','anno',['hanno'],'ANNO sono 12 mesi: senza H.'),
+  C('Tu ___ una bici rossa?','hai',['ai'],'"Tu avevi una bici": funziona, quindi HAI.'),C('Porto i fiori ___ nonni.','ai',['hai'],'"Porto i fiori avevi nonni" non funziona: senza H.'),
+  C('Lucia ___ gli occhi verdi.','ha',['a'],'"Lucia aveva gli occhi verdi": funziona, quindi HA.'),C('Io ___ sete, mi dai l\'acqua?','ho',['o'],'"Io avevo sete": funziona, quindi HO.'),
+  C('Gioco ___ calcio con Paolo.','a',['ha'],'"Gioco aveva calcio" non funziona: senza H.')]},
+{tappa:1,title:'È oppure E',sub:'Con l\'accento o senza?',tip:'Trucco: prova con ERA. Se funziona, ci vuole È con l\'accento.',ex:[
+ {h:'Due parole diverse',p:['*È* con l\'accento è il verbo essere. *E* senza accento unisce due parole.'],v:[V.groups([['È: verbo essere','Il cielo è azzurro.','Oggi è lunedì.'],['E: unisce','pane e latte','Anna e Luca']])]},
+ {h:'Il trucco di ERA',p:['Prova a mettere ERA al posto della parola.'],v:[V.swap([['La torta *è* buona','La torta *era* buona',1],['pane *e* latte','pane *era* latte',0]])],trick:'Se con ERA la frase funziona, scrivi È con l\'accento.'}],
+ pool:[C('Il cielo ___ azzurro.','è',['e'],'"Il cielo era azzurro": funziona, quindi È.'),C('Mangio pane ___ marmellata.','e',['è'],'Qui unisce due cose: E senza accento.'),
+  C('Luca ___ molto simpatico.','è',['e'],'"Luca era simpatico": funziona, quindi È.'),C('Mamma ___ papà vanno al mare.','e',['è'],'Unisce mamma e papà: E senza accento.'),
+  C('Oggi ___ lunedì.','è',['e'],'"Era lunedì": funziona, quindi È.'),C('Il gatto ___ il topo giocano.','e',['è'],'Unisce gatto e topo: E senza accento.'),
+  C('La torta ___ buonissima.','è',['e'],'"La torta era buonissima": funziona, quindi È.'),C('Leggo ___ poi scrivo.','e',['è'],'Unisce due azioni: E senza accento.'),
+  C('Dov\'___ la mia matita?','è',['e'],'"Dov\'era la mia matita?": funziona, quindi È.')]},
+{tappa:2,title:'I nomi',sub:'Persone, animali e cose',ex:[
+ {h:'Che cos\'è un nome',p:['I *nomi* sono le parole che usiamo per chiamare persone, animali e cose.'],v:[V.groups([['Persone','maestra','papà','pompiere'],['Animali','gatto','cavallo','farfalla'],['Cose','zaino','tavolo','pane']])]},
+ {h:'Nomi propri e comuni',p:['I *nomi propri* chiamano una persona, un animale o un posto preciso: si scrivono con la *maiuscola*.'],v:[V.groups([['Nomi propri: maiuscola','Luca','Roma','Fido'],['Nomi comuni: minuscola','bambino','città','cane']])],trick:'Per trovare un nome chiediti: posso metterci davanti IL, LO, LA o UN?'}],
+ pool:[C('Quale parola è un *nome*?','tavolo',['corre','bello']),C('Quale parola è un *nome*?','maestra',['canta','alto']),C('Quale parola è un *nome*?','farfalla',['vola','piccola']),
+  C('MAESTRA è il nome di...','una persona',['un animale','una cosa']),C('CAVALLO è il nome di...','un animale',['una persona','una cosa']),C('ZAINO è il nome di...','una cosa',['una persona','un animale']),C('POMPIERE è il nome di...','una persona',['un animale','una cosa']),
+  C('Quale nome va scritto con la *maiuscola*?','luca → Luca',['bambino → Bambino','scuola → Scuola'],'Luca è un nome proprio: il nome di una persona precisa.'),
+  C('Quale nome va scritto con la *maiuscola*?','milano → Milano',['città → Città','strada → Strada'],'Milano è il nome di una città precisa.'),
+  T('Tocca il *nome*.','Il gatto dorme',[1],'GATTO è il nome di un animale.'),T('Tocca il *nome*.','La nonna cucina',[1],'NONNA è il nome di una persona.'),
+  T('Tocca i *due nomi*.','Il bambino mangia la mela',[1,4],'BAMBINO (persona) e MELA (cosa).'),T('Tocca i *due nomi*.','Anna legge un libro',[0,3],'ANNA (persona) e LIBRO (cosa).')]},
+{tappa:2,title:'Maschile e femminile, uno o tanti',sub:'Genere e numero dei nomi',ex:[
+ {h:'Maschile o femminile',p:['I nomi possono essere *maschili* o *femminili*.'],v:[V.groups([['Maschile','il gatto','il libro','il nonno'],['Femminile','la gatta','la casa','la nonna']])]},
+ {h:'Uno o tanti',p:['*Singolare* vuol dire uno solo. *Plurale* vuol dire tanti.'],v:[V.table(['','Singolare: uno','Plurale: tanti'],[['maschile','un libr*o*','tanti libr*i*'],['femminile','una cas*a*','tante cas*e*'],['in -E','un fior*e*','tanti fior*i*']])],trick:'Metti davanti UN o UNA per il genere. Metti TANTI o TANTE per il plurale.'}],
+ pool:[C('GATTA è...','femminile',['maschile'],'Si dice UNA gatta: femminile.'),C('LIBRO è...','maschile',['femminile'],'Si dice UN libro: maschile.'),C('STELLE è...','plurale',['singolare'],'Sono tante stelle: plurale.'),C('FIORE è...','singolare',['plurale'],'È un fiore solo: singolare.'),
+  C('Il plurale di LIBRO è...','libri',['libre','libro']),C('Il plurale di CASA è...','case',['casi','casa']),C('Il plurale di FIORE è...','fiori',['fiora','fiore']),
+  C('Il femminile di MAESTRO è...','maestra',['maestri','maestre']),C('Il femminile di GATTO è...','gatta',['gatti','gatte']),C('Il maschile di NONNA è...','nonno',['nonne','nonni']),C('Il singolare di PANINI è...','panino',['panina','panini']),
+  C('MELE è...','femminile plurale',['maschile singolare','femminile singolare'],'TANTE mele: femminile e plurale.'),C('CANI è...','maschile plurale',['femminile plurale','maschile singolare'],'TANTI cani: maschile e plurale.')]},
+{tappa:2,title:'Gli articoli',sub:'IL, LO, LA, UN, UNA...',ex:[
+ {h:'Le parole che stanno davanti',p:['L\'*articolo* è una piccola parola che sta davanti al nome.'],v:[V.table(['','Maschile','Femminile'],[['uno solo','il · lo · l\'','la · l\''],['tanti','i · gli','le']])]},
+ {h:'Quando si usa LO e GLI',p:['LO e GLI vanno davanti a Z, GN e S + consonante. L\' va davanti a vocale.'],v:[V.groups([['LO / GLI','lo zaino','lo scoiattolo','gli gnomi'],["L' davanti a vocale","l'albero","l'ape","l'orso"]])]},
+ {h:'Un, uno, una',p:['Questi articoli li usiamo per una cosa qualsiasi, non per una cosa precisa.'],v:[V.chips(['un treno','uno zio','una mela',"un'amica"])],trick:"UN' con l'apostrofo solo per le parole femminili che iniziano con vocale: un'amica, ma un amico."}],
+ pool:[C('___ cane','il',['lo','la']),C('___ zaino','lo',['il','la'],'Davanti a Z si usa LO.'),C('___ stella','la',['il','lo']),C('___ albero',"l'",['il','la'],"Davanti a vocale si usa L'."),
+  C('___ gatti','i',['gli','le']),C('___ gnomi','gli',['i','le'],'Davanti a GN si usa GLI.'),C('___ scarpe','le',['gli','i']),C('___ zio','lo',['il','la'],'Davanti a Z si usa LO.'),C('___ elefanti','gli',['i','le'],'Plurale maschile davanti a vocale: GLI.'),
+  C('___ sedia','una',['un','uno']),C('___ scoiattolo','uno',['un','una'],'S + consonante: UNO.'),C('___ amica',"un'",['un','uno'],"Femminile con vocale: UN' con l'apostrofo."),C('___ amico','un',["un'",'uno'],'Maschile: UN senza apostrofo.'),C('___ treno','un',['uno','una']),C('___ studenti','gli',['i','le'],'S + consonante, plurale: GLI.')]},
+{tappa:2,title:'Gli aggettivi',sub:'Come è fatto?',ex:[
+ {h:'Com\'è?',p:['L\'*aggettivo* dice *com\'è* una persona, un animale o una cosa.'],v:[V.sent([['Il gatto','',''],['nero','aggettivo','x'],['dorme.','','']]),V.sent([['La torta','',''],['buona','aggettivo','x']])]},
+ {h:'Va d\'accordo con il nome',p:['Se il nome cambia, anche l\'aggettivo cambia il suo finale.'],v:[V.table(['','Singolare','Plurale'],[['maschile','il fiore ross*o*','i fiori ross*i*'],['femminile','la rosa ross*a*','le rose ross*e*']])],trick:'Per trovare l\'aggettivo, chiediti: COM\'È?'}],
+ pool:[T('Tocca l\'*aggettivo*.','La mela rossa',[2],'COM\'È la mela? Rossa.'),T('Tocca l\'*aggettivo*.','Un cane piccolo',[2],'COM\'È il cane? Piccolo.'),T('Tocca i *due aggettivi*.','Il gelato freddo è buono',[2,4],'COM\'È il gelato? Freddo e buono.'),
+  C('Scegli l\'aggettivo: Il gatto ___ .','nero',['dorme','sedia'],'NERO dice com\'è il gatto.'),C('Quale parola è un *aggettivo*?','morbido',['cuscino','dorme']),
+  C('Il contrario di ALTO è...','basso',['grande','lungo']),C('Il contrario di CALDO è...','freddo',['bello','pieno']),C('Il contrario di VELOCE è...','lento',['forte','nuovo']),
+  C('Le ciliegie sono ___ .','rosse',['rosso','rossa'],'Ciliegie è femminile plurale: ROSSE.'),C('Il cielo è ___ .','azzurro',['azzurra','azzurre'],'Cielo è maschile singolare: AZZURRO.'),C('I gatti sono ___ .','neri',['nero','nera'],'Gatti è maschile plurale: NERI.')]},
+{tappa:2,title:'I verbi',sub:'Che cosa fa? E quando?',ex:[
+ {h:'Che cosa fa?',p:['Il *verbo* dice che cosa fa qualcuno.'],v:[V.sent([['Il cane','',''],['corre','verbo','p'],['nel prato.','','']]),V.chips(['salta','mangia','dorme','canta','legge'])]},
+ {h:'Quando succede?',p:['Il verbo dice anche *quando* succede una cosa.'],v:[V.time([['ieri','ho giocato','passato'],['oggi','gioco','presente',1],['domani','giocherò','futuro']])],trick:'Per trovare il verbo, chiediti: CHE COSA FA?'}],
+ pool:[T('Tocca il *verbo*.','Il cane corre',[2],'CHE COSA FA il cane? Corre.'),T('Tocca il *verbo*.','Sara canta una canzone',[1],'CHE COSA FA Sara? Canta.'),T('Tocca il *verbo*.','I bambini giocano in giardino',[2],'CHE COSA FANNO i bambini? Giocano.'),
+  C('Quale parola è un *verbo*?','saltare',['rana','verde']),C('Quale parola è un *verbo*?','dormire',['letto','stanco']),C('Quale parola è un *verbo*?','scrive',['penna','quaderno']),
+  C('“Ieri ho giocato a calcio.” Quando succede?','nel passato',['nel presente','nel futuro'],'IERI è già successo: passato.'),C('“Domani andrò al mare.” Quando succede?','nel futuro',['nel passato','nel presente'],'DOMANI deve ancora succedere: futuro.'),C('“Adesso mangio una mela.” Quando succede?','nel presente',['nel passato','nel futuro'],'ADESSO sta succedendo: presente.'),
+  C('Ieri io ___ un disegno.','ho fatto',['faccio','farò'],'IERI: serve il passato.'),C('Domani noi ___ al parco.','andremo',['siamo andati','andavamo'],'DOMANI: serve il futuro.')]},
+{tappa:3,title:'Soggetto e predicato',sub:'Chi fa? Che cosa fa?',ex:[
+ {h:'Che cos\'è una frase',p:['Una *frase* è un gruppo di parole in ordine che ha un senso.'],v:[V.vs([['Il bambino gioca a palla.','Palla il gioca bambino.']])]},
+ {h:'Chi? Che cosa fa?',p:['Il *soggetto* è chi fa l\'azione. Il *predicato* è che cosa fa.'],v:[V.sent([['Il gatto','soggetto: CHI?','s'],['beve','predicato: CHE COSA FA?','p'],['il latte.','','']])],trick:'Prima trova il verbo, poi chiedi: CHI lo fa? Quello è il soggetto.'}],
+ pool:[T('Tocca il *soggetto*: CHI fa l\'azione?','Il gatto|beve|il latte',[0],'CHI beve? Il gatto.'),T('Tocca il *predicato*: CHE COSA FA?','Il gatto|beve|il latte',[1],'CHE COSA FA il gatto? Beve.'),
+  T('Tocca il *soggetto*.','Marta|disegna|una casa',[0],'CHI disegna? Marta.'),T('Tocca il *predicato*.','La maestra|spiega|la lezione',[1],'CHE COSA FA la maestra? Spiega.'),
+  T('Tocca il *soggetto*.','Oggi|il sole|splende',[1],'CHI splende? Il sole.'),T('Tocca il *predicato*.','Il cane|abbaia',[1],'CHE COSA FA il cane? Abbaia.'),
+  T('Tocca il *soggetto*. Attenzione: è alla fine!','Nel prato|corrono|i cavalli',[2],'CHI corre? I cavalli.'),
+  C('Quale è una frase giusta?','Il bambino gioca a palla.',['Il bambino della palla.','Gioca il a palla bambino.'],'Ha un senso e le parole sono in ordine.'),
+  C('Quale è una frase giusta?','La mamma prepara la cena.',['La mamma la cena.','Prepara cena mamma la la.'],'Ha un senso e le parole sono in ordine.'),
+  C('“Luca mangia.” Chi fa l\'azione?','Luca',['mangia'],'CHI mangia? Luca: è il soggetto.')]},
+
+/* ===== PRIMARIA 3ª–5ª ===== */
+{tappa:4,title:'L\'apostrofo',sub:'Quando una vocale cade',ex:[
+ {h:'La vocale che cade',p:['Quando una parola finisce con una vocale e la successiva inizia con una vocale, a volte la prima cade. Al suo posto mettiamo l\'*apostrofo*.'],v:[V.swap([['lo albero',"l'albero"],['la ape',"l'ape"],['una amica',"un'amica"],['di estate',"d'estate"]])]},
+ {h:'Attenti alle trappole',p:['Alcune parole sembrano volere l\'apostrofo, ma non lo vogliono.'],v:[V.vs([['qual è',"qual'è"],['un amico',"un'amico"],["un po'",'un pò']])],trick:"QUAL È non vuole mai l'apostrofo. E PO' vuole l'apostrofo, non l'accento!"}],
+ pool:[C('Come si scrive?',"l'ape",['la ape','lape']),C('Come si scrive?','qual è',["qual'è","quale'è"],"QUAL È si scrive sempre senza apostrofo."),C('Come si scrive?',"un'amica",['un amica','uno amica'],"Femminile con vocale: UN'."),
+  C('Come si scrive?','un amico',["un'amico",'uno amico'],'Amico è maschile: UN senza apostrofo.'),C('Come si scrive?',"un po'",['un pò','un po'],"PO' si scrive con l'apostrofo."),C('Come si scrive?',"l'orso",['lo orso','l orso']),
+  C('Come si scrive?',"dov'è",["dove'è",'dovè']),C('Come si scrive?',"c'è",['cè',"ce'"]),C('Come si scrive?',"un'isola",['un isola',"una'isola"]),C('Come si scrive?',"l'uovo",['lo uovo','luovo'])]},
+{tappa:4,title:'Gli accenti',sub:'Città, perché, sì e si',ex:[
+ {h:'L\'ultima vocale forte',p:['Quando l\'ultima vocale di una parola si pronuncia più forte, ci vuole l\'*accento*.'],v:[V.chips(['città','perché','papà','più','però','caffè'])]},
+ {h:'Piccole parole gemelle',p:['Alcune parole piccole con l\'accento cambiano significato.'],v:[V.table(['Con accento','Senza accento'],[['*là*: in quel posto','*la*: la mela'],['*sì*: la risposta','*si*: Luca si lava'],['*dà*: verbo dare','*da*: vengo da Roma'],['*né*: né pane né pasta','*ne*: ne voglio due'],['*tè*: la bevanda','*te*: vengo con te']])],trick:'QUI e QUA non vogliono mai l\'accento: su QUI e su QUA l\'accento non va!'}],
+ pool:[C('Come si scrive?','città',['citta','cità']),C('Come si scrive?','perché',['perche','perké']),C('Come si scrive?','qui',['quì','qùi'],'QUI e QUA non hanno mai l\'accento.'),C('Come si scrive?','blu',['blù','bleu'],'Le parole di una sola sillaba di solito non hanno accento.'),
+  C('Vado ___ con la mia amica.','là',['la'],'LÀ vuol dire "in quel posto": con l\'accento.'),C('Mangio ___ mela.','la',['là'],'Qui è un articolo: senza accento.'),
+  C('Hai fatto i compiti? ___!','Sì',['Si'],'È una risposta: con l\'accento.'),C('Luca ___ lava le mani.','si',['sì'],'Non è una risposta: senza accento.'),
+  C('La maestra ___ i compiti.','dà',['da'],'Viene dal verbo dare: con l\'accento.'),C('Torno ___ scuola alle quattro.','da',['dà'],'Qui non c\'è il verbo dare: senza accento.'),
+  C('Non voglio né pane ___ pasta.','né',['ne'],'Vuol dire "e non": con l\'accento.'),C('Bevo una tazza di ___ caldo.','tè',['te'],'La bevanda: con l\'accento.')]},
+{tappa:4,title:'La punteggiatura',sub:'I segnali stradali della scrittura',ex:[
+ {h:'I segni e cosa fanno',p:['I segni di punteggiatura sono come i *segnali stradali*: dicono quando fermarsi e come leggere.'],v:[V.table(['Segno','Nome','A cosa serve'],[['.','punto','la frase è finita: stop!'],[',','virgola','una piccola pausa'],['?','punto interrogativo','una domanda'],['!','punto esclamativo','un\'emozione forte'],[':','due punti','arriva un elenco o una spiegazione'],['« »','virgolette','qualcuno parla']])]},
+ {h:'Una virgola salva la nonna',p:['Una virgola può cambiare tutto il senso. Tocca le carte!'],v:[V.reveal([['Vieni a mangiare nonna!','Senza virgola sembra che vogliamo mangiare la nonna! Giusto: Vieni a mangiare, nonna!'],['Ho comprato mele pere e banane.','Negli elenchi ci vuole la virgola: mele, pere e banane.']])],trick:'Dopo punto, punto interrogativo e punto esclamativo si scrive con la maiuscola.'}],
+ pool:[C('Quale segno chiude una domanda?','?',['.','!']),C('Quale segno usiamo per una piccola pausa?','la virgola',['il punto','i due punti']),
+  C('Nello zaino ho___ libri, quaderni e astuccio.',':',['?','!'],'I due punti introducono un elenco.'),
+  C('Quale frase è scritta bene?','Ho comprato mele, pere e banane.',['Ho comprato mele pere, e banane.','Ho comprato, mele pere e banane.'],'Negli elenchi la virgola va tra le cose, ma non prima della E.'),
+  C('Quale frase è scritta bene?','Domani vado al mare. Sono felice!',['Domani vado al mare. sono felice!','Domani vado al mare sono felice.'],'Dopo il punto si scrive con la maiuscola.'),
+  C('Quale frase è scritta bene?','Mangiamo, bambini!',['Mangiamo bambini!','Mangiamo bambini?'],'La virgola separa la persona a cui parliamo.'),
+  C('Con quale segno scriviamo le parole esatte di chi parla?','le virgolette « »',['il punto','la virgola']),
+  C('Dopo un punto esclamativo, la parola dopo inizia con...','la lettera maiuscola',['la lettera minuscola']),
+  C('Che bella sorpresa___','!',['?',':'],'Esprime un\'emozione: punto esclamativo.'),C('Che ore sono___','?',['!',':'],'È una domanda: punto interrogativo.')]},
+{tappa:4,title:'Discorso diretto e indiretto',sub:'Chi parla e come lo racconto',ex:[
+ {h:'Due modi di raccontare',p:['Nel *discorso diretto* riportiamo le parole esatte, tra virgolette. Nel *discorso indiretto* raccontiamo noi che cosa ha detto.'],v:[V.swap([['Marco disse: «*Ho* fame».','Marco disse che *aveva* fame.'],['Sara chiese: «*Posso* uscire?».','Sara chiese *se poteva* uscire.']])]},
+ {h:'Che cosa cambia',p:['Passando al discorso indiretto, alcune parole cambiano.'],v:[V.table(['Diretto','Indiretto'],[['io, mio','lui, lei, suo'],['qui','lì'],['oggi','quel giorno'],['domani','il giorno dopo'],['ho fame (presente)','aveva fame (passato)']])],trick:'Nel discorso indiretto spariscono le virgolette e arriva la parola CHE (oppure SE per le domande).'}],
+ pool:[C('Quale frase è un discorso diretto?','Anna disse: «Sono stanca».',['Anna disse che era stanca.','Anna era stanca.']),
+  C('Quale frase è un discorso indiretto?','Il papà disse che sarebbe tornato tardi.',['Il papà disse: «Torno tardi».','«Torno tardi» disse il papà.']),
+  C('Luca disse: «Ho perso la palla». Diventa...','Luca disse che aveva perso la palla.',['Luca disse che ho perso la palla.','Luca disse: aveva perso la palla.']),
+  C('La maestra disse: «Domani c\'è la verifica». Diventa...','La maestra disse che il giorno dopo c\'era la verifica.',['La maestra disse che domani c\'è la verifica.','La maestra disse: il giorno dopo c\'era la verifica.']),
+  C('Nel discorso diretto le parole di chi parla sono...','tra virgolette',['tra parentesi','dopo la parola CHE']),
+  C('Quale segno introduce di solito il discorso diretto?','i due punti',['il punto interrogativo','la virgola']),
+  C('Sara chiese: «Posso uscire?». Diventa...','Sara chiese se poteva uscire.',['Sara chiese che posso uscire.','Sara chiese: poteva uscire.'],'Per le domande, nel discorso indiretto si usa SE.'),
+  C('Nel discorso indiretto, IO diventa...','lui o lei',['tu','noi'])]},
+{tappa:5,title:'I pronomi personali',sub:'Al posto del nome',ex:[
+ {h:'Un sostituto per il nome',p:['Il *pronome* prende il posto del nome, così non lo ripetiamo.'],v:[V.swap([['Luca gioca. *Luca* ride.','Luca gioca. *Lui* ride.']])]},
+ {h:'Le persone',p:['I pronomi personali indicano chi parla, a chi si parla e di chi si parla.'],v:[V.table(['','Singolare','Plurale'],[['1ª persona: chi parla','io','noi'],['2ª persona: a chi si parla','tu','voi'],['3ª persona: di chi si parla','lui, lei','loro']])]},
+ {h:'I pronomi piccoli',p:['Alcuni pronomi stanno vicino al verbo.'],v:[V.swap([['Vedo Marco','*Lo* vedo'],['Chiamo Anna','*La* chiamo'],['Parlo a Paolo','*Gli* parlo'],['Parlo ad Anna','*Le* parlo']])],trick:'GLI per un maschio, LE per una femmina. "Gli" per una femmina è un errore!'}],
+ pool:[T('Tocca il *pronome*.','Ieri lei è andata al cinema',[1]),T('Tocca il *pronome*.','Noi giochiamo a nascondino',[0]),T('Tocca il *pronome*.','Marco mi ha chiamato',[1]),
+  C('Al posto di "Anna e Luca" uso...','loro',['noi','lui']),C('Al posto di "io e te" uso...','noi',['voi','loro']),
+  C('Ho incontrato Sara e ___ ho salutata.','la',['lo','gli']),C('Vedo il nonno e ___ abbraccio.','lo',['la','le']),
+  C('Ho telefonato a Paolo e ___ ho detto tutto.','gli',['le','lo'],'A lui = GLI.'),C('Ho scritto alla zia e ___ ho mandato una foto.','le',['gli','la'],'A lei = LE.'),
+  C('Quale pronome è la 2ª persona plurale?','voi',['loro','tu'])]},
+{tappa:5,title:'Essere e avere',sub:'I due verbi aiutanti',ex:[
+ {h:'Due verbi da sapere a memoria',p:['*Essere* e *avere* si usano tantissimo. Ecco il presente.'],v:[V.table(['','ESSERE','AVERE'],[['io','sono','ho'],['tu','sei','hai'],['lui, lei','è','ha'],['noi','siamo','abbiamo'],['voi','siete','avete'],['loro','sono','hanno']])]},
+ {h:'I verbi ausiliari',p:['Essere e avere aiutano gli altri verbi a formare i tempi composti. Per questo si chiamano *ausiliari*.'],v:[V.eq([['ho','+','mangiato','=','ho mangiato'],['sono','+','andato','=','sono andato'],['abbiamo','+','letto','=','abbiamo letto']])],trick:'Ausiliare vuol dire "che aiuta".'}],
+ pool:[C('Tu ___ molto simpatico.','sei',['hai','è']),C('Noi ___ un cane.','abbiamo',['siamo','hanno']),C('Voi ___ in ritardo.','siete',['avete','sono']),C('Loro ___ fame.','hanno',['sono','avete']),
+  C('Io ___ stanco.','sono',['ho','è']),C('Lei ___ i capelli lunghi.','ha',['è','a']),
+  C('Ieri io ___ andato al parco.','sono',['ho'],'ANDARE vuole l\'ausiliare essere.'),C('Ieri noi ___ mangiato la pizza.','abbiamo',['siamo'],'MANGIARE vuole l\'ausiliare avere.'),
+  C('“Avete” è il verbo avere alla persona...','voi',['noi','loro'])]},
+{tappa:5,title:'Le tre coniugazioni',sub:'-ARE, -ERE, -IRE',ex:[
+ {h:'Tre famiglie di verbi',p:['Sul dizionario i verbi si trovano all\'*infinito*. Dal finale capiamo la famiglia, cioè la *coniugazione*.'],v:[V.groups([['1ª coniugazione: -ARE','mangiare','cantare','giocare'],['2ª coniugazione: -ERE','leggere','correre','vedere'],['3ª coniugazione: -IRE','dormire','partire','sentire']])]},
+ {h:'Radice e desinenza',p:['La *radice* porta il significato. La *desinenza* cambia e dice chi fa l\'azione.'],v:[V.sent([['CANT','radice','p'],['IAMO','desinenza','x']]),V.table(['','CANTARE','LEGGERE','DORMIRE'],[['io','cant*o*','legg*o*','dorm*o*'],['tu','cant*i*','legg*i*','dorm*i*'],['lui, lei','cant*a*','legg*e*','dorm*e*'],['noi','cant*iamo*','legg*iamo*','dorm*iamo*'],['voi','cant*ate*','legg*ete*','dorm*ite*'],['loro','cant*ano*','legg*ono*','dorm*ono*']])],trick:'Per trovare la coniugazione, riporta il verbo all\'infinito: nuotiamo → nuotARE → 1ª.'}],
+ pool:[C('CANTARE è della...','1ª coniugazione',['2ª coniugazione','3ª coniugazione']),C('VEDERE è della...','2ª coniugazione',['1ª coniugazione','3ª coniugazione']),C('PARTIRE è della...','3ª coniugazione',['1ª coniugazione','2ª coniugazione']),
+  C('“Corriamo” viene da...','correre (2ª)',['corrare (1ª)','corrire (3ª)']),C('“Dormite” viene da...','dormire (3ª)',['dormere (2ª)','dormare (1ª)']),C('“Nuotano” viene da...','nuotare (1ª)',['nuotere (2ª)','nuotire (3ª)']),
+  T('Tocca la *desinenza* di CANTIAMO.','CANT|IAMO',[1],'La desinenza è il finale che cambia: -IAMO.'),T('Tocca la *radice* di LEGGETE.','LEGG|ETE',[0],'La radice è la parte che non cambia: LEGG-.'),
+  C('Noi ___ (leggere) un libro.','leggiamo',['leggemo','leggono']),C('Loro ___ (dormire) fino a tardi.','dormono',['dormano','dormiscono'])]},
+{tappa:5,title:'I tempi dell\'indicativo',sub:'Passato, presente, futuro',ex:[
+ {h:'Il viaggio nel tempo',p:['Il modo *indicativo* racconta fatti reali. Ha tanti tempi.'],v:[V.time([['tanto tempo fa','giocai','passato remoto'],['da piccolo','giocavo','imperfetto'],['ieri','ho giocato','passato prossimo'],['oggi','gioco','presente',1],['domani','giocherò','futuro']])]},
+ {h:'Quale passato?',p:['*Imperfetto*: azioni che duravano o si ripetevano. *Passato prossimo*: azioni finite, vicine a noi. *Passato remoto*: azioni finite e lontane, usate nelle storie.'],v:[V.reveal([['Da piccolo ___ sempre in cortile.','giocavo: si ripeteva → imperfetto'],['Stamattina ___ colazione.','ho fatto: è finita da poco → passato prossimo'],['Nel 1492 Colombo ___ in America.','arrivò: fatto lontano → passato remoto']])]},
+ {h:'Semplici e composti',p:['I tempi *semplici* hanno una parola. I tempi *composti* ne hanno due: ausiliare + verbo.'],v:[V.table(['Tempo semplice','Tempo composto'],[['presente: gioco','passato prossimo: ho giocato'],['imperfetto: giocavo','trapassato prossimo: avevo giocato'],['passato remoto: giocai','trapassato remoto: ebbi giocato'],['futuro semplice: giocherò','futuro anteriore: avrò giocato']])],trick:'Composto = 2 parole. Semplice = 1 parola.'}],
+ pool:[C('“Mangiavo” è...','imperfetto',['passato prossimo','futuro semplice']),C('“Ho letto” è...','passato prossimo',['passato remoto','presente']),C('“Partirono” è...','passato remoto',['imperfetto','futuro semplice']),
+  C('“Correrete” è...','futuro semplice',['presente','imperfetto']),C('“Avevo finito” è...','trapassato prossimo',['passato prossimo','futuro anteriore']),
+  C('Da piccolo ___ sempre con le costruzioni.','giocavo',['giocherò','giocai'],'Un\'azione che si ripeteva nel passato: imperfetto.'),C('Domani ___ a trovare la nonna.','andremo',['andavamo','andammo']),
+  C('Nel 1492 Colombo ___ in America.','arrivò',['arrivava','arriverà'],'Fatto lontano e concluso: passato remoto.'),C('Quale tempo è composto?','avrò mangiato',['mangerò','mangiavo']),C('Quale tempo è semplice?','dormii',['ho dormito','avevo dormito'])]},
+{tappa:5,title:'Le preposizioni',sub:'Le parole che collegano',ex:[
+ {h:'Le preposizioni semplici',p:['Le *preposizioni* sono parole piccole che collegano le altre parole della frase.'],v:[V.chips(['di','a','da','in','con','su','per','tra','fra'])],trick:'Ripetile come una filastrocca: DI, A, DA, IN, CON, SU, PER, TRA, FRA.'},
+ {h:'Le preposizioni articolate',p:['Quando una preposizione si unisce all\'articolo, nasce una *preposizione articolata*.'],v:[V.eq([['a','+','il','=','al'],['di','+','la','=','della'],['in','+','i','=','nei'],['su','+','lo','=','sullo'],['da','+','le','=','dalle']])]}],
+ pool:[T('Tocca la *preposizione semplice*.','Vado in palestra',[1]),T('Tocca la *preposizione semplice*.','Il libro di Marta',[2]),T('Tocca la *preposizione articolata*.','Il gatto dorme sul divano',[3]),T('Tocca la *preposizione articolata*.','Torno dalla piscina',[1]),
+  C('a + il = ?','al',['all','a il']),C('in + la = ?','nella',['inla','alla']),C('di + gli = ?','degli',['dei','dello']),C('su + i = ?','sui',['sugli','sul']),
+  C('“Nello” è formata da...','in + lo',['ne + lo','in + il']),C('Quale è una preposizione semplice?','con',['col','alla'],'COL = con + il: è articolata.')]},
+{tappa:5,title:'I gradi dell\'aggettivo',sub:'Alto, più alto, altissimo',ex:[
+ {h:'Tre gradini',p:['Un aggettivo può salire di grado, come su una scala.'],v:[V.steps([['positivo','alto'],['comparativo','più alto di'],['superlativo','altissimo']])]},
+ {h:'Il comparativo: confrontare',p:['Il *comparativo* confronta due cose.'],v:[V.table(['Tipo','Esempio'],[['maggioranza','Il gatto è *più* veloce *della* tartaruga.'],['minoranza','La tartaruga è *meno* veloce *del* gatto.'],['uguaglianza','Luca è alto *come* Marco.']])]},
+ {h:'Il superlativo: il massimo',p:['Il superlativo *assoluto* dice "moltissimo". Il superlativo *relativo* dice "il più di tutti".'],v:[V.groups([['Assoluto','bellissimo','molto bello'],['Relativo','il più bello della classe','il meno caro di tutti']]),V.table(['Positivo','Comparativo','Superlativo'],[['buono','migliore','ottimo'],['cattivo','peggiore','pessimo'],['grande','maggiore','massimo']])],trick:'MIGLIORE vuol già dire "più buono": "più migliore" è un errore!'}],
+ pool:[C('“Bellissimo” è un...','superlativo assoluto',['comparativo','superlativo relativo']),C('“Più alto di” è un...','comparativo di maggioranza',['comparativo di minoranza','superlativo relativo']),
+  C('“Il più veloce della classe” è un...','superlativo relativo',['superlativo assoluto','comparativo']),C('“Meno caro di” è un...','comparativo di minoranza',['comparativo di maggioranza','comparativo di uguaglianza']),
+  C('“Simpatico come” è un...','comparativo di uguaglianza',['comparativo di maggioranza','superlativo assoluto']),
+  C('Il superlativo assoluto di BUONO può essere...','ottimo',['migliore','più buonissimo']),C('Il comparativo di CATTIVO può essere...','peggiore',['pessimo','cattivissimo']),
+  C('Quale forma è sbagliata?','più migliore',['migliore','molto buono'],'MIGLIORE vuol già dire "più buono".'),C('Il superlativo assoluto di FACILE è...','facilissimo',['più facile','il più facile'])]},
+{tappa:5,title:'Possessivi e dimostrativi',sub:'Di chi è? Dove si trova?',ex:[
+ {h:'Di chi è?',p:['Gli aggettivi *possessivi* dicono a chi appartiene una cosa.'],v:[V.table(['Chi possiede','Maschile','Femminile'],[['io','mio · miei','mia · mie'],['tu','tuo · tuoi','tua · tue'],['lui, lei','suo · suoi','sua · sue'],['noi','nostro · nostri','nostra · nostre'],['voi','vostro · vostri','vostra · vostre'],['loro','loro','loro']])]},
+ {h:'Dove si trova?',p:['I *dimostrativi* indicano se una cosa è vicina o lontana da chi parla.'],v:[V.groups([['Vicino a chi parla','questo libro','questa penna','questi fiori'],['Lontano','quello zaino','quella casa','quei monti']])],trick:'Possessivo: DI CHI È? Dimostrativo: DOVE SI TROVA?'}],
+ pool:[T('Tocca l\'aggettivo *possessivo*.','Il mio zaino è blu',[1]),T('Tocca l\'aggettivo *possessivo*.','Avete visto la vostra maestra?',[3]),T('Tocca l\'aggettivo *dimostrativo*.','Questa torta è squisita',[0]),T('Tocca l\'aggettivo *dimostrativo*.','Guarda quel cane laggiù',[1]),
+  C('Il quaderno di Luca è il ___ quaderno.','suo',['loro','tuo']),C('La casa di Anna e Paolo è la ___ casa.','loro',['sua','suoi'],'Se chi possiede è più di uno, si usa LORO.'),
+  C('Prendo ___ penna qui vicino a me.','questa',['quella','quello']),C('Vedi ___ montagne lontane?','quelle',['queste','quelli']),C('I libri di noi due sono i ___ libri.','nostri',['vostri','nostro']),C('Quale aggettivo indica DI CHI È?','tuo',['questo','quello'])]},
+{tappa:5,title:'Avverbi e congiunzioni',sub:'Come, dove, quando… e come si unisce',ex:[
+ {h:'L\'avverbio',p:['L\'*avverbio* aggiunge informazioni al verbo: come, dove, quando, quanto.'],v:[V.groups([['Come?','bene','piano','velocemente'],['Dove?','qui','sopra','lontano'],['Quando?','oggi','presto','sempre'],['Quanto?','molto','poco','troppo']])]},
+ {h:'La fabbrica di avverbi',p:['Molti avverbi nascono da un aggettivo + *-MENTE*.'],v:[V.eq([['lenta','+','mente','=','lentamente'],['felice','+','mente','=','felicemente'],['facile','+','mente','=','facilmente']])]},
+ {h:'La congiunzione',p:['La *congiunzione* unisce parole o frasi.'],v:[V.chips(['e','o','ma','però','perché','quando','se','anche']),V.sent([['Volevo uscire','',''],['ma','congiunzione','x'],['pioveva.','','']])],trick:'Avverbio = AD + VERBO: sta vicino al verbo. Congiunzione = congiunge, cioè unisce.'}],
+ pool:[T('Tocca l\'*avverbio*.','Il treno arriva presto',[3]),T('Tocca l\'*avverbio*.','Marco corre velocemente',[2]),T('Tocca la *congiunzione*.','Volevo uscire ma pioveva',[2]),T('Tocca la *congiunzione*.','Resto a casa perché sono stanco',[3]),
+  C('“Ieri” è un avverbio di...','tempo',['luogo','modo']),C('“Lì” è un avverbio di...','luogo',['tempo','quantità']),C('“Troppo” è un avverbio di...','quantità',['modo','luogo']),
+  C('Da DOLCE si forma l\'avverbio...','dolcemente',['dolcissimo','dolcezza']),C('Mangi la pasta ___ la pizza?','o',['ma','perché']),C('Studio ___ voglio imparare.','perché',['ma','o'])]},
+
+/* ===== 1ª MEDIA ===== */
+{tappa:6,title:'Come nascono i nomi',sub:'Primitivi, derivati, alterati, composti',ex:[
+ {h:'La struttura del nome',p:['Ogni nome ha una *radice*, che porta il significato, e una *desinenza*, che indica genere e numero.'],v:[V.sent([['GATT','radice','p'],['O · A · I · E','desinenza','x']])]},
+ {h:'Quattro modi di formare un nome',p:['Partendo da una parola possiamo costruirne tante altre.'],v:[V.table(['Tipo','Come si forma','Esempi'],[['primitivo','non viene da altre parole','libro, mare'],['derivato','radice + suffisso o prefisso','libreria, marinaio'],['alterato','cambia grandezza o giudizio','libretto, librone, libraccio'],['composto','due parole unite','portafoglio, arcobaleno']])]},
+ {h:'Gli alterati e i falsi alterati',p:['Gli alterati possono essere *diminutivi* (-ino, -etto), *accrescitivi* (-one), *vezzeggiativi* (-uccio, -otto) e *dispregiativi* (-accio).'],v:[V.reveal([['Il MULINO è un piccolo mulo?','No! È un falso alterato. Anche BOTTONE, TACCHINO e LIMONE lo sono.'],['Che cos\'è un nome collettivo?','Un nome singolare che indica un gruppo: gregge, sciame, flotta, folla.']])],trick:'Per scoprire un falso alterato, togli il suffisso: se il significato non c\'entra più, è falso!'}],
+ pool:[C('LIBRERIA è un nome...','derivato',['primitivo','alterato']),C('MARE è un nome...','primitivo',['derivato','composto']),C('CASETTA è un nome...','alterato',['derivato','composto']),C('PORTAOMBRELLI è un nome...','composto',['alterato','derivato']),
+  C('RAGAZZACCIO è un alterato...','dispregiativo',['diminutivo','accrescitivo']),C('NASONE è un alterato...','accrescitivo',['vezzeggiativo','dispregiativo']),
+  C('Quale è un falso alterato?','mulino',['gattino','libretto'],'Il mulino non è un piccolo mulo!'),C('Quale è un nome collettivo?','sciame',['ape','fiore'],'Sciame = gruppo di api.'),
+  C('Un gruppo di pecore si chiama...','gregge',['flotta','sciame']),T('Tocca il *suffisso* di FIORAIO.','FIOR|AIO',[1],'-AIO è il suffisso che indica il mestiere.')]},
+{tappa:6,title:'I pronomi relativi',sub:'Che, cui, il quale',ex:[
+ {h:'Due frasi diventano una',p:['Il pronome *relativo* sostituisce un nome già detto e unisce due frasi.'],v:[V.swap([['Ho un amico. *L\'amico* vive a Roma.','Ho un amico *che* vive a Roma.']])]},
+ {h:'I pronomi relativi',p:['Ecco quali sono e quando si usano.'],v:[V.table(['Pronome','Quando si usa','Esempio'],[['che','soggetto o complemento oggetto','il libro *che* leggo'],['cui','dopo una preposizione',"l'amico *a cui* scrivo"],['il quale, la quale, i quali, le quali','al posto di che o cui','la ragazza *con la quale* parlo'],['chi','vuol dire "colui che"','*Chi* studia impara.']])]},
+ {h:'Il CHE ha due facce',p:['CHE non è sempre un pronome relativo. Prova a sostituirlo con IL QUALE.'],v:[V.reveal([['“Il gelato che mangio”','“Il gelato il quale mangio” funziona: è un pronome relativo.'],['“Dico che piove”','“Dico il quale piove” non funziona: qui CHE è una congiunzione.']])],trick:'Prova con IL QUALE / LA QUALE: se funziona, è un relativo.'}],
+ pool:[T('Tocca il *pronome relativo*.','Il film che ho visto era bello',[2]),T('Tocca il *pronome relativo*.','La città in cui vivo è piccola',[3],'Il pronome è CUI. IN è una preposizione.'),
+  C('Questa è la casa ___ abito.','in cui',['che','chi']),C('Ecco il ragazzo ___ ho parlato.','con cui',['che','cui']),C('Il libro ___ mi hai prestato è bellissimo.','che',['cui','il cui']),
+  C('___ trova un amico trova un tesoro.','Chi',['Che','Cui']),C('In “So che hai ragione”, CHE è...','una congiunzione',['un pronome relativo'],'“So il quale hai ragione” non funziona.'),
+  C('In “Il cane che abbaia è il mio”, CHE è...','un pronome relativo',['una congiunzione'],'“Il cane il quale abbaia” funziona.'),
+  C('Le amiche con ___ esco sono simpatiche.','le quali',['i quali','che']),C('In “la ragazza a cui scrivo”, A CUI si può sostituire con...','alla quale',['la quale','che'])]},
+{tappa:7,title:'I modi del verbo',sub:'Certo, possibile, desiderato, ordinato',ex:[
+ {h:'Il modo: come vedo l\'azione',p:['Il *modo* dice come chi parla presenta l\'azione.'],v:[V.table(['Modo','A cosa serve','Esempio'],[['indicativo','fatti reali e certi','Io *studio*.'],['congiuntivo','dubbi, desideri, possibilità','Spero che tu *studi*.'],['condizionale','azioni legate a una condizione','*Studierei* se avessi tempo.'],['imperativo','ordini e consigli','*Studia*!']])]},
+ {h:'Finiti e indefiniti',p:['I modi *finiti* dicono chi fa l\'azione. I modi *indefiniti* no.'],v:[V.groups([['Modi finiti','indicativo','congiuntivo','condizionale','imperativo'],['Modi indefiniti','infinito: mangiare','participio: mangiato','gerundio: mangiando']])],trick:'Se dal verbo capisci CHI fa l\'azione, il modo è finito.'}],
+ pool:[C('“Spero che tu venga”: VENGA è al modo...','congiuntivo',['indicativo','condizionale']),C('“Chiudi la porta!”: CHIUDI è al modo...','imperativo',['indicativo','infinito']),
+  C('“Vorrei un gelato”: VORREI è al modo...','condizionale',['congiuntivo','indicativo']),C('“Domani piove”: PIOVE è al modo...','indicativo',['congiuntivo','condizionale']),
+  C('“Correndo sono caduto”: CORRENDO è al modo...','gerundio',['participio','infinito']),C('“Studiare è utile”: STUDIARE è al modo...','infinito',['indicativo','gerundio']),
+  C('“Finiti i compiti, uscii”: FINITI è al modo...','participio',['gerundio','indicativo']),C('Quale modo è indefinito?','gerundio',['congiuntivo','condizionale']),
+  C('Quale modo usiamo per dare un ordine?','imperativo',['congiuntivo','participio']),C('Quale modo usiamo per i fatti certi?','indicativo',['condizionale','congiuntivo'])]},
+{tappa:7,title:'Congiuntivo e condizionale',sub:'Usarli senza sbagliare',ex:[
+ {h:'Una squadra con il SE',p:['Nelle frasi con SE, congiuntivo e condizionale lavorano in coppia.'],v:[V.sent([['Se avessi tempo,','congiuntivo','o'],['verrei con te.','condizionale','p']])]},
+ {h:'Dopo pensare, credere, sperare',p:['Dopo i verbi di opinione, desiderio o dubbio ci vuole il *congiuntivo*.'],v:[V.vs([['Se potessi, verrei.','Se potrei, verrei.'],['Penso che sia vero.','Penso che è vero.'],['Vorrei che tu venissi.','Vorrei che tu verresti.']])],trick:'Nella frase con SE della condizione non si usa il condizionale: "se avrei" è un errore!'}],
+ pool:[C('Se ___ più tempo, leggerei di più.','avessi',['avrei','ho avuto']),C('Se fosse bel tempo, ___ al mare.','andremmo',['andassimo','andremo']),
+  C('Credo che Marco ___ ragione.','abbia',['avrebbe','ha avuto']),C('Spero che tu ___ presto.','torni',['torneresti','tornavi']),
+  C('Quale frase è corretta?','Se potessi, ti aiuterei.',['Se potrei, ti aiuterei.','Se potrei, ti aiutassi.']),C('Quale frase è corretta?','Vorrei che tu restassi.',['Vorrei che tu resteresti.','Vorrei che tu resti.']),
+  C('Voglio che voi ___ silenzio.','facciate',['fate','fareste']),C('Al tuo posto ___ più attenzione.','farei',['facessi','facci']),C('È possibile che domani ___ .','piova',['pioverebbe','piovesse'])]},
+{tappa:7,title:'Transitivi e intransitivi',sub:'L\'azione passa o resta?',ex:[
+ {h:'Verbi transitivi',p:['Un verbo è *transitivo* quando l\'azione può passare direttamente su qualcosa o qualcuno: il *complemento oggetto*.'],v:[V.sent([['Luca','',''],['mangia','verbo transitivo','p'],['una mela.','complemento oggetto','o']])]},
+ {h:'Verbi intransitivi',p:['È *intransitivo* quando l\'azione non passa su un oggetto: resta nel soggetto.'],v:[V.sent([['Luca','',''],['dorme.','verbo intransitivo','p']]),V.sent([['Marco','',''],['va','verbo intransitivo','p'],['a scuola.','non è oggetto: ha la preposizione','']])],trick:'Dopo il verbo chiedi CHI? CHE COSA? Se la risposta arriva senza preposizione, il verbo è transitivo.'}],
+ pool:[C('In “Anna legge un libro” il verbo è...','transitivo',['intransitivo']),C('In “Il bambino ride” il verbo è...','intransitivo',['transitivo']),
+  C('In “Marco va a scuola” il verbo è...','intransitivo',['transitivo'],'"A scuola" ha la preposizione: non è un complemento oggetto.'),C('In “Il papà lava la macchina” il verbo è...','transitivo',['intransitivo']),
+  C('Quale verbo è intransitivo?','arrivare',['comprare','guardare']),C('Quale verbo è transitivo?','scrivere',['dormire','partire']),C('Quale verbo è intransitivo?','nascere',['vedere','prendere']),
+  T('Tocca il *complemento oggetto*.','La nonna|prepara|una torta',[2]),C('Molti verbi intransitivi formano i tempi composti con...','essere',['avere'],'Sono partito, sono arrivato. Ma ci sono eccezioni: ho dormito.')]},
+{tappa:7,title:'Attiva, passiva, riflessiva',sub:'Chi fa e chi subisce',ex:[
+ {h:'Attiva e passiva',p:['Nella forma *attiva* il soggetto fa l\'azione. Nella forma *passiva* il soggetto la subisce.'],v:[V.swap([['Il gatto *mangia* il topo.','Il topo *è mangiato* dal gatto.']]),V.sent([['Il topo','soggetto: subisce','s'],['è mangiato','verbo passivo','p'],['dal gatto','chi fa l\'azione','x']])]},
+ {h:'La forma riflessiva',p:['Nella forma *riflessiva* il soggetto fa l\'azione su se stesso.'],v:[V.chips(['io mi lavo','tu ti pettini','lei si veste','noi ci prepariamo'])],trick:'Solo i verbi transitivi possono diventare passivi. Riflessivo? Aggiungi "se stesso": Luca si lava = Luca lava se stesso.'}],
+ pool:[C('“La lettera è scritta da Anna” è in forma...','passiva',['attiva','riflessiva']),C('“Il cuoco prepara la cena” è in forma...','attiva',['passiva','riflessiva']),
+  C('“Sara si pettina” è in forma...','riflessiva',['passiva','attiva']),C('“Il ladro fu arrestato dalla polizia” è in forma...','passiva',['attiva','riflessiva']),
+  C('Volgi al passivo: “Il vento muove le foglie”.','Le foglie sono mosse dal vento.',['Le foglie muovono il vento.','Il vento è mosso dalle foglie.']),
+  C('Volgi all\'attivo: “La partita è vinta dalla nostra squadra”.','La nostra squadra vince la partita.',['La partita vince la nostra squadra.','La nostra squadra è vinta dalla partita.']),
+  C('Quale verbo NON può diventare passivo?','partire',['leggere','costruire'],'Solo i verbi transitivi hanno la forma passiva.'),C('“Mi vesto da solo” è in forma...','riflessiva',['passiva','attiva'])]},
+{tappa:8,title:'Le nove parti del discorso',sub:'Ripasso generale',ex:[
+ {h:'Variabili e invariabili',p:['Le parole italiane si dividono in *nove parti del discorso*. Alcune cambiano forma, altre no.'],v:[V.groups([['Variabili: cambiano','articolo','nome','aggettivo','pronome','verbo'],['Invariabili: non cambiano','avverbio','preposizione','congiunzione','interiezione']])]},
+ {h:'Una frase ai raggi X',p:['Guarda come ogni parola ha il suo ruolo.'],v:[V.sent([['Il','articolo','x'],['mio','aggettivo','o'],['cane','nome','s'],['corre','verbo','p'],['velocemente','avverbio','x'],['nel','preposizione','o'],['prato','nome','s']])]},
+ {h:'Stessa parola, ruolo diverso',p:['Una parola cambia ruolo a seconda di come è usata.'],v:[V.reveal([['“Il mio cane” e “Questo è il mio”','Nel primo MIO è aggettivo (accompagna un nome). Nel secondo è pronome (lo sostituisce).'],['“Lo zaino” e “Lo vedo”','Nel primo LO è articolo. Nel secondo è pronome.']])],trick:'L\'interiezione esprime un\'emozione: ah!, oh!, evviva!, uffa!'}],
+ pool:[C('In “Il mio cane corre”, MIO è...','un aggettivo',['un pronome','un nome']),C('In “Questo è il mio”, MIO è...','un pronome',['un aggettivo','un avverbio'],'Non accompagna un nome: lo sostituisce.'),
+  C('“Evviva!” è...','un\'interiezione',['un avverbio','una congiunzione']),C('In “Arriva presto”, PRESTO è...','un avverbio',['un aggettivo','una preposizione']),
+  C('In “Il treno per Milano”, PER è...','una preposizione',['una congiunzione','un avverbio']),C('In “Studio e gioco”, E è...','una congiunzione',['un verbo','una preposizione']),
+  C('In “Il cielo è blu”, È è...','un verbo',['una congiunzione','un articolo']),C('Quale parte del discorso è invariabile?','la preposizione',['il nome','il verbo']),
+  C('In “Il bello della montagna è il silenzio”, BELLO è...','un nome',['un aggettivo','un avverbio'],'Ha l\'articolo e non accompagna un nome: qui è usato come nome.'),C('In “Lo vedo domani”, LO è...','un pronome',['un articolo','una preposizione'],'Sta vicino al verbo e sostituisce un nome.')]},
+
+/* ===== 2ª MEDIA: ANALISI LOGICA ===== */
+{tappa:9,title:'Soggetto e predicato',sub:'Verbale, nominale, sottinteso',ex:[
+ {h:'Che cos\'è l\'analisi logica',p:['Fare *analisi logica* vuol dire scoprire il compito di ogni gruppo di parole nella frase.'],v:[V.sent([['Il gatto','soggetto','s'],['dorme','predicato verbale','p'],['sul divano.','complemento','o']])]},
+ {h:'Predicato nominale',p:['Il *predicato nominale* è formato dal verbo essere (la *copula*) + un nome o un aggettivo (il *nome del predicato*).'],v:[V.sent([['Il cielo','soggetto','s'],['è','copula','p'],['azzurro.','nome del predicato','p']]),V.sent([['Il libro','soggetto','s'],['è','predicato verbale: si trova','p'],['sul tavolo.','complemento','o']])]},
+ {h:'Il soggetto sottinteso',p:['A volte il soggetto non è scritto, ma si capisce dal verbo.'],v:[V.reveal([['“Andiamo al cinema.” Chi è il soggetto?','Noi, sottinteso: lo capiamo dalla desinenza -IAMO.'],['“Mi piacciono i gelati.” Chi è il soggetto?','I gelati! Sono loro che piacciono.']])],trick:'Prima trova il verbo. Poi chiedi CHI? o CHE COSA? per trovare il soggetto.'}],
+ pool:[T('Tocca il *soggetto*.','Domani|partirà|mio fratello',[2]),T('Tocca il *predicato*.','I ragazzi|giocano|in cortile',[1]),
+  C('In “La torta è buona” il predicato è...','nominale',['verbale']),C('In “La torta è in frigorifero” il predicato è...','verbale',['nominale'],'Qui È vuol dire "si trova": predicato verbale.'),
+  C('In “Marta corre veloce” il predicato è...','verbale',['nominale']),C('In “Mio zio è medico” il nome del predicato è...','medico',['mio zio','è']),
+  C('In “Leggiamo un libro” il soggetto è...','noi, sottinteso',['un libro','leggiamo']),C('In “Mi piacciono i gelati” il soggetto è...','i gelati',['mi','io'],'CHE COSA piace? I gelati.'),
+  C('Nella frase “Sono stanco”, SONO è...','la copula',['il soggetto','il nome del predicato'])]},
+{tappa:9,title:'Attributo e apposizione',sub:'Gli accompagnatori del nome',ex:[
+ {h:'L\'attributo',p:['L\'*attributo* è un aggettivo che accompagna un nome.'],v:[V.sent([['Il cane','soggetto','s'],['nero','attributo','x'],['abbaia.','predicato verbale','p']])]},
+ {h:'L\'apposizione',p:['L\'*apposizione* è un nome che accompagna un altro nome per dire chi è o che cosa è.'],v:[V.sent([['Il dottor','apposizione','x'],['Rossi','soggetto','s'],['visita','predicato verbale','p'],['i pazienti.','compl. oggetto','o']]),V.sent([['Il fiume','apposizione','x'],['Po','soggetto','s'],['attraversa Torino.','','']])],trick:'Attributo = aggettivo. Apposizione = nome.'}],
+ pool:[T('Tocca l\'*attributo*.','La|piccola|casa|è|vuota',[1],'VUOTA è unito al verbo essere: è nome del predicato.'),T('Tocca l\'*attributo*.','Ho comprato|un|vestito|nuovo',[3]),
+  T('Tocca l\'*apposizione*.','Il|fiume|Po|attraversa|Torino',[1]),T('Tocca l\'*apposizione*.','La|maestra|Anna|spiega|la lezione',[1]),
+  C('In “Il gatto grigio dorme”, GRIGIO è...','attributo',['apposizione','predicato']),C('In “Mia sorella Giulia studia”, SORELLA è...','apposizione',['attributo','soggetto']),
+  C('In “Il mare è calmo”, CALMO è...','nome del predicato',['attributo','apposizione'],'È unito al verbo essere: fa parte del predicato nominale.'),
+  C('L\'attributo è sempre...','un aggettivo',['un nome','un verbo']),C('L\'apposizione è sempre...','un nome',['un aggettivo','un avverbio'])]},
+{tappa:9,title:'Il complemento oggetto',sub:'Chi? Che cosa?',ex:[
+ {h:'Su chi cade l\'azione',p:['Il *complemento oggetto* indica chi o che cosa riceve direttamente l\'azione. Non ha la preposizione.'],v:[V.sent([['Luca','soggetto','s'],['legge','predicato verbale','p'],['un fumetto.','compl. oggetto: CHE COSA?','o']])]},
+ {h:'Casi da riconoscere',p:['Il complemento oggetto può essere anche un pronome, e c\'è solo con i verbi transitivi attivi.'],v:[V.reveal([['“Il cane morde il postino.” Chi è il soggetto?','Il cane. Il postino è il complemento oggetto: subisce l\'azione.'],['“Lo saluto sempre.” Dov\'è il complemento oggetto?','LO: saluto lui.'],['“Vado al mare.” C\'è un complemento oggetto?','No: "al mare" ha la preposizione.']])],trick:'Domanda: CHI? CHE COSA? e nessuna preposizione davanti.'}],
+ pool:[T('Tocca il *complemento oggetto*.','Il pittore|dipinge|un quadro',[2]),T('Tocca il *complemento oggetto*.','Ogni mattina|Sara|beve|il latte',[3]),T('Tocca il *complemento oggetto*.','Il cane|insegue|il gatto',[2]),T('Tocca il *complemento oggetto*.','Lo|saluto|sempre',[0]),
+  C('In “Vado al mare” c\'è un complemento oggetto?','No',['Sì: "al mare"'],'"Al mare" ha la preposizione.'),C('In “Il gatto è inseguito dal cane” c\'è un complemento oggetto?','No',['Sì: "dal cane"'],'La frase è passiva: non c\'è il complemento oggetto.'),
+  C('Il complemento oggetto risponde alla domanda...','chi? che cosa?',['dove?','con chi?']),C('In “Luca ascolta la musica” il complemento oggetto è...','la musica',['Luca','ascolta']),C('In “Ti aspetto qui” il complemento oggetto è...','ti',['qui','aspetto'])]},
+{tappa:10,title:'Specificazione e termine',sub:'Di chi? A chi?',ex:[
+ {h:'Specificazione: DI CHI?',p:['Il complemento di *specificazione* precisa di chi o di che cosa si parla. Si introduce con DI.'],v:[V.sent([['La coda','soggetto','s'],['del gatto','specificazione: DI CHI?','x'],['è lunga.','predicato nominale','p']])]},
+ {h:'Termine: A CHI?',p:['Il complemento di *termine* indica a chi o a che cosa va l\'azione. Si introduce con A.'],v:[V.sent([['Anna','soggetto','s'],['regala','predicato verbale','p'],['un fiore','compl. oggetto','o'],['alla mamma.','termine: A CHI?','x']])]},
+ {h:'Attenzione ai pronomi e al DI',p:['Anche i pronomi possono essere complementi di termine. E non ogni DI è specificazione!'],v:[V.reveal([['“Gli scrivo.” Che complemento è GLI?','Termine: scrivo A LUI.'],['“Una maglia di lana.” È specificazione?','No: dice il materiale. È complemento di materia.']])],trick:'DI CHI? DI CHE COSA? → specificazione. A CHI? A CHE COSA? → termine.'}],
+ pool:[T('Tocca il *complemento di specificazione*.','La coda|del gatto|è lunga',[1]),T('Tocca il *complemento di termine*.','Ho scritto|una lettera|al nonno',[2]),T('Tocca il *complemento di termine*.','Gli|ho prestato|la bici',[0]),
+  C('In “Il profumo delle rose”, DELLE ROSE è complemento di...','specificazione',['termine','luogo']),C('In “Do l\'acqua al cane”, AL CANE è complemento di...','termine',['specificazione','oggetto']),
+  C('Il complemento di termine risponde alla domanda...','a chi? a che cosa?',['di chi? di che cosa?','dove?']),C('In “Le ho telefonato”, LE è complemento...','di termine',['oggetto','di specificazione'],'Le ho telefonato = ho telefonato a lei.'),
+  C('In “Una maglia di lana”, DI LANA è complemento di...','materia',['specificazione','termine'],'Non ogni DI è specificazione: qui indica il materiale.')]},
+{tappa:10,title:'Luogo e tempo',sub:'Dove? Quando?',ex:[
+ {h:'I complementi di luogo',p:['Il complemento di *luogo* dice dove. Ce ne sono quattro.'],v:[V.groups([['Stato in luogo: dove sono?','sono a casa','abito in Italia'],['Moto a luogo: verso dove?','vado a scuola','parto per Roma'],['Moto da luogo: da dove?','esco da casa','torno dal mare'],['Moto per luogo: passando da dove?','passo per il bosco','entro dalla finestra']])]},
+ {h:'I complementi di tempo',p:['Il complemento di *tempo* dice quando o per quanto tempo.'],v:[V.groups([['Tempo determinato: quando?','alle otto','a Natale','in estate'],['Tempo continuato: per quanto tempo?','per due ore','tutta la notte']])],trick:'Guarda il verbo! "In Francia" è stato in luogo con "vivo", moto a luogo con "vado".'}],
+ pool:[C('In “Abito a Novara”, A NOVARA è...','stato in luogo',['moto a luogo','moto da luogo']),C('In “Domani vado in montagna”, IN MONTAGNA è...','moto a luogo',['stato in luogo','moto per luogo']),
+  C('In “Esco dalla scuola alle 14”, DALLA SCUOLA è...','moto da luogo',['moto a luogo','stato in luogo']),C('In “Il treno passa per Milano”, PER MILANO è...','moto per luogo',['moto a luogo','stato in luogo']),
+  C('In “Ci vediamo alle cinque”, ALLE CINQUE è...','tempo determinato',['tempo continuato','stato in luogo']),C('In “Ho studiato per tre ore”, PER TRE ORE è...','tempo continuato',['tempo determinato','moto per luogo']),
+  C('In “In estate andiamo al mare”, IN ESTATE è...','tempo determinato',['stato in luogo','tempo continuato']),
+  T('Tocca il *complemento di luogo*.','Il gatto|dorme|sotto il letto',[2]),T('Tocca il *complemento di tempo*.','Ieri sera|abbiamo visto|un film',[0])]},
+{tappa:10,title:'Mezzo, modo, causa, fine, compagnia',sub:'Come? Perché? Con chi?',ex:[
+ {h:'Cinque complementi, cinque domande',p:['Ogni complemento risponde a una domanda diversa.'],v:[V.table(['Complemento','Domanda','Esempio'],[['mezzo','con che cosa?','Vado a scuola *in bicicletta*.'],['modo','come?','Parla *con gentilezza*.'],['causa','perché? per quale motivo?','Tremo *dal freddo*.'],['fine','per quale scopo?','Mi alleno *per la gara*.'],['compagnia','con chi?','Esco *con Giulia*.']])]},
+ {h:'Il camaleonte CON',p:['La preposizione CON cambia significato. Tocca le carte!'],v:[V.reveal([['Esco CON Marta','Compagnia: con chi?'],['Scrivo CON la penna','Mezzo: con che cosa?'],['Rispondo CON calma','Modo: come?']])],trick:'Causa = il motivo che viene prima. Fine = lo scopo che vuoi raggiungere dopo.'}],
+ pool:[C('In “Viaggio in treno”, IN TRENO è complemento di...','mezzo',['modo','luogo']),C('In “Cammina in fretta”, IN FRETTA è complemento di...','modo',['mezzo','tempo']),
+  C('In “Piange dalla gioia”, DALLA GIOIA è complemento di...','causa',['fine','moto da luogo']),C('In “Mi alleno per la gara”, PER LA GARA è complemento di...','fine',['causa','mezzo']),
+  C('In “Gioco con mio cugino”, CON MIO CUGINO è complemento di...','compagnia',['mezzo','modo']),C('In “Taglio il pane con il coltello”, CON IL COLTELLO è complemento di...','mezzo',['compagnia','modo']),
+  C('In “Ascolta con attenzione”, CON ATTENZIONE è complemento di...','modo',['mezzo','compagnia']),C('In “Per la pioggia la gita è rinviata”, PER LA PIOGGIA è complemento di...','causa',['fine','mezzo']),
+  C('Il complemento di fine risponde alla domanda...','per quale scopo?',['per quale motivo?','come?'])]},
+{tappa:10,title:'Agente e causa efficiente',sub:'Chi fa l\'azione nelle frasi passive',ex:[
+ {h:'Chi agisce davvero',p:['Nelle frasi *passive*, chi fa l\'azione è il complemento d\'*agente* (persona o animale) o di *causa efficiente* (cosa o fenomeno).'],v:[V.sent([['Il topo','soggetto','s'],['è stato catturato','predicato verbale','p'],['dal gatto.','compl. d\'agente','x']]),V.sent([['L\'albero','soggetto','s'],['è stato abbattuto','predicato verbale','p'],['dal vento.','compl. di causa efficiente','x']])]},
+ {h:'La prova del ribaltamento',p:['Se giri la frase all\'attivo, l\'agente diventa il soggetto.'],v:[V.swap([['Il topo è catturato *dal gatto*.','*Il gatto* cattura il topo.']])],trick:'DA CHI? → agente. DA CHE COSA? → causa efficiente. Ma solo se il verbo è passivo!'}],
+ pool:[C('In “La torta è stata fatta dalla nonna”, DALLA NONNA è complemento...','d\'agente',['di causa efficiente','di moto da luogo']),C('In “Il campo fu allagato dalla pioggia”, DALLA PIOGGIA è complemento...','di causa efficiente',['d\'agente','di causa']),
+  C('In “Torno dalla nonna”, DALLA NONNA è...','moto a luogo',['complemento d\'agente','moto da luogo'],'Il verbo non è passivo: indica dove vado.'),C('Il complemento d\'agente si trova nelle frasi...','passive',['attive','riflessive']),
+  T('Tocca il *complemento d\'agente*.','Il quadro|è stato dipinto|da un artista famoso',[2]),T('Tocca il *complemento di causa efficiente*.','La strada|è illuminata|dai lampioni',[2]),
+  C('Se volgo all\'attivo “Il ladro è inseguito dal poliziotto”, IL POLIZIOTTO diventa...','il soggetto',['il complemento oggetto','il predicato']),C('In “Il pesce è mangiato dal gatto” il soggetto è...','il pesce',['il gatto','è mangiato'])]},
+
+/* ===== 3ª MEDIA: ANALISI DEL PERIODO ===== */
+{tappa:11,title:'Frase semplice e periodo',sub:'Contare le proposizioni',ex:[
+ {h:'Dalla frase al periodo',p:['Una *proposizione* (frase semplice) ha un solo predicato. Un *periodo* è formato da più proposizioni.'],v:[V.sent([['Quando arrivo a casa,','proposizione 1','x'],['faccio merenda','proposizione 2','s'],['e poi studio.','proposizione 3','p']])]},
+ {h:'Contare i verbi',p:['Quanti predicati, tante proposizioni. Attenzione ai verbi formati da più parole!'],v:[V.reveal([['“Ieri ho guardato un film.” Quante proposizioni?','Una sola: HO GUARDATO è un solo verbo, in un tempo composto.'],['“Sono stato promosso!” Quante proposizioni?','Una sola: SONO STATO PROMOSSO è un verbo passivo.']])],trick:'Conta i predicati. Un tempo composto o passivo conta come uno solo.'}],
+ pool:[C('Quante proposizioni ci sono in “Mangio e poi esco”?','2',['1','3']),C('Quante proposizioni ci sono in “Ieri sera ho guardato un bel film”?','1',['2','3'],'"Ho guardato" è un solo verbo.'),
+  C('Quante proposizioni ci sono in “Quando piove, resto a casa e leggo”?','3',['2','4']),C('Quante proposizioni ci sono in “Spero che tu venga alla festa”?','2',['1','3']),
+  C('Quante proposizioni ci sono in “Sono stato promosso!”?','1',['2','3'],'È un solo verbo in forma passiva.'),C('Un periodo è...','un insieme di proposizioni',['una sola parola','un solo verbo']),
+  C('Quale è una frase semplice?','Il sole tramonta.',['Il sole tramonta e la luna sorge.','Quando il sole tramonta, fa freddo.']),C('Quante proposizioni ci sono in “Luca corre, salta e grida”?','3',['1','2'])]},
+{tappa:11,title:'Principale, coordinate, subordinate',sub:'Chi comanda nel periodo?',ex:[
+ {h:'La principale',p:['La proposizione *principale* ha senso da sola e regge tutto il periodo.'],v:[V.sent([['Resto a casa','principale','s'],['perché piove.','subordinata','x']])]},
+ {h:'Coordinate e subordinate',p:['Le *coordinate* sono sullo stesso piano, unite da e, o, ma, però. Le *subordinate* dipendono da un\'altra proposizione.'],v:[V.sent([['Mangio','principale','s'],['e poi esco.','coordinata','p']]),V.reveal([['“perché piove” ha senso da sola?','No! Ha bisogno di "Resto a casa": è una subordinata.']])],trick:'Copri una proposizione con la mano: se quella che resta ha senso da sola, è la principale.'}],
+ pool:[T('Tocca la *proposizione principale*.','Se studi|prenderai un bel voto',[1]),T('Tocca la *proposizione principale*.','Mentre cucinavo|è suonato il telefono',[1]),
+  T('Tocca la *subordinata*.','Sono felice|perché è arrivata l\'estate',[1]),T('Tocca la *coordinata* alla principale.','Mi sono svegliato|e ho fatto colazione',[1]),
+  C('“Studio molto, ma i risultati non arrivano”: la seconda proposizione è...','coordinata',['subordinata','principale'],'MA mette le due frasi sullo stesso piano.'),
+  C('“Ti chiamo quando arrivo”: “quando arrivo” è...','subordinata',['coordinata','principale']),C('La proposizione principale...','ha senso compiuto da sola',['inizia sempre con "che"','non ha il verbo']),
+  C('Quale congiunzione introduce di solito una coordinata?','e',['perché','quando'])]},
+{tappa:11,title:'Esplicite e implicite',sub:'Modo finito o indefinito?',ex:[
+ {h:'Due versioni della stessa idea',p:['Una subordinata è *esplicita* se il verbo è a un modo finito (indicativo, congiuntivo, condizionale). È *implicita* se il verbo è a un modo indefinito (infinito, gerundio, participio).'],v:[V.table(['Esplicita','Implicita'],[['*Mentre camminavo*, ho visto Luca.','*Camminando*, ho visto Luca.'],['*Dopo che avemmo mangiato*, uscimmo.','*Dopo aver mangiato*, uscimmo.'],['Sono contento *perché ti ho rivisto*.','Sono contento *di averti rivisto*.']])]},
+ {h:'Riconoscerle al volo',p:['Guarda solo il verbo della subordinata.'],v:[V.groups([['Esplicita: modo finito','che tu venga','quando arrivo','perché pioveva'],['Implicita: modo indefinito','per arrivare','arrivando','arrivato a casa']])],trick:'Modo finito = esplicita. Infinito, gerundio, participio = implicita.'}],
+ pool:[C('“Uscendo di casa, ho incontrato Paolo”: “uscendo di casa” è...','implicita',['esplicita']),C('“Quando sono uscito, ho incontrato Paolo”: “quando sono uscito” è...','esplicita',['implicita']),
+  C('“Studio per superare l\'esame”: “per superare l\'esame” è...','implicita',['esplicita']),C('“Penso che tu abbia ragione”: “che tu abbia ragione” è...','esplicita',['implicita']),
+  C('“Finita la lezione, uscimmo”: il verbo della subordinata è al...','participio',['gerundio','infinito']),
+  C('Trasforma in implicita: “Mentre guardavo la TV, mi sono addormentato”.','Guardando la TV, mi sono addormentato.',['Guardavo la TV e mi sono addormentato.','Mentre guardando la TV, mi sono addormentato.']),
+  C('Trasforma in esplicita: “Dopo aver mangiato, uscimmo”.','Dopo che avemmo mangiato, uscimmo.',['Mangiando, uscimmo.','Mangiammo e uscimmo.']),C('Una subordinata con il verbo al gerundio è...','implicita',['esplicita'])]},
+{tappa:12,title:'Soggettive, oggettive, dichiarative',sub:'Subordinate che fanno da soggetto o oggetto',ex:[
+ {h:'La soggettiva',p:['La *soggettiva* fa da soggetto alla principale. Arriva spesso dopo: è bello, è necessario, bisogna, sembra.'],v:[V.sent([['È importante','principale','s'],['che tu studi.','soggettiva: CHE COSA è importante?','x']])]},
+ {h:'L\'oggettiva',p:['L\'*oggettiva* fa da complemento oggetto. Arriva dopo verbi come dire, pensare, credere, sapere, vedere.'],v:[V.sent([['Penso','principale','s'],['che tu abbia ragione.','oggettiva: CHE COSA penso?','o']])]},
+ {h:'La dichiarativa',p:['La *dichiarativa* spiega un nome o un pronome della principale: la speranza, l\'idea, il fatto, questo.'],v:[V.sent([['Ho una speranza:','principale','s'],['che domani ci sia il sole.','dichiarativa: quale speranza?','p']])],trick:'Metti CIÒ al posto della subordinata: "Ciò è importante" → soggettiva. "Penso ciò" → oggettiva.'}],
+ pool:[C('“Bisogna che tu ti impegni”: la subordinata è...','soggettiva',['oggettiva','dichiarativa']),C('“Marco dice che verrà”: la subordinata è...','oggettiva',['soggettiva','dichiarativa']),
+  C('“Ho la certezza che vincerai”: la subordinata è...','dichiarativa',['oggettiva','soggettiva'],'Spiega il nome "certezza".'),C('“È giusto aiutare gli altri”: “aiutare gli altri” è...','soggettiva implicita',['oggettiva implicita','dichiarativa esplicita']),
+  C('“Spero di vederti presto”: “di vederti presto” è...','oggettiva implicita',['soggettiva implicita','dichiarativa implicita']),C('“Sembra che stia per piovere”: la subordinata è...','soggettiva',['oggettiva','causale']),
+  C('“So che hai studiato”: la subordinata è...','oggettiva',['soggettiva','dichiarativa']),C('“Di una cosa sono sicuro: che ce la farai”: la subordinata è...','dichiarativa',['soggettiva','oggettiva'])]},
+{tappa:12,title:'Le relative',sub:'Subordinate che descrivono un nome',ex:[
+ {h:'Una proposizione-aggettivo',p:['La subordinata *relativa* si aggancia a un nome della principale e lo descrive, come farebbe un aggettivo. È introdotta da un pronome relativo: che, cui, il quale, chi, oppure dove.'],v:[V.sent([['Il libro','principale…','s'],['che mi hai regalato','relativa','x'],['è bellissimo.','…principale','s']])]},
+ {h:'Relativa o oggettiva?',p:['Usa la prova del IL QUALE per distinguere.'],v:[V.reveal([['“Il film che abbiamo visto”','“Il film il quale abbiamo visto”: funziona → relativa.'],['“Dico che hai ragione”','“Dico il quale hai ragione”: non funziona → oggettiva.']])],trick:'La relativa si riferisce a un NOME. L\'oggettiva completa un VERBO.'}],
+ pool:[T('Tocca la *proposizione relativa*.','La ragazza|con cui parlavo|è mia cugina',[1]),T('Tocca la *proposizione relativa*.','Ho trovato|il cane|che si era perso',[2]),
+  C('“Conosco un posto dove si mangia bene”: “dove si mangia bene” è...','relativa',['causale','oggettiva'],'DOVE qui vuol dire "nel quale".'),C('“Dico che hai ragione”: è una relativa?','No, è un\'oggettiva',['Sì, è una relativa'],'"Dico il quale hai ragione" non funziona.'),
+  C('“Il film che abbiamo visto era lungo”: “che abbiamo visto” è...','relativa',['oggettiva','dichiarativa']),C('La relativa si riferisce...','a un nome della principale',['al verbo della principale','solo al soggetto']),
+  C('Quale parola NON introduce una relativa?','perché',['che','cui']),C('“Chi rompe paga”: “chi rompe” è...','relativa',['causale','temporale'],'CHI = colui che.')]},
+{tappa:12,title:'Causali, finali, temporali',sub:'Perché? Per quale scopo? Quando?',ex:[
+ {h:'Tre domande, tre subordinate',p:['Ogni subordinata risponde a una domanda.'],v:[V.table(['Subordinata','Domanda','Esplicita','Implicita'],[['causale','perché?','Resto a casa *perché sono malato*.','Sono felice *di vederti*.'],['finale','per quale scopo?','Te lo spiego *affinché tu capisca*.','Studio *per imparare*.'],['temporale','quando?','*Quando arrivi*, chiamami.','*Arrivato a casa*, ho mangiato.']])]},
+ {h:'Il doppio PERCHÉ',p:['PERCHÉ può introdurre una causale o una finale. Guarda il verbo!'],v:[V.reveal([['“Studio perché voglio imparare”','Causale: spiega il motivo. Verbo all\'indicativo.'],['“Te lo ripeto perché tu non lo dimentichi”','Finale: indica lo scopo (= affinché). Verbo al congiuntivo.']])],trick:'Causa = il motivo che viene prima. Fine = lo scopo da raggiungere dopo.'}],
+ pool:[C('“Non sono uscito perché pioveva”: la subordinata è...','causale',['finale','temporale']),C('“Corro per arrivare in tempo”: la subordinata è...','finale',['causale','temporale']),
+  C('“Quando arriverai, festeggeremo”: la subordinata è...','temporale',['causale','finale']),C('“Ti presto il libro affinché tu lo legga”: la subordinata è...','finale',['causale','oggettiva']),
+  C('“Mentre mangiavo, è squillato il telefono”: la subordinata è...','temporale',['causale','relativa']),C('“Siccome era tardi, siamo tornati”: la subordinata è...','causale',['temporale','finale']),
+  C('“Te lo ripeto perché tu non lo dimentichi”: la subordinata è...','finale',['causale'],'PERCHÉ + congiuntivo indica lo scopo.'),C('“Dopo aver cenato, siamo usciti”: la subordinata è...','temporale implicita',['causale implicita','finale implicita']),
+  C('Quale congiunzione introduce una finale?','affinché',['siccome','mentre'])]},
+{tappa:12,title:'Consecutive e concessive',sub:'Conseguenze e ostacoli',ex:[
+ {h:'La consecutiva',p:['La *consecutiva* indica la conseguenza. Spesso c\'è una coppia: così… che, tanto… che, talmente… che.'],v:[V.sent([['Ero così stanco','principale','s'],['che mi sono addormentato.','consecutiva','x']])]},
+ {h:'La concessiva',p:['La *concessiva* dice un ostacolo che però non ferma l\'azione: sebbene, benché, anche se, nonostante.'],v:[V.sent([['Anche se piove,','concessiva','o'],['esco lo stesso.','principale','s']])],trick:'Dopo SEBBENE, BENCHÉ e NONOSTANTE ci vuole il congiuntivo: sebbene fossi stanco.'}],
+ pool:[C('“Ha corso tanto che è senza fiato”: la subordinata è...','consecutiva',['concessiva','causale']),C('“Benché fosse stanco, continuò a lavorare”: la subordinata è...','concessiva',['consecutiva','causale']),
+  C('“Anche se non ho fame, assaggio la torta”: la subordinata è...','concessiva',['temporale','consecutiva']),C('“Faceva così freddo che il lago ghiacciò”: la subordinata è...','consecutiva',['causale','concessiva']),
+  C('Sebbene ___ stanco, sono andato all\'allenamento.','fossi',['ero','sarei'],'Dopo SEBBENE ci vuole il congiuntivo.'),C('Nonostante ___ , siamo usciti.','piovesse',['pioveva','pioverebbe'],'Dopo NONOSTANTE ci vuole il congiuntivo.'),
+  C('Quale congiunzione introduce una concessiva?','benché',['affinché','talmente… che']),C('Quale coppia introduce una consecutiva?','così… che',['sebbene','perché'])]},
+{tappa:12,title:'Il periodo ipotetico',sub:'Se… allora',ex:[
+ {h:'Condizione e conseguenza',p:['Il *periodo ipotetico* ha due parti: la *protasi* (la condizione, con SE) e l\'*apodosi* (la conseguenza, cioè la principale).'],v:[V.sent([['Se studi,','protasi: condizione','o'],['sarai promosso.','apodosi: conseguenza','s']])]},
+ {h:'I tre tipi',p:['Il tipo dipende da quanto è probabile la condizione.'],v:[V.steps([['realtà','Se piove, resto a casa.'],['possibilità','Se vincessi, comprerei una bici.'],['irrealtà','Se avessi studiato, avrei passato l\'esame.']]),V.table(['Tipo','Protasi: se…','Apodosi'],[['realtà','indicativo','indicativo o imperativo'],['possibilità','congiuntivo imperfetto','condizionale presente'],['irrealtà','congiuntivo trapassato','condizionale passato']])],trick:'Mai "se avrei"! Dopo il SE della condizione: indicativo o congiuntivo.'}],
+ pool:[C('“Se fa bel tempo, andiamo al mare” è un periodo ipotetico della...','realtà',['possibilità','irrealtà']),C('“Se trovassi un portafoglio, lo porterei alla polizia” è un periodo ipotetico della...','possibilità',['realtà','irrealtà']),
+  C('“Se fossi partito prima, saresti arrivato in tempo” è un periodo ipotetico della...','irrealtà',['possibilità','realtà']),C('Se ___ più attento, non avresti sbagliato.','fossi stato',['saresti stato','eri']),
+  C('Se vincessi la lotteria, ___ il giro del mondo.','farei',['facessi','avrò fatto']),C('Se piove, ___ a casa.','restiamo',['restassimo','saremmo restati']),
+  C('Quale frase è corretta?','Se lo sapessi, te lo direi.',['Se lo saprei, te lo direi.','Se lo sapessi, te lo dicessi.']),C('In “Se studi, sarai promosso” la protasi è...','se studi',['sarai promosso']),
+  C('L\'apodosi è...','la conseguenza, cioè la principale',['la condizione introdotta da SE','una relativa'])]}
+];
+LEVELS.forEach((l,i)=>{l.id=i;l.g=TAPPE[l.tappa].g});
+const inGroup=g=>LEVELS.filter(l=>l.g===g);
+const numInGroup=l=>inGroup(l.g).indexOf(l)+1;
+
+/* ---------- salvataggio (solo su questo dispositivo) ---------- */
+const KEY='parolandia-v1';
+let save={stars:{},open:false,g:0};
+try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.stars)save=Object.assign(save,s)}catch(e){}
+const persist=()=>{try{localStorage.setItem(KEY,JSON.stringify(save))}catch(e){}};
+const starsOf=i=>save.stars[i]||0;
+const unlocked=i=>{const l=LEVELS[i];if(save.open)return true;const p=LEVELS[i-1];return !p||p.g!==l.g||starsOf(i-1)>=1};
+const starHtml=n=>'<span class="stars" aria-label="'+n+' stelle su 3">'+'★'.repeat(n)+'<span class="off">'+'★'.repeat(3-n)+'</span></span>';
+
+const app=document.getElementById('app');
+const PER=6;
+let st={};
+
+/* ---------- mappa ---------- */
+function home(){
+  if(canSpeak)try{speechSynthesis.cancel()}catch(e){}
+  const g=save.g||0;
+  const tot=LEVELS.reduce((s,l)=>s+starsOf(l.id),0);
+  let h=`<header class="top"><div class="brand"><svg viewBox="0 0 60 76" width="44" height="56" aria-hidden="true">${MASCOT.replace(/^<svg[^>]*>|<\/svg>$/g,'')}</svg><div><h1>Parola<span>ndia</span></h1><p>La grammatica italiana, un passo alla volta</p></div></div>
+    <div class="total"><b>★</b> ${tot} / ${LEVELS.length*3} stelle</div></header>
+    <div class="tabs-wrap"><div class="tabs" role="tablist">${GROUPS.map((G,i)=>{const L=inGroup(i);const s=L.reduce((a,l)=>a+starsOf(l.id),0);
+      return `<button class="tab" role="tab" aria-selected="${i===g}" data-g="${i}"><b>${esc(G.name)}</b><small>${esc(G.sub)} · ★ ${s}/${L.length*3}</small></button>`}).join('')}</div></div>`;
+  TAPPE.forEach((t,ti)=>{
+    if(t.g!==g)return;
+    h+=`<section class="tappa"><div class="tappa-h"><h2>${esc(t.name)}</h2><small>${esc(t.sub)}</small></div><div class="levels">`;
+    LEVELS.filter(l=>l.tappa===ti).forEach(l=>{
+      const u=unlocked(l.id),n=numInGroup(l);
+      h+=`<button class="lv ${t.color}" data-l="${l.id}" ${u?'':'disabled'}><span class="n">${n}</span><span class="t"><b>${esc(l.title)}</b><span>${u?esc(l.sub):'Prima completa il livello '+(n-1)}</span>${starHtml(starsOf(l.id))}</span></button>`;
+    });
+    h+='</div></section>';
+  });
+  h+=`<footer><span>Le stelle restano salvate solo su questo dispositivo.</span>
+    <span><button class="linkbtn" id="unlock">${save.open?'Blocca i livelli in ordine':'Per l\'insegnante: sblocca tutti i livelli'}</button> · <button class="linkbtn" id="reset">Ricomincia da capo</button></span></footer>`;
+  app.innerHTML=h;
+  app.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{save.g=+b.dataset.g;persist();home()});
+  app.querySelectorAll('.lv').forEach(b=>b.onclick=()=>lesson(+b.dataset.l,0));
+  document.getElementById('unlock').onclick=()=>{save.open=!save.open;persist();home()};
+  const r=document.getElementById('reset');
+  r.onclick=()=>{if(r.dataset.sure){save={stars:{},open:false,g:save.g};persist();home()}else{r.dataset.sure=1;r.textContent='Sicuro? Tocca ancora per cancellare le stelle'}};
+  window.scrollTo(0,0);
+}
+
+/* ---------- componenti visivi ---------- */
+function vis(v){
+  const I=(i)=>`style="--i:${i}"`;
+  switch(v.k){
+  case 'letters':return `<div class="v-letters pop ${v.big?'big':''}">${[...v.s].map((c,i)=>`<span class="lt ${VOC.includes(c)?'v':''}" ${I(i)}>${c}</span>`).join('')}</div>`;
+  case 'legend':return `<div class="legend"><span style="--k:var(--red)">vocali</span><span style="--k:var(--blue)">consonanti</span></div>`;
+  case 'syl':return `<div class="v-syl">${v.w.map(w=>{const s=w.split('-');return `<div class="syl-row pop">${s.map((x,i)=>`<span class="sy" ${I(i)}>${esc(x)}</span>`).join('')}<span class="clap">👏 battiti <b>${s.length}</b></span></div>`}).join('')}</div>`;
+  case 'vs':return `<div class="v-vs"><span class="vs-h ok">Si scrive così</span><span class="vs-h no">Non così</span>${v.rows.map(([a,b])=>`<div class="vs ok"><i>✔</i><span>${esc(a)}</span></div><div class="vs no"><i>✘</i><span>${esc(b)}</span></div>`).join('')}</div>`;
+  case 'groups':return `<div class="v-groups">${v.g.map((g,i)=>`<div class="grp g${i%4}"><h4>${esc(g[0])}</h4><ul>${g.slice(1).map(x=>`<li>${md(x)}</li>`).join('')}</ul></div>`).join('')}</div>`;
+  case 'table':return `<div class="tbl"><table><thead><tr>${v.head.map(x=>`<th>${md(x)}</th>`).join('')}</tr></thead><tbody>${v.rows.map(r=>`<tr>${r.map(x=>`<td>${md(x)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+  case 'sent':return `<div class="v-sent pop">${v.parts.map(([t,l,k],i)=>`<span class="chunk ${k?'k-'+k:''}" ${I(i)}><span class="w">${esc(t)}</span>${l?`<span class="l">${esc(l)}</span>`:''}</span>`).join('')}</div>`;
+  case 'time':return `<ol class="v-time">${v.items.map(([w,vb,tn,now])=>`<li class="${now?'now':''}"><span class="when">${esc(w)}</span><span class="dot"></span><span class="vb">${esc(vb)}</span><span class="tn">${esc(tn)}</span></li>`).join('')}</ol>`;
+  case 'swap':return `<div class="v-swap">${v.rows.map(([a,b,ok])=>`<div class="sw"><span class="a">${md(a)}</span><span class="ar">→</span><span class="b">${md(b)}</span>${ok===undefined?'<span></span>':`<span class="badge ${ok?'ok':'no'}">${ok?'✔ funziona':'✘ non funziona'}</span>`}</div>`).join('')}</div>`;
+  case 'reveal':return `<div class="v-reveal">${v.items.map(([q,a])=>`<button class="rv" aria-expanded="false"><span class="rq">${md(q)}</span><span class="tap">Tocca per scoprire</span><span class="ra" hidden>${md(a)}</span></button>`).join('')}</div>`;
+  case 'eq':return `<div class="v-eq">${v.rows.map(r=>`<div class="eq pop">${r.map((x,i)=>['+','='].includes(x)?`<span class="op">${x}</span>`:`<span class="t ${i===r.length-1?'r':''}" ${I(i)}>${esc(x)}</span>`).join('')}</div>`).join('')}</div>`;
+  case 'steps':{const cols=['var(--green)','var(--blue)','var(--red)'];return `<div class="v-steps pop">${v.items.map(([l,t],i)=>`<div class="stp" style="--sc:${cols[i%3]};min-height:${70+i*40}px;--i:${i}"><small>${esc(l)}</small><b>${esc(t)}</b></div>`).join('')}</div>`}
+  case 'chips':return `<div class="v-chips pop">${v.items.map((x,i)=>`<span class="chip" ${I(i)}>${esc(x)}</span>`).join('')}</div>`;
+  case 'ex':return `<div class="example">${md(v.t)}</div>`;
+  }return '';
+}
+function bindReveal(root){root.querySelectorAll('.rv').forEach(b=>b.onclick=()=>{const o=b.getAttribute('aria-expanded')==='true';b.setAttribute('aria-expanded',!o);b.querySelector('.ra').hidden=o;b.querySelector('.tap').hidden=!o})}
+const trickHtml=t=>`<div class="trick">${MASCOT}<div class="bubble"><b>Virgola ti suggerisce</b>${md(t)}</div></div>`;
+function cardBody(c){
+  return `<div class="texts">${c.p.map(x=>`<p>${md(x)}</p>`).join('')}</div>${(c.v||[]).map(x=>`<div class="vis">${vis(x)}</div>`).join('')}${c.trick?trickHtml(c.trick):''}`;
+}
+
+/* ---------- spiegazione ---------- */
+function lesson(id,page){
+  const L=LEVELS[id],c=L.ex[page],col=TAPPE[L.tappa].color,last=page===L.ex.length-1;
+  app.innerHTML=`<div class="bar"><button class="back" id="bk">← Mappa</button><span class="lvname">${esc(GROUPS[L.g].name)} · Livello ${numInGroup(L)} · ${esc(L.title)}</span></div>
+  <article class="lesson ${col}">
+    <div class="lesson-head"><h2>${esc(c.h||L.title)}</h2><span class="step">Scheda ${page+1} di ${L.ex.length}</span></div>
+    <div class="lesson-body">
+      ${cardBody(c)}
+      ${canSpeak?'<button class="speak" id="sp">🔊 Ascolta</button>':''}
+      <div class="nav">
+        <div class="dots">${L.ex.map((_,i)=>`<i class="${i<=page?'on':''}"></i>`).join('')}</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn ghost" id="pv" ${page===0?'disabled':''}>Indietro</button>
+          <button class="btn ${last?'go':''}" id="nx">${last?'Facciamo gli esercizi!':'Avanti'}</button>
+        </div>
+      </div>
+    </div></article>`;
+  bindReveal(app);
+  document.getElementById('bk').onclick=home;
+  document.getElementById('pv').onclick=()=>lesson(id,page-1);
+  document.getElementById('nx').onclick=()=>last?startQuiz(id):lesson(id,page+1);
+  const sp=document.getElementById('sp');if(sp)sp.onclick=()=>speak((c.h||L.title)+'. '+c.p.join(' ')+(c.trick?' Trucco: '+c.trick:''));
+  window.scrollTo(0,0);
+}
+
+/* ---------- esercizi ---------- */
+function startQuiz(id){
+  const L=LEVELS[id];
+  const qs=(L.gen?L.gen():shuffle(L.pool).slice(0,PER)).map(q=>q.t==='c'?{...q,o:shuffle(q.o)}:q);
+  st={id,qs,i:0,res:[]};
+  showQ();
+}
+function qText(q,fill,cls){
+  let s=md(q.q);
+  if(s.includes('___'))s=s.replace('___',`<span class="blank ${cls||''}">${fill?esc(fill):'&nbsp;'}</span>`);
+  return s;
+}
+function showQ(){
+  const L=LEVELS[st.id],q=st.qs[st.i],col=TAPPE[L.tappa].color;
+  const prog=st.qs.map((_,i)=>`<i class="${i<st.res.length?(st.res[i]?'ok':'no'):(i===st.i?'cur':'')}"></i>`).join('');
+  const caseT=s=>L.up&&q.t==='c'?s.toUpperCase():s;
+  const body=q.t==='c'
+    ?`<div class="opts">${q.o.map((o,i)=>`<button class="opt" data-i="${i}">${esc(caseT(o))}</button>`).join('')}</div>`
+    :`<div class="tokens">${q.w.map((w,i)=>`<button class="tok ${q.letters?'letter':''}" data-i="${i}" aria-pressed="false">${esc(w)}</button>`).join('')}</div><button class="btn" id="chk" disabled>Controlla</button>`;
+  app.innerHTML=`<div class="bar"><button class="back" id="bk">← Mappa</button><div class="progress" aria-label="Domanda ${st.i+1} di ${st.qs.length}">${prog}</div></div>
+  <div class="sheet ${col}">
+    <div class="eyebrow">Esercizio ${st.i+1} di ${st.qs.length} · ${esc(L.title)}</div>
+    <div class="q" id="qt">${qText(q)}</div>
+    ${body}
+    <div id="fb"></div>
+    <div class="nav" style="margin-top:20px">
+      <button class="linkbtn" id="rv">Rileggi la spiegazione</button>
+      ${canSpeak?'<button class="speak" id="sp">🔊 Ascolta la domanda</button>':''}
+    </div>
+  </div>`;
+  document.getElementById('bk').onclick=home;
+  document.getElementById('rv').onclick=review;
+  const sp=document.getElementById('sp');if(sp)sp.onclick=()=>speak(q.q+(q.t==='c'?'. '+q.o.join(', oppure, '):''));
+  if(q.t==='c'){
+    app.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{
+      const ok=q.o[+b.dataset.i]===q.a;
+      app.querySelectorAll('.opt').forEach(x=>{x.disabled=true;if(q.o[+x.dataset.i]===q.a)x.classList.add('ok')});
+      if(!ok)b.classList.add('no');
+      if(q.q.includes('___'))document.getElementById('qt').innerHTML=qText(q,caseT(q.a),'ok');
+      feedback(ok,q);
+    });
+  }else{
+    const toks=[...app.querySelectorAll('.tok')],chk=document.getElementById('chk');
+    toks.forEach(b=>b.onclick=()=>{b.classList.toggle('sel');b.setAttribute('aria-pressed',b.classList.contains('sel'));chk.disabled=!toks.some(t=>t.classList.contains('sel'))});
+    chk.onclick=()=>{
+      const sel=toks.filter(t=>t.classList.contains('sel')).map(t=>+t.dataset.i);
+      const ok=sel.length===q.a.length&&sel.every(i=>q.a.includes(i));
+      toks.forEach(t=>{const i=+t.dataset.i;t.disabled=true;t.classList.remove('sel');
+        if(q.a.includes(i))t.classList.add(sel.includes(i)?'ok':'miss');else if(sel.includes(i))t.classList.add('no')});
+      chk.hidden=true;feedback(ok,q);
+    };
+  }
+  window.scrollTo(0,0);
+}
+const YES=['Esatto!','Giusto!','Perfetto!','Ottimo lavoro!','Sì, è così!','Ben fatto!'];
+function feedback(ok,q){
+  st.res.push(ok);
+  const L=LEVELS[st.id],hint=q.h||L.tip||'';
+  let correct='';
+  if(!ok)correct=q.t==='c'?`La risposta giusta è <b>${esc(L.up?q.a.toUpperCase():q.a)}</b>.`
+    :`${q.letters?'Le lettere giuste':'La risposta giusta'} ha il bordo verde: <b>${q.a.map(i=>esc(q.w[i])).join(', ')}</b>.`;
+  const lastQ=st.i===st.qs.length-1,fb=document.getElementById('fb');
+  fb.innerHTML=`<div class="fb ${ok?'ok':'no'}" role="status"><h3>${ok?pick(YES):'Non ancora, ma ci sei quasi!'}</h3>
+    ${correct?`<p>${correct}</p>`:''}${hint?`<p>${md(hint)}</p>`:''}
+    <div class="row"><button class="btn ${ok?'go':''}" id="nx">${lastQ?'Vedi il risultato':'Avanti'}</button></div></div>`;
+  const nx=document.getElementById('nx');nx.focus({preventScroll:true});
+  fb.scrollIntoView({behavior:'smooth',block:'nearest'});
+  nx.onclick=()=>{if(lastQ)result();else{st.i++;showQ()}};
+}
+function review(){
+  const L=LEVELS[st.id];
+  const m=$(`<div class="modal" role="dialog" aria-modal="true" aria-label="Ripasso"><article class="lesson ${TAPPE[L.tappa].color}">
+    <div class="lesson-head"><h2>Ripasso: ${esc(L.title)}</h2></div>
+    <div class="lesson-body">${L.ex.map(cardBody).join('<hr style="border:none;border-top:2px dashed var(--line);width:100%;margin:4px 0">')}
+    <div class="nav"><span></span><button class="btn" id="cl">Torna all'esercizio</button></div></div></article></div>`);
+  document.body.appendChild(m);bindReveal(m);
+  const close=()=>m.remove();
+  m.querySelector('#cl').onclick=close;m.onclick=e=>{if(e.target===m)close()};
+  m.querySelector('#cl').focus();
+}
+
+/* ---------- risultato ---------- */
+function result(){
+  const L=LEVELS[st.id],n=st.res.filter(Boolean).length,tot=st.qs.length;
+  const stars=n===tot?3:n>=tot-1?2:n>=Math.ceil(tot/2)?1:0;
+  if(stars>starsOf(st.id)){save.stars[st.id]=stars;persist()}
+  const msg=['Rileggiamo insieme la spiegazione e riproviamo: ce la puoi fare!','Bene! Hai sbloccato il livello successivo. Se vuoi più stelle, riprova.','Molto bene! Ancora un piccolo sforzo per 3 stelle.','Fantastico! Tutte giuste!'][stars];
+  const next=LEVELS[st.id+1],canNext=next&&next.g===L.g&&unlocked(next.id);
+  app.innerHTML=`<div class="bar"><button class="back" id="bk">← Mappa</button><span class="lvname">Livello ${numInGroup(L)} · ${esc(L.title)}</span></div>
+  <div class="sheet result ${TAPPE[L.tappa].color}">
+    ${MASCOT}
+    <h2>${n} giuste su ${tot}</h2>
+    <div class="big" aria-label="${stars} stelle su 3">${'★'.repeat(stars)}<span class="off">${'★'.repeat(3-stars)}</span></div>
+    <p>${msg}</p>
+    <div class="nav">
+      ${stars===0?`<button class="btn ghost" id="ex">Rileggi la spiegazione</button>`:''}
+      <button class="btn ${canNext?'ghost':''}" id="again">Rifai il livello</button>
+      ${canNext?`<button class="btn go" id="next">Avanti: ${esc(next.title)}</button>`:''}
+    </div></div>`;
+  document.getElementById('bk').onclick=home;
+  document.getElementById('again').onclick=()=>startQuiz(st.id);
+  const ex=document.getElementById('ex');if(ex)ex.onclick=()=>lesson(st.id,0);
+  const nx=document.getElementById('next');if(nx)nx.onclick=()=>lesson(next.id,0);
+  window.scrollTo(0,0);
+}
+
+/* controllo interno dei dati */
+LEVELS.forEach(l=>{const qs=l.gen?[...l.gen(),...l.gen(),...l.gen()]:l.pool;
+  if(!l.gen&&qs.length<PER)console.warn('Poche domande:',l.title,qs.length);
+  qs.forEach(q=>{
+  if(q.t==='c'&&(new Set(q.o).size!==q.o.length||q.o.length<2))console.warn('Domanda da controllare:',l.title,q.q,q.o);
+  if(q.t==='tap'&&(q.a.some(i=>i>=q.w.length)||!q.a.length))console.warn('Indice errato:',l.title,q.q)})});
+
+home();
+})();
+</script>
+
+<script src="a11y.js"></script>
+</body></html>

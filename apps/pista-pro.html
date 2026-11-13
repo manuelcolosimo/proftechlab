@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Pista Codice PRO — Prof Tech Lab</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{--grass:#7cc34a;--grass2:#8fd15a;--road:#3d4350;--road-edge:#e9eef2;--ink:#1f2a1a;--cell:44px;
+  --mv:#4c97ff;--turn:#9966ff;--ctrl:#ffab19;--sens:#0fbd8c;--fn:#ff6680;}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;min-height:100%}
+body{font-family:Fredoka,system-ui,sans-serif;color:var(--ink);background:radial-gradient(circle at 20% 10%,var(--grass2),var(--grass) 60%);user-select:none}
+button{font-family:inherit;cursor:pointer;border:none}
+.app{max-width:1250px;margin:0 auto;padding:10px 12px 24px;display:flex;flex-direction:column;gap:10px}
+header{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+h1{font-size:20px;margin:0;color:#fff;text-shadow:0 2px 0 #0003;flex:1;min-width:160px}
+h1 small{display:block;font-size:12px;font-weight:500;opacity:.9}
+h1 b{background:#ff6680;border-radius:8px;padding:0 6px;font-size:14px;vertical-align:middle}
+.pill{background:#00000026;color:#fff;border-radius:999px;padding:6px 12px;font-weight:600;font-size:14px}
+.iconbtn{width:42px;height:42px;border-radius:50%;background:#fff;color:#2a7a1b;font-size:20px;display:grid;place-items:center;box-shadow:0 3px 0 #0002;flex:0 0 auto}
+.iconbtn:active{transform:translateY(2px);box-shadow:none}
+.main{display:grid;grid-template-columns:150px minmax(260px,1fr) minmax(300px,1.15fr);gap:10px;align-items:start}
+
+/* palette */
+.palette{background:#fff;border-radius:16px;padding:8px;display:flex;flex-direction:column;gap:6px;box-shadow:0 4px 0 #0002;position:sticky;top:8px}
+.palette h4{margin:4px 2px 0;font-size:12px;color:#777;font-weight:600}
+.pb{border-radius:10px;color:#fff;font-weight:600;font-size:14px;padding:9px 10px;text-align:left;box-shadow:inset 0 -3px 0 #0002;line-height:1.1}
+.pb:active{transform:scale(.95)}
+.pb.disabled{opacity:.35;pointer-events:none}
+
+/* script editor */
+.script{background:#ffffffee;border-radius:16px;padding:10px;box-shadow:0 4px 0 #0002;min-height:300px}
+.toolbar{display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+.tb{background:#eef3ea;border-radius:10px;padding:7px 10px;font-weight:600;font-size:14px;color:#2a5a1b}
+.tb:disabled{opacity:.35}
+.go{margin-left:auto;background:#ffd23f;color:#5a3d00;border-radius:14px;padding:9px 18px;font-size:18px;font-weight:700;box-shadow:0 4px 0 #c79a00}
+.go.stop{background:#ef4444;color:#fff;box-shadow:0 4px 0 #a51d1d}
+.go:disabled{opacity:.5}
+.area{border-radius:12px;padding:8px;margin-bottom:8px}
+.area.mainA{background:#f4f7fb}
+.area.fnA{background:#fff0f3;border:2px dashed var(--fn)}
+.hat{display:inline-block;background:#ffbf00;color:#5a3d00;font-weight:700;border-radius:14px 14px 6px 6px;padding:6px 12px;font-size:14px;margin-bottom:2px}
+.hat.fnh{background:var(--fn);color:#fff}
+.blk{display:flex;align-items:center;gap:6px;color:#fff;font-weight:600;font-size:15px;padding:7px 10px;border-radius:8px;box-shadow:inset 0 -3px 0 #0002;width:max-content;max-width:100%;cursor:pointer}
+.c-var{background:#ff8c1a}.neg,.op{background:#fff;color:#b45309;border-radius:999px;padding:2px 8px;font-weight:700;font-size:13px}.neg.on{background:#7c2d12;color:#fff}.op{color:#555}
+.watch{display:none;margin-top:6px;background:#fff4e6;border:2px solid #ff8c1a;border-radius:10px;padding:4px 10px;font-weight:700;color:#9a3412;width:max-content}
+.c-mv{background:var(--mv)}.c-turn{background:var(--turn)}.c-ctrl{background:var(--ctrl)}.c-sens{background:var(--sens)}.c-fn{background:var(--fn)}
+.cblk{border-radius:8px;width:max-content;min-width:180px;max-width:100%;cursor:pointer}
+.chead{display:flex;align-items:center;gap:6px;color:#fff;font-weight:600;font-size:15px;padding:7px 10px;flex-wrap:wrap}
+.cbody{margin-left:14px;background:#f4f7fb;border-radius:0 8px 8px 0;padding:2px 6px 2px 6px;min-height:20px}
+.area.fnA .cbody{background:#fff0f3}
+.cfoot{height:12px;border-radius:0 0 8px 8px}
+.sel>.chead,.blk.sel{outline:3px solid #1f2a1a;outline-offset:1px}
+.run>.chead,.blk.run{filter:brightness(1.25);box-shadow:0 0 0 4px #ffd23f}
+.num,.cond{background:#fff;color:#222;border-radius:999px;padding:2px 10px;font-weight:700;font-size:14px;min-width:30px}
+.cond{color:#0b7a5c}
+.gap{height:8px;border-radius:4px;margin:1px 0}
+.gap.empty{height:24px;border:2px dashed #c9d3c2;font-size:12px;color:#999;display:flex;align-items:center;padding-left:8px}
+.gap.cur{height:26px;background:#22c55e33;border:2px dashed #16a34a;display:flex;align-items:center;padding-left:6px;color:#15803d;font-weight:700;font-size:13px}
+.gap.cur::before{content:"▸ i blocchi vanno qui"}
+.gap.empty:not(.cur)::before{content:"vuoto · tocca qui"}
+
+/* aiuto visivo, anteprima e blocchi statici */
+.paint{position:absolute;inset:3px;border-radius:6px;opacity:.85;z-index:2;pointer-events:none;display:grid;place-items:center;color:#fff;font-weight:700;font-size:calc(var(--cell)*.32);text-shadow:0 1px 2px #0008}
+.ticon{position:absolute;inset:0;display:grid;place-items:center;z-index:3;font-size:calc(var(--cell)*.5);color:#fff;text-shadow:0 0 4px #000,0 0 2px #000;pointer-events:none;font-weight:700}
+.gdot{position:absolute;width:14px;height:14px;border-radius:50%;background:#ffd23f;border:3px solid #1f2a1a;transform:translate(-50%,-50%);z-index:4;opacity:.9;pointer-events:none}
+.gend{position:absolute;transform:translate(-50%,-50%);z-index:4;font-size:calc(var(--cell)*.55);pointer-events:none;text-shadow:0 0 3px #fff}
+.nbadge{position:absolute;top:-6px;right:-6px;z-index:6;background:#ff8c1a;color:#fff;border:2px solid #fff;border-radius:999px;font-size:11px;font-weight:700;padding:0 5px;pointer-events:none}
+.legend{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;font-size:13px}
+.legend span{display:inline-flex;align-items:center;gap:4px}
+.legend i{width:16px;height:16px;border-radius:4px;display:inline-block}
+.static{pointer-events:none;background:#f4f7fb;border-radius:12px;padding:10px;margin:8px 0}
+.static .cbody{min-height:16px}
+.static .blk,.static .cblk{margin:3px 0}
+.static .q{background:#fff;color:#999;border-radius:999px;padding:2px 10px;font-weight:700}
+.toggle{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:#2a5a1b}
+.hintbtn{background:#fff6d6}
+/* board side */
+.side{display:flex;flex-direction:column;gap:8px}
+.boardwrap{display:flex;justify-content:center;align-items:center;padding:6px;min-height:200px}
+.board{position:relative;display:grid}
+.cell{width:var(--cell);height:var(--cell);position:relative}
+.cell.t{background:var(--road);box-shadow:inset 0 0 0 1px #ffffff1a}
+.cell.t.eN{border-top:3px solid var(--road-edge)}.cell.t.eS{border-bottom:3px solid var(--road-edge)}
+.cell.t.eW{border-left:3px solid var(--road-edge)}.cell.t.eE{border-right:3px solid var(--road-edge)}
+.cell.F{background:repeating-conic-gradient(#fff 0 25%,#1d2b3a 0 50%) 0 0/50% 50%}
+.cell.S::after{content:"";position:absolute;inset:30%;border-radius:50%;background:#ffffff30}
+.deco{position:absolute;left:18%;top:12%;font-size:calc(var(--cell)*.52);pointer-events:none}
+.kart{position:absolute;width:var(--cell);height:var(--cell);left:0;top:0;transition:transform .3s linear;z-index:5;pointer-events:none}
+.kart .body{width:100%;height:100%;transition:transform .2s}
+.kart.crash .body{animation:spin .6s ease-out}
+@keyframes spin{to{transform:rotate(var(--rot2))}}
+.trail{position:absolute;width:8px;height:8px;border-radius:50%;background:#ffd23f;z-index:4;transform:translate(-50%,-50%);opacity:.8}
+.card{background:#ffffffee;border-radius:16px;padding:10px 12px;box-shadow:0 4px 0 #0002}
+.card h3{margin:0 0 4px;font-size:15px;color:#2a7a1b}
+.card p{margin:4px 0;font-size:14px;line-height:1.35}
+.msg{font-size:14px;min-height:20px;font-weight:500}
+.vtabs{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.vtab{background:#e8f6dc;color:#2a5a1b;border-radius:10px;padding:4px 10px;font-weight:600;font-size:13px}
+.vtab.on{background:#2a7a1b;color:#fff}.vtab.ok{outline:2px solid #22c55e}.vtab.ko{outline:2px solid #ef4444}
+pre.code{font-family:"JetBrains Mono",monospace;font-size:12.5px;background:#1d2433;color:#dfe7ff;border-radius:10px;padding:8px 10px;margin:4px 0 0;white-space:pre;overflow-x:auto;min-height:44px}
+pre.code .k{color:#ff9e64}pre.code .f{color:#7dd3fc}pre.code .num{color:#fde047;background:none;padding:0;min-width:0;font-size:inherit}pre.code .c{color:#7c8aa5}
+pre.code .ln{display:block;border-radius:4px}pre.code .ln.hl{background:#ffffff2e}
+.btn{background:#fff;border-radius:12px;padding:8px 12px;font-weight:600;font-size:14px;box-shadow:0 3px 0 #0002;color:#2a5a1b}
+.btn.alt{background:#2a7a1b;color:#fff}
+.row{display:flex;gap:6px;flex-wrap:wrap}
+.overlay{position:fixed;inset:0;background:#0b1a0b99;display:none;align-items:center;justify-content:center;z-index:50;padding:16px}
+.overlay.show{display:flex}
+.modal{background:#fff;border-radius:22px;max-width:540px;width:100%;padding:20px;box-shadow:0 10px 0 #0003;max-height:92vh;overflow:auto}
+.modal h2{margin:0 0 6px;color:#2a7a1b}
+.modal .tag{display:inline-block;background:#e8f6dc;color:#2a7a1b;border-radius:999px;padding:3px 10px;font-size:13px;font-weight:600;margin-bottom:6px}
+.stars{font-size:40px;letter-spacing:4px;text-align:center}
+.levels{display:grid;grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:8px;margin-top:10px}
+.lv{background:#e8f6dc;border-radius:14px;padding:8px 4px;text-align:center;font-weight:700;color:#2a5a1b;font-size:20px}
+.lv small{display:block;font-size:12px;font-weight:500;color:#e2a400;min-height:15px}
+.lv.locked{opacity:.4;pointer-events:none}.lv.cur{outline:3px solid #2a7a1b}
+.chapter{grid-column:1/-1;font-size:13px;font-weight:600;color:#666;margin-top:6px}
+a.link{color:#fff;font-size:13px;font-weight:600}
+@media (max-width:960px){
+  .main{grid-template-columns:1fr}
+  .side{order:1}.script{order:2}
+  .palette{order:3;position:sticky;bottom:6px;top:auto;flex-direction:row;flex-wrap:wrap;z-index:10}
+  .palette h4{display:none}
+  .pb{padding:8px 9px;font-size:13px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <button class="iconbtn" id="btnMenu" aria-label="Elenco livelli">☰</button>
+    <h1>Pista Codice <b>PRO</b><small>Prof Tech Lab · blocchi annidati, funzioni, algoritmi</small></h1>
+    <a class="link" href="pista-codice.html">⬅ Menu Pista Codice</a>
+    <button class="pill" id="btnSpeed" title="Velocità">🐢 x1</button>
+    <span class="pill" id="lvlPill">🏁 1</span>
+    <span class="pill" id="sizePill">🧱 0/0</span>
+  </header>
+
+  <div class="main">
+    <div class="palette" id="palette"></div>
+
+    <div class="script">
+      <div class="toolbar">
+        <button class="tb" id="bUp" title="Sposta su">⬆</button>
+        <button class="tb" id="bDown" title="Sposta giù">⬇</button>
+        <button class="tb" id="bDel" title="Elimina blocco selezionato">🗑</button>
+        <button class="tb" id="bClear">Svuota</button>
+        <button class="go" id="btnGo">▶ Via</button>
+      </div>
+      <div id="areas"></div>
+    </div>
+
+    <div class="side">
+      <div class="card">
+        <h3 id="goalTitle">Obiettivo</h3>
+        <p id="goalText"></p>
+        <div class="vtabs" id="vtabs"></div>
+        <div class="watch" id="watch">📦 n = ?</div>
+        <div class="msg" id="msg"></div>
+        <div id="ghostNote" style="font-size:13px;color:#555;display:none">🟡 I pallini gialli mostrano dove andrà il kart con il programma attuale.</div>
+      </div>
+      <div class="boardwrap" id="boardwrap"><div class="board" id="board"></div></div>
+      <div class="row">
+        <button class="btn hintbtn" id="btnHint">💡 Aiuto 1/3</button>
+        <button class="btn" id="btnConcept">📘 Concetto</button>
+        <button class="btn" id="btnPy">🐍 Python: no</button>
+      </div>
+      <div class="card" id="legendCard" style="display:none"><h3>💡 Aiuto</h3><div id="legend"></div></div>
+      <div class="card" id="pyCard" style="display:none">
+        <h3>Il tuo codice in Python</h3>
+        <pre class="code" id="code"></pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ovIntro"><div class="modal" id="introBox"></div></div>
+<div class="overlay" id="ovWin"><div class="modal" id="winBox"></div></div>
+<div class="overlay" id="ovMenu"><div class="modal">
+  <h2>Livelli PRO</h2>
+  <p style="margin:0;font-size:14px">Puoi usare tutti i blocchi che vuoi: se il kart arriva al traguardo il livello è superato. Le stelle premiano i programmi più corti.</p>
+  <div class="levels" id="levels"></div>
+  <div class="row" style="margin-top:12px;justify-content:space-between">
+    <button class="btn" id="btnReset">Azzera progressi</button>
+    <button class="btn alt" id="btnCloseMenu">Chiudi</button>
+  </div>
+</div></div>
+
+<script>
+/*ENGINE_START*/
+const DIRS={R:[1,0],L:[-1,0],U:[0,-1],D:[0,1]};
+const HEAD="RDLU"; // ordine orario: girare a destra = +1
+const ANG={R:0,D:90,L:180,U:270};
+const turnR=h=>HEAD[(HEAD.indexOf(h)+1)%4], turnL=h=>HEAD[(HEAD.indexOf(h)+3)%4];
+const COND_NAMES={front:"avanti",right:"a destra",left:"a sinistra",n:"n"};
+const PY_COND={front:"libero_avanti()",right:"libero_destra()",left:"libero_sinistra()"};
+
+const CONCEPTS={
+  rel:{tag:"Capitolo 9",title:"Movimento relativo",text:"Finora dicevi al kart <i>dove</i> andare sullo schermo (destra, giù…). Ora i comandi sono <b>dal punto di vista del pilota</b>: <b>avanti</b>, <b>gira a sinistra</b>, <b>gira a destra</b>. Attenzione: se il kart guarda verso il basso, la sua sinistra è la tua destra! Così si programmano i robot veri, come LEGO Spike e micro:bit.<br><br><b>Nuovo editor:</b> tocca un blocco della colonna a sinistra per inserirlo nel punto verde ▸. Tocca un blocco del programma per selezionarlo (puoi spostarlo o eliminarlo), tocca i numeri per cambiarli.",ex:"avanti(3)\ngira_destra()\navanti(2)"},
+  nest:{tag:"Capitolo 10",title:"Blocchi annidati",text:"I blocchi a forma di <b>C</b> possono contenere <b>tanti blocchi</b>, e anche <b>altri blocchi a C</b>: un ciclo dentro un ciclo, una condizione dentro un ciclo, una condizione dentro un'altra. In Python questo si vede dal <b>rientro</b> (indentazione) delle righe.<br><br>Quando inserisci un blocco a C, il punto verde ▸ entra automaticamente al suo interno.",ex:"for i in range(2):\n    for j in range(3):\n        avanti(1)\n        gira_destra()\n        avanti(1)\n        gira_sinistra()\n    avanti(2)"},
+  func:{tag:"Capitolo 11",title:"Funzioni",text:"Una <b>funzione</b> è un pezzo di programma con un nome. La <b>definisci una volta</b> (riquadro rosa) e poi la <b>chiami</b> quante volte vuoi con il blocco 🧩. Serve quando lo stesso pezzo si ripete in punti diversi, non sempre di seguito: lì un ciclo non basta.<br><br>Questo si chiama <b>astrazione</b>: dai un nome a un'idea e smetti di pensare ai dettagli.",ex:"def mossa():\n    avanti(1)\n    gira_destra()\n\nmossa()\navanti(2)\nmossa()"},
+  vars:{tag:"Capitolo 13",title:"Variabili",text:"Una <b>variabile</b> è una scatola con un nome che contiene un numero. Qui la scatola si chiama <b>n</b>. Puoi <b>impostarla</b> (n = 1), <b>cambiarla</b> (n += 1) e <b>usarla</b> dentro altri blocchi: <b>avanti n</b> avanza di tante caselle quanto vale n <i>in quel momento</i>.<br><br>Dentro un ciclo la variabile cambia a ogni giro, e lo stesso blocco fa cose diverse. Guarda il riquadro 📦 per vedere il valore di n mentre il programma gira.",ex:"n = 1\nfor i in range(4):\n    avanti(n)\n    gira_destra()\n    n += 1"},
+  sens:{tag:"Capitolo 14",title:"Ripeti finché + E / O / NON",text:"<b>Ripeti finché</b> ripete i blocchi interni <b>finché la condizione diventa vera</b>, poi passa ai blocchi successivi. Non serve sapere in anticipo quante volte.<br><br>Le condizioni si possono combinare:<br>• <b>NON</b> inverte: vero diventa falso.<br>• <b>E</b>: vera solo se <i>entrambe</i> le parti sono vere.<br>• <b>O</b>: vera se <i>almeno una</i> parte è vera.<br><br>Tocca i bottoni bianchi nel blocco per cambiare la condizione: <b>è/NON è</b>, la direzione, e <b>+</b> per aggiungere una seconda parte con E oppure O.",ex:"# avanza finché trovi una svolta\nwhile not (libero_destra() or libero_sinistra()):\n    avanti(1)"},
+  count:{tag:"Capitolo 15",title:"Contatori",text:"Una variabile può <b>contare</b>: parti da <b>n = 0</b> e aggiungi 1 ogni volta che succede qualcosa (per esempio, trovi una svolta a destra). Poi usi la condizione <b>n = 3</b> per decidere quando fermarti.<br><br>Nella condizione tocca la direzione finché compare <b>n</b>, poi tocca il numero per cambiarlo. Il bottone <b>=</b> diventa <b>≠</b> (diverso).",ex:"n = 0\nwhile not n == 3:\n    avanti(1)\n    if libero_destra():\n        n += 1"},
+  gp:{tag:"Capitolo 16",title:"Gran Premio",text:"L'ultima sfida unisce tutto: <b>variabile</b>, <b>ciclo finché 🏁</b> e <b>movimento relativo</b>. Il programma deve funzionare su piste con un numero diverso di scalini, quindi non puoi sapere in anticipo quante volte ripetere.",ex:"n = 1\nwhile not traguardo():\n    avanti(n)\n    ...\n    n += 1"},
+  maze:{tag:"Capitolo 12",title:"Il labirinto",text:"Tre labirinti diversi, un solo programma. Esiste un algoritmo famoso che esce da qualsiasi labirinto semplice: <b>tieni sempre la mano destra appoggiata al muro</b>. Se a destra c'è un passaggio, gira a destra e avanza; altrimenti, se puoi, vai avanti; altrimenti gira a sinistra.<br><br>Riesci a tradurre questa regola in blocchi?",ex:"while not traguardo():\n    if libero_destra():\n        ...\n    else:\n        ..."}
+};
+
+// Mappe: . erba  # pista  S partenza  F traguardo  X roccia  * albero  o fiore
+// h = direzione iniziale del kart. pal = blocchi disponibili. max = blocchi massimi. ref = soluzione di riferimento (per stelle e test)
+const LEVELS=[
+ {c:"rel",h:"R",goal:"Usa il blocco avanti: il numero dice quante caselle.",max:3,pal:["fwd","left","right"],
+  hint:"Conta le caselle fino al traguardo e scrivile nel blocco avanti.",
+  maps:[["*.......",".S###F.o","...o...*"]],
+  ref:[{t:"fwd",n:4}]},
+ {c:"rel",h:"R",goal:"Prima curva: da che parte gira il pilota?",max:4,pal:["fwd","left","right"],
+  hint:"Il kart guarda a destra. La strada scende: per il pilota è una svolta a destra.",
+  maps:[["o.....",".S###*","....#.","....F.","*....o"]],
+  ref:[{t:"fwd",n:3},{t:"right"},{t:"fwd",n:2}]},
+ {c:"rel",h:"D",goal:"Il kart guarda in basso! Mettiti nei suoi panni.",max:4,pal:["fwd","left","right"],
+  hint:"Se guardi verso il basso, la tua sinistra è a destra dello schermo. Prova a girare il telefono!",
+  maps:[["o.....",".S...*",".#....",".###F.","*....o"]],
+  ref:[{t:"fwd",n:2},{t:"left"},{t:"fwd",n:3}]},
+ {c:"rel",h:"L",goal:"Si parte verso sinistra. Tre curve, e non tutte uguali.",max:8,pal:["fwd","left","right"],
+  hint:"Prima svolta: il kart guarda a sinistra e la strada sale. Per il pilota è a destra.",
+  maps:[["*.......","..###..o","..#.#...","..F.##S.","o.....*."]],
+  ref:[{t:"fwd",n:2},{t:"right"},{t:"fwd",n:2},{t:"left"},{t:"fwd",n:2},{t:"left"},{t:"fwd",n:2}]},
+
+ {c:"nest",h:"R",goal:"Un percorso a U: tre lati uguali. Metti DUE blocchi dentro lo stesso ripeti.",max:6,pal:["fwd","left","right","rep"],
+  hint:"Ogni lato è: avanti 3, gira a destra. Mettili tutti e due dentro ripeti 3 volte.",
+  maps:[["o.......",".S###..*","....#...","....#...",".F###..o","*......."]],
+  ref:[{t:"rep",n:3,body:[{t:"fwd",n:3},{t:"right"}]}]},
+ {c:"nest",h:"R",goal:"Una scala. Il ciclo deve contenere 4 blocchi.",max:6,pal:["fwd","left","right","rep"],
+  hint:"Uno scalino è: avanti 1, gira a destra, avanti 1, gira a sinistra. Quanti scalini ci sono?",
+  maps:[["o.......",".S#....*","..##....","...##...","....F..o","*......."]],
+  ref:[{t:"rep",n:3,body:[{t:"fwd",n:1},{t:"right"},{t:"fwd",n:1},{t:"left"}]}]},
+ {c:"nest",h:"R",goal:"Prima la scala con il ciclo, poi il rettilineo: i blocchi DOPO il ciclo vengono eseguiti una volta sola.",max:8,pal:["fwd","left","right","rep"],
+  hint:"ripeti 3 volte [avanti 1, gira a destra, avanti 1, gira a sinistra], poi FUORI dal ciclo: avanti 2. Tocca lo spazio sotto il ciclo per mettere il blocco fuori.",
+  maps:[["o.........",".S#......*","..##......","...##.....","....##F...","*.......o."]],
+  ref:[{t:"rep",n:3,body:[{t:"fwd",n:1},{t:"right"},{t:"fwd",n:1},{t:"left"}]},{t:"fwd",n:2}]},
+ {c:"nest",h:"R",goal:"Il programma del livello prima si ripete 2 volte! Mettilo tutto DENTRO un altro ripeti: un ciclo dentro un ciclo.",max:8,pal:["fwd","left","right","rep"],
+  hint:"Il ciclo esterno ripete 2 volte: [una scala da 3 scalini] + [avanti 2]. La scala è a sua volta un ciclo.",
+  maps:[[".............",".S#.........o","..##.........","...##....*...","....####.....",".......##....","*.......##...",".........##F.","o............"]],
+  ref:[{t:"rep",n:2,body:[{t:"rep",n:3,body:[{t:"fwd",n:1},{t:"right"},{t:"fwd",n:1},{t:"left"}]},{t:"fwd",n:2}]}]},
+ {c:"nest",h:"R",goal:"Due piste di lunghezza diversa, un solo programma: ripeti finché 🏁 non si ferma finché non arrivi.",max:4,pal:["fwd","left","right","while"],
+  hint:"Metti avanti 1 dentro ripeti finché 🏁. Il kart avanza di 1 a ogni giro finché tocca il traguardo.",
+  maps:[["o........",".S###F..*","........."],["o........",".S######F","*........"]],
+  ref:[{t:"while",body:[{t:"fwd",n:1}]}]},
+ {c:"nest",h:"R",goal:"Una curva, ma in punti diversi. Se davanti è libero avanza, altrimenti gira a destra.",max:6,pal:["fwd","left","right","while","ifelse","if"],
+  hint:"ripeti finché 🏁 → dentro: se libero avanti → avanti 1, altrimenti → gira a destra.",
+  maps:[["o.......",".S###...","....#..*","....F...","*......o"],["o.......",".S##....","...#...*","...#....","...F...o"]],
+  ref:[{t:"while",body:[{t:"if",c:"front",body:[{t:"fwd",n:1}],els:[{t:"right"}]}]}]},
+ {c:"nest",h:"R",goal:"Due piste diverse, con più curve. Stessa regola: se davanti è libero avanza, altrimenti gira a destra.",max:5,pal:["fwd","left","right","while","ifelse","if"],
+  hint:"Ripeti finché 🏁 → dentro un SE/ALTRIMENTI: se libero avanti → avanti 1, altrimenti → gira a destra.",
+  maps:[["o.......",".S####.*",".....#..",".....#..","..F###..","*......o"],
+        ["o.......",".S#####.","......#*",".##F..#.",".#....#.",".######.","*......o"]],
+  ref:[{t:"while",body:[{t:"if",c:"front",body:[{t:"fwd",n:1}],els:[{t:"right"}]}]}]},
+ {c:"nest",h:"R",goal:"Ora le curve vanno sia a destra che a sinistra. Serve una condizione dentro l'altra.",max:7,pal:["fwd","left","right","while","ifelse","if"],
+  hint:"Se davanti è libero avanza. Altrimenti… c'è un'altra domanda da fare: è libero a sinistra?",
+  maps:[[".........","...####.o","...#..#..",".S##..#..","*.....F..","........."],
+        [".........",".S###..F.","....#..#.","....####*","o........"]],
+  ref:[{t:"while",body:[{t:"if",c:"front",body:[{t:"fwd",n:1}],els:[{t:"if",c:"left",body:[{t:"left"}],els:[{t:"right"}]}]}]}]},
+
+ {c:"func",h:"R",goal:"Lo scalino compare 4 volte, ma non sempre di seguito. Crea una funzione!",max:11,pal:["fwd","left","right","rep","call"],
+  hint:"Metti nella funzione (riquadro rosa) uno scalino: avanti 1, destra, avanti 1, sinistra. Poi nel programma: 🧩, avanti 2, 🧩, 🧩, avanti 1, 🧩.",
+  fn:true,
+  maps:[["..........",".S#......o","..####....",".....##...","*.....###.","........F.","o........."]],
+  ref:{fn:[{t:"fwd",n:1},{t:"right"},{t:"fwd",n:1},{t:"left"}],main:[{t:"call"},{t:"fwd",n:2},{t:"call"},{t:"call"},{t:"fwd",n:1},{t:"call"}]}},
+ {c:"func",h:"R",goal:"Salta le rocce! Il salto è sempre uguale: trasformalo in una funzione.",max:14,pal:["fwd","left","right","rep","call"],
+  hint:"Il salto: gira a sinistra, avanti 1, gira a destra, avanti 2, gira a destra, avanti 1, gira a sinistra.",
+  fn:true,
+  maps:[["o............","..###.#####.*",".S#X###X#X#F.","*...........o"]],
+  ref:{fn:[{t:"left"},{t:"fwd",n:1},{t:"right"},{t:"fwd",n:2},{t:"right"},{t:"fwd",n:1},{t:"left"}],main:[{t:"fwd",n:1},{t:"call"},{t:"fwd",n:2},{t:"call"},{t:"call"},{t:"fwd",n:1}]}},
+
+ {c:"maze",h:"D",goal:"Tre labirinti, un solo programma: la regola della mano destra.",max:9,pal:["fwd","left","right","while","ifelse","if"],
+  hint:"Ripeti finché 🏁: SE libero a destra → [gira a destra, avanti 1], ALTRIMENTI → [SE libero avanti → avanti 1, ALTRIMENTI → gira a sinistra].",
+  maps:[["*..........", ".S.#######.", ".#.....#.#.", ".#.###.F.#.", ".#.#.#...#.", ".###.#####.", "o.........*"], ["*..........", ".S.#####.#.", ".#.#...#.#.", ".###.F.###.", ".....#...#.", ".#########.", "o.........*"], ["*..........", ".S.#######.", ".#.#.....#.", ".###.##F.#.", ".....#...#.", ".#########.", "o.........*"]],
+  ref:[{t:"while",body:[{t:"if",c:"right",body:[{t:"right"},{t:"fwd",n:1}],els:[{t:"if",c:"front",body:[{t:"fwd",n:1}],els:[{t:"left"}]}]}]}]}
+ ,
+ {c:"vars",h:"R",goal:"Gli scalini diventano sempre più lunghi: 1, 2, 3, 4. Usa la variabile n.",max:8,vars:true,pal:["fwd","left","right","rep","set","chg","fwdv"],
+  hint:"n = 1, poi ripeti 4 volte: avanti n, gira a destra, avanti 1, gira a sinistra, n += 1.",
+  maps:[[".............",".S#.........o","..###........","....####..*..",".......####F.","o............"]],
+  ref:[{t:"set",v:1},{t:"rep",n:4,body:[{t:"fwdv"},{t:"right"},{t:"fwd",n:1},{t:"left"},{t:"chg",v:1}]}]},
+ {c:"vars",h:"R",goal:"Una spirale che si allarga: ogni lato è lungo una casella in più del precedente.",max:6,vars:true,pal:["fwd","left","right","rep","set","chg","fwdv"],
+  hint:"I lati sono lunghi 1, 2, 3, 4, 5, 6 e si gira sempre a destra. Bastano 5 blocchi.",
+  maps:[["........",".######.",".#....#.",".#.S#.#.",".#..#.#.",".####.#.","......#.","......F.","........"]],
+  ref:[{t:"set",v:1},{t:"rep",n:6,body:[{t:"fwdv"},{t:"right"},{t:"chg",v:1}]}]},
+ {c:"vars",h:"R",goal:"Conto alla rovescia! Ora la spirale si stringe.",max:6,vars:true,pal:["fwd","left","right","rep","set","chg","fwdv"],
+  hint:"Il primo lato è lungo 6, poi 5, 4… La variabile parte da 6 e a ogni giro diminuisce: n += -1.",
+  maps:[[".........",".S######.",".......#.","...###.#.","...#.F.#.","...#...#.","...#####.","........."]],
+  ref:[{t:"set",v:6},{t:"rep",n:6,body:[{t:"fwdv"},{t:"right"},{t:"chg",v:-1}]}]},
+ {c:"sens",h:"R",goal:"Tre piste di lunghezza diversa. Avanza finché c'è strada, poi gira.",max:6,compound:true,pal:["fwd","left","right","until"],
+  hint:"ripeti finché NON è libero avanti → avanti 1. Poi gira a destra e di nuovo lo stesso ciclo.",
+  maps:[[".........",".S###....","....#....","....#....","....F....",".........","........."],
+        [".........",".S######.",".......#.",".......F.",".........",".........","........."],
+        [".........",".S#......","..#......","..#......","..#......","..F......","........."]],
+  ref:[{t:"until",c:"front",na:true,body:[{t:"fwd",n:1}]},{t:"right"},{t:"until",c:"front",na:true,body:[{t:"fwd",n:1}]}]},
+ {c:"sens",h:"R",goal:"Attento: la strada dritta è una trappola. Gira alla prima svolta a destra!",max:6,compound:true,pal:["fwd","left","right","until"],
+  hint:"Il primo ciclo deve fermarsi quando è libero a destra, non quando finisce la strada.",
+  maps:[[".........",".S#####..","...#.....","...#.....","...F.....","........."],
+        [".........",".S######.",".....#...",".....F...",".........","........."]],
+  ref:[{t:"until",c:"right",body:[{t:"fwd",n:1}]},{t:"right"},{t:"until",c:"front",na:true,body:[{t:"fwd",n:1}]}]},
+ {c:"sens",h:"R",goal:"La svolta può essere a destra o a sinistra. Serve O!",max:8,compound:true,pal:["fwd","left","right","until","ifelse"],
+  hint:"ripeti finché è libero a destra O è libero a sinistra → avanti 1. Poi: se libero a destra gira a destra, altrimenti a sinistra. Infine avanza fino in fondo.",
+  maps:[[".........",".........",".........",".S######.","....#....","....F....","........."],
+        [".........","...F.....","...#.....",".S#####..",".........",".........","........."]],
+  ref:[{t:"until",c:"right",op:"or",b:"left",body:[{t:"fwd",n:1}]},{t:"if",c:"right",body:[{t:"right"}],els:[{t:"left"}]},{t:"until",c:"front",na:true,body:[{t:"fwd",n:1}]}]},
+ {c:"sens",h:"R",goal:"Finale: le svolte a sinistra sono vicoli ciechi, tranne quella in fondo. Combina NON e O.",max:8,compound:true,pal:["fwd","left","right","until","ifelse"],
+  hint:"Fermati quando NON è libero avanti O è libero a destra. In Python diventa: while libero_avanti() and not libero_destra()",
+  maps:[[".........",".........",".........",".S######.","....#....","....F....","........."],
+        [".........","......F..","...#..#..",".S#####..",".........",".........","........."]],
+  ref:[{t:"until",c:"front",na:true,op:"or",b:"right",body:[{t:"fwd",n:1}]},{t:"if",c:"right",body:[{t:"right"}],els:[{t:"left"}]},{t:"until",c:"front",na:true,body:[{t:"fwd",n:1}]}]}
+ ,
+ {c:"count",h:"R",goal:"Prendi la TERZA svolta a destra: le prime due sono vicoli ciechi. Conta con n!",max:9,vars:true,compound:true,pal:["fwd","left","right","until","if","set","chg"],
+  hint:"n = 0. Ripeti finché n = 3: avanti 1, se è libero a destra → n += 1. Poi gira a destra e avanza finché la strada finisce.",
+  maps:[["............",".S#########.","...#.#..#...","........#...","........F...","............"],
+        ["............",".S#########.","..#..#...#..",".........#..",".........#..",".........F..","............"]],
+  ref:[{t:"set",v:0},{t:"until",c:"n",cv:3,body:[{t:"fwd",n:1},{t:"if",c:"right",body:[{t:"chg",v:1}]}]},{t:"right"},{t:"until",c:"front",na:true,body:[{t:"fwd",n:1}]}]},
+ {c:"count",h:"R",goal:"Terza svolta a destra, poi seconda svolta a sinistra. Ricorda di azzerare il contatore!",max:15,vars:true,compound:true,pal:["fwd","left","right","until","if","set","chg"],
+  hint:"Due conteggi in fila: il primo fino a n = 3 controllando la destra, poi n = 0 e il secondo fino a n = 2 controllando la sinistra.",
+  maps:[["..............",".S###########.","...#..#..#....",".........##...",".........#....",".........###F.",".........#....",".........#....",".............."],
+        ["...............",".S############.","..#..#....#....","..........##...","..........#....","..........#....","..........###F.","..........#....","..............."]],
+  ref:[{t:"set",v:0},{t:"until",c:"n",cv:3,body:[{t:"fwd",n:1},{t:"if",c:"right",body:[{t:"chg",v:1}]}]},{t:"right"},
+       {t:"set",v:0},{t:"until",c:"n",cv:2,body:[{t:"fwd",n:1},{t:"if",c:"left",body:[{t:"chg",v:1}]}]},{t:"left"},
+       {t:"until",c:"front",na:true,body:[{t:"fwd",n:1}]}]},
+ {c:"gp",h:"R",goal:"Gran Premio: scale con un numero diverso di scalini. Un solo algoritmo con variabile per tutte!",max:8,vars:true,pal:["fwd","fwdv","left","right","while","set","chg"],
+  hint:"Come nel primo livello delle variabili, ma il numero di scalini cambia da pista a pista, quindi non c'è il blocco ripeti N volte: usa ripeti finché 🏁.",
+  maps:[["..........",".S#.......","..###.....","....###F..","..........",".........."],
+        [".............",".S#.........o","..###........","....####..*..",".......####F.","o............"]],
+  ref:[{t:"set",v:1},{t:"while",body:[{t:"fwdv"},{t:"right"},{t:"fwd",n:1},{t:"left"},{t:"chg",v:1}]}]}
+];
+
+
+
+function parseMap(map){
+  const rows=map.length, cols=map[0].length; let sx=0,sy=0;
+  for(let y=0;y<rows;y++)for(let x=0;x<cols;x++){ if(map[y][x]==="S"){sx=x;sy=y;} }
+  return {rows,cols,sx,sy,tile:(x,y)=> (y<0||y>=rows||x<0||x>=cols)?".":map[y][x]};
+}
+function isTrack(ch){return ch==="#"||ch==="S"||ch==="F";}
+const getMaps=lv=>lv.maps;
+const progOf=lv=>Array.isArray(lv.ref)?{main:lv.ref,fn:[]}:lv.ref;
+function countNodes(list){let n=0;for(const b of list){n++; if(b.body)n+=countNodes(b.body); if(b.els)n+=countNodes(b.els);}return n;}
+const progSize=p=>countNodes(p.main)+countNodes(p.fn||[]);
+
+// Esegue un programma ad albero su una pista. Restituisce la traccia degli eventi (funzione pura, testabile).
+function run(level,prog,vi=0){
+  const m=parseMap(getMaps(level)[vi]); let x=m.sx,y=m.sy,h=level.h||"R",nv=0; const ev=[]; let steps=0;
+  class Stop{constructor(r){this.r=r;}}
+  const free=d=>isTrack(m.tile(x+DIRS[d][0],y+DIRS[d][1]));
+  const dirOf=c=>c==="front"?h:c==="right"?turnR(h):turnL(h);
+  const evalCond=b=>{
+    const part=(c,neg,v)=>{
+      if(c==="n"){const raw=nv===(v||0);return {c,d:null,v:v||0,nv,raw,neg:!!neg,val:neg?!raw:raw};}
+      const d=dirOf(c),raw=free(d);return {c,d,raw,neg:!!neg,val:neg?!raw:raw};};
+    const parts=[part(b.c,b.na,b.cv)]; if(b.op)parts.push(part(b.b,b.nb,b.bv));
+    const res=b.op==="and"?parts[0].val&&parts[1].val:b.op==="or"?parts[0].val||parts[1].val:parts[0].val;
+    ev.push({t:"cond",id:b.id,parts,res,x,y,op:b.op||""}); return res;
+  };
+  const tick=()=>{ if(++steps>3000){ev.push({t:"infinite"});throw new Stop("guard");} };
+  function execList(list,depth){ for(const b of list)execNode(b,depth); }
+  function execNode(b,depth){
+    tick(); ev.push({t:"pc",id:b.id});
+    switch(b.t){
+      case "fwd":
+        for(let s=0;s<b.n;s++){
+          const nx=x+DIRS[h][0],ny=y+DIRS[h][1];
+          if(!isTrack(m.tile(nx,ny))){ev.push({t:"crash",x:nx,y:ny,dir:h});throw new Stop("off");}
+          x=nx;y=ny;ev.push({t:"move",x,y,dir:h});
+        }
+        if(m.tile(x,y)==="F"){ev.push({t:"win"});throw new Stop("win");}
+        break;
+      case "left": h=turnL(h);ev.push({t:"turn",dir:h,side:"L"});break;
+      case "right": h=turnR(h);ev.push({t:"turn",dir:h,side:"R"});break;
+      case "rep": for(let i=0;i<b.n;i++){ev.push({t:"iter",id:b.id,i});execList(b.body,depth);} break;
+      case "while": {
+        const seen=new Set();
+        while(true){
+          const key=x+","+y+","+h+","+nv;
+          if(seen.has(key)){ev.push({t:"infinite"});throw new Stop("guard");}
+          seen.add(key);
+          if(!b.body.length){ev.push({t:"infinite"});throw new Stop("guard");}
+          ev.push({t:"iter",id:b.id});
+          execList(b.body,depth); tick();
+        }
+      }
+      case "set": nv=b.v; ev.push({t:"var",v:nv}); break;
+      case "chg": nv+=b.v; ev.push({t:"var",v:nv}); break;
+      case "fwdv": {
+        const k=Math.max(0,nv);
+        for(let s=0;s<k;s++){
+          const nx=x+DIRS[h][0],ny=y+DIRS[h][1];
+          if(!isTrack(m.tile(nx,ny))){ev.push({t:"crash",x:nx,y:ny,dir:h});throw new Stop("off");}
+          x=nx;y=ny;ev.push({t:"move",x,y,dir:h});
+        }
+        if(m.tile(x,y)==="F"){ev.push({t:"win"});throw new Stop("win");}
+        break;
+      }
+      case "until": {
+        const seen=new Set();
+        while(!evalCond(b)){
+          const key=x+","+y+","+h+","+nv;
+          if(seen.has(key)){ev.push({t:"infinite"});throw new Stop("guard");}
+          seen.add(key); ev.push({t:"iter",id:b.id});
+          execList(b.body,depth); tick();
+        }
+        break;
+      }
+      case "if": {
+        const res=evalCond(b);
+        if(res)execList(b.body,depth); else if(b.els)execList(b.els,depth);
+        break;
+      }
+      case "call":
+        if(depth>8){ev.push({t:"recursion"});throw new Stop("recursion");}
+        execList(prog.fn||[],depth+1); break;
+    }
+  }
+  try{ execList(prog.main,0); }catch(e){ if(e instanceof Stop){ return e.r==="win"?{ok:true,ev}:{ok:false,ev,reason:e.r}; } throw e; }
+  return {ok:false,ev,reason:"short"};
+}
+function runAll(level,prog){return getMaps(level).map((_,vi)=>run(level,prog,vi));}
+function stars(level,used){const best=progSize(progOf(level)); return used<=best?3:used<=best+1?2:1;}
+/*ENGINE_END*/
+
+
+// ================= UI =================
+const $=id=>document.getElementById(id);
+const VL="ABCDE";
+const PAL={
+  fwd:{lbl:"avanti 1",cls:"c-mv",make:()=>({t:"fwd",n:1})},
+  left:{lbl:"↺ gira a sinistra",cls:"c-turn",make:()=>({t:"left"})},
+  right:{lbl:"↻ gira a destra",cls:"c-turn",make:()=>({t:"right"})},
+  rep:{lbl:"ripeti 2 volte",cls:"c-ctrl",make:()=>({t:"rep",n:2,body:[]})},
+  while:{lbl:"ripeti finché 🏁",cls:"c-ctrl",make:()=>({t:"while",body:[]})},
+  if:{lbl:"se libero…",cls:"c-sens",make:()=>({t:"if",c:"front",body:[]})},
+  ifelse:{lbl:"se… altrimenti",cls:"c-sens",make:()=>({t:"if",c:"front",body:[],els:[]})},
+  call:{lbl:"🧩 mossa()",cls:"c-fn",make:()=>({t:"call"})},
+  until:{lbl:"ripeti finché…",cls:"c-ctrl",make:()=>({t:"until",c:"front",na:true,body:[]})},
+  set:{lbl:"n = 1",cls:"c-var",make:()=>({t:"set",v:1})},
+  chg:{lbl:"n += 1",cls:"c-var",make:()=>({t:"chg",v:1})},
+  fwdv:{lbl:"avanti n",cls:"c-mv",make:()=>({t:"fwdv"})}
+};
+const GROUPS=[["Movimento",["fwd","fwdv","left","right"]],["Controllo",["rep","while","until"]],["Sensori",["if","ifelse"]],["Variabili",["set","chg"]],["Funzioni",["call"]]];
+
+let save={unlocked:1,stars:{}};
+let showPy=false; try{showPy=localStorage.getItem("pistaCodiceProPy")==="1";}catch(e){}
+try{const s=JSON.parse(localStorage.getItem("pistaCodicePro")||"null");if(s&&s.unlocked)save=s;}catch(e){}
+const persist=()=>{try{localStorage.setItem("pistaCodicePro",JSON.stringify(save));}catch(e){}};
+
+let L=0,prog={main:[],fn:[]},cursor=null,selId=null,running=false,stopReq=false,V=0,vres=[],nid=1,speed=1,hintStage=0;
+const lvl=()=>LEVELS[L];
+const sleep=ms=>new Promise(r=>setTimeout(r,ms/speed));
+
+// ---------- albero ----------
+let lists=[],index={}; // registro ricostruito a ogni render
+function findNode(id){return index[id];}
+function size(){return progSize(prog);}
+
+function loadLevel(i,intro=true){
+  L=i;const lv=lvl();prog={main:[],fn:[]};cursor={list:prog.main,i:0};selId=null;V=0;vres=[];hintStage=0;
+  $("lvlPill").textContent="🏁 "+(i+1)+"/"+LEVELS.length;
+  $("goalTitle").textContent=CONCEPTS[lv.c].title+" · livello "+(i+1);
+  $("goalText").textContent=lv.goal; setMsg("");
+  hidePaint(); setHintLabel();
+  renderPalette();renderTabs();buildBoard();renderAll();
+  if(intro&&LEVELS.findIndex(l=>l.c===lv.c)===i)showConcept();
+}
+function setMsg(t,c){const m=$("msg");m.innerHTML=t;m.style.color=c||"#2a5a1b";}
+
+function renderPalette(){
+  const lv=lvl();let h="";
+  for(const [g,items] of GROUPS){const its=items.filter(k=>lv.pal.includes(k)||(k==="call"&&lv.fn));if(!its.length)continue;
+    h+=`<h4>${g}</h4>`+its.map(k=>`<button class="pb ${PAL[k].cls}" data-k="${k}">${PAL[k].lbl}</button>`).join("");}
+  $("palette").innerHTML=h;
+  $("palette").querySelectorAll(".pb").forEach(b=>b.onclick=()=>insert(b.dataset.k));
+}
+function insert(k){
+  if(running)return;
+  if(size()>=60){setMsg("Il programma è molto lungo: prova a usare un ciclo per accorciarlo.","#b33");return;}
+  const node=PAL[k].make();node.id=nid++;
+  if(!cursor||!lists.includes(cursor.list))cursor={list:prog.main,i:prog.main.length};
+  cursor.list.splice(cursor.i,0,node);
+  if(node.body)cursor={list:node.body,i:0}; else cursor={list:cursor.list,i:cursor.i+1};
+  selId=node.id;setMsg("");vres=[];renderTabs();resetKart();renderAll();
+}
+
+// ---------- render editor ----------
+function renderAll(active){
+  lists=[];index={};
+  let h=`<div class="area mainA"><div class="hat">▶ quando premi Via</div>${renderList(prog.main)}</div>`;
+  if(lvl().fn)h+=`<div class="area fnA"><div class="hat fnh">🧩 definisci mossa()</div>${renderList(prog.fn)}</div>`;
+  $("areas").innerHTML=h;
+  $("sizePill").textContent="🧱 "+size()+" blocchi · ⭐⭐⭐ con "+progSize(progOf(lvl()))+" o meno";
+  const g=$("btnGo");g.textContent=running?"⏹ Stop":"▶ Via";g.classList.toggle("stop",running);g.disabled=!running&&size()===0;
+  ["bUp","bDown","bDel"].forEach(b=>$(b).disabled=running||!selId);
+  $("bClear").disabled=running;
+  $("btnHint").disabled=running;
+  drawGhost();
+  $("palette").querySelectorAll(".pb").forEach(b=>b.classList.toggle("disabled",running||size()>=60));
+  renderCode();
+}
+function renderList(list){
+  const li=lists.length;lists.push(list);let h="";
+  list.forEach((n,i)=>{index[n.id]={node:n,list,i};h+=gap(li,i,list)+nodeHTML(n);});
+  h+=gap(li,list.length,list);
+  return h;
+}
+function gap(li,i,list){
+  const cur=cursor&&cursor.list===list&&cursor.i===i;
+  const empty=list.length===0;
+  return `<div class="gap ${cur?"cur":""} ${empty?"empty":""}" data-l="${li}" data-i="${i}"></div>`;
+}
+function condPart(n,w){
+  const c=w==="a"?n.c:n.b,neg=w==="a"?n.na:n.nb,v=(w==="a"?n.cv:n.bv)||0;
+  if(c==="n")return `<button class="cond" data-id="${n.id}" data-w="${w}">n</button> <button class="neg ${neg?"on":""}" data-id="${n.id}" data-w="${w}">${neg?"≠":"="}</button> <button class="cvn num" data-id="${n.id}" data-w="${w}">${v}</button>`;
+  return `<button class="neg ${neg?"on":""}" data-id="${n.id}" data-w="${w}">${neg?"NON è":"è"}</button> libero <button class="cond" data-id="${n.id}" data-w="${w}">${COND_NAMES[c]}</button>`;
+}
+function condBtn(n){
+  if(!lvl().compound)return `<button class="cond" data-id="${n.id}" data-w="a">${COND_NAMES[n.c]}</button>`;
+  let h=condPart(n,"a")+` <button class="op" data-id="${n.id}">${n.op==="and"?"E":n.op==="or"?"O":"+"}</button>`;
+  if(n.op)h+=" "+condPart(n,"b");
+  return h;
+}
+function nodeHTML(n){
+  const sel=n.id===selId?" sel":"";
+  switch(n.t){
+    case "fwd":return `<div class="blk c-mv${sel}" data-id="${n.id}">avanti <button class="num" data-id="${n.id}">${n.n}</button></div>`;
+    case "left":return `<div class="blk c-turn${sel}" data-id="${n.id}">↺ gira a sinistra</div>`;
+    case "right":return `<div class="blk c-turn${sel}" data-id="${n.id}">↻ gira a destra</div>`;
+    case "call":return `<div class="blk c-fn${sel}" data-id="${n.id}">🧩 mossa()</div>`;
+    case "rep":return cblock(n,"c-ctrl",`ripeti <button class="num" data-id="${n.id}">${n.n}</button> volte`,sel);
+    case "while":return cblock(n,"c-ctrl","ripeti finché arrivi al 🏁",sel);
+    case "if":return cblock(n,"c-sens",lvl().compound?`se ${condBtn(n)}`:`se è libero ${condBtn(n)}`,sel);
+    case "until":return cblock(n,"c-ctrl",lvl().compound?`ripeti finché ${condBtn(n)}`:`ripeti finché è libero ${condBtn(n)}`,sel);
+    case "set":return `<div class="blk c-var${sel}" data-id="${n.id}">n = <button class="num" data-id="${n.id}">${n.v}</button></div>`;
+    case "chg":return `<div class="blk c-var${sel}" data-id="${n.id}">n += <button class="num" data-id="${n.id}">${n.v}</button></div>`;
+    case "fwdv":return `<div class="blk c-mv${sel}" data-id="${n.id}">avanti <span class="num" style="background:#ff8c1a;color:#fff">n</span></div>`;
+  }
+}
+function cblock(n,cls,head,sel){
+  let h=`<div class="cblk ${cls}${sel}" data-id="${n.id}"><div class="chead" data-id="${n.id}">${head}</div><div class="cbody">${renderList(n.body)}</div>`;
+  if(n.els)h+=`<div class="chead" data-id="${n.id}">altrimenti</div><div class="cbody">${renderList(n.els)}</div>`;
+  return h+`<div class="cfoot"></div></div>`;
+}
+$("areas").addEventListener("click",e=>{
+  if(running)return;
+  const neg=e.target.closest(".neg"),op=e.target.closest(".op"),cvn=e.target.closest(".cvn");
+  if(cvn){const n=findNode(+cvn.dataset.id).node;const k=cvn.dataset.w==="b"?"bv":"cv";n[k]=((n[k]||0)+1)%10;selId=n.id;vres=[];renderTabs();renderAll();return;}
+  if(neg){const n=findNode(+neg.dataset.id).node;if(neg.dataset.w==="b")n.nb=!n.nb;else n.na=!n.na;selId=n.id;vres=[];renderTabs();renderAll();return;}
+  if(op){const n=findNode(+op.dataset.id).node;n.op=n.op===""||!n.op?"and":n.op==="and"?"or":"";if(n.op&&!n.b){n.b="right";n.nb=false;}selId=n.id;vres=[];renderTabs();renderAll();return;}
+  const num=e.target.closest("button.num"),cond=e.target.closest(".cond"),g=e.target.closest(".gap"),blk=e.target.closest(".blk,.chead");
+  if(num){const n=findNode(+num.dataset.id).node;
+    if(n.t==="fwd")n.n=n.n%6+1;
+    else if(n.t==="set")n.v=(n.v+1)%10;
+    else if(n.t==="chg"){const cyc=[1,2,3,-1,-2,-3];n.v=cyc[(cyc.indexOf(n.v)+1)%cyc.length];}
+    else n.n=n.n>=9?2:n.n+1; selId=n.id; vres=[];renderTabs();renderAll();return;}
+  if(cond){const n=findNode(+cond.dataset.id).node;const order=["front","right","left"].concat(lvl().vars&&lvl().compound?["n"]:[]);const k=cond.dataset.w==="b"?"b":"c";n[k]=order[(order.indexOf(n[k])+1)%order.length];selId=n.id;vres=[];renderTabs();renderAll();return;}
+  if(g){cursor={list:lists[+g.dataset.l],i:+g.dataset.i};selId=null;renderAll();return;}
+  if(blk){const f=findNode(+blk.dataset.id);selId=f.node.id;cursor={list:f.list,i:f.i+1};renderAll();}
+});
+function moveSel(d){const f=findNode(selId);if(!f)return;const j=f.i+d;if(j<0||j>=f.list.length)return;
+  f.list.splice(f.i,1);f.list.splice(j,0,f.node);cursor={list:f.list,i:j+1};resetKart();renderAll();}
+$("bUp").onclick=()=>moveSel(-1);$("bDown").onclick=()=>moveSel(1);
+$("bDel").onclick=()=>{const f=findNode(selId);if(!f||running)return;f.list.splice(f.i,1);selId=null;cursor={list:f.list,i:f.i};vres=[];renderTabs();resetKart();renderAll();};
+$("bClear").onclick=()=>{if(running)return;prog.main.length=0;prog.fn.length=0;cursor={list:prog.main,i:0};selId=null;vres=[];renderTabs();resetKart();setMsg("");renderAll();};
+
+// ---------- Python ----------
+function pyLines(list,ind,out){
+  if(!list.length){out.push([ind+'<span class="k">pass</span>  <span class="c"># vuoto</span>',null]);return;}
+  for(const n of list){
+    switch(n.t){
+      case "fwd":out.push([ind+`<span class="f">avanti</span>(<span class="num">${n.n}</span>)`,n.id]);break;
+      case "left":out.push([ind+`<span class="f">gira_sinistra</span>()`,n.id]);break;
+      case "right":out.push([ind+`<span class="f">gira_destra</span>()`,n.id]);break;
+      case "call":out.push([ind+`<span class="f">mossa</span>()`,n.id]);break;
+      case "rep":out.push([ind+`<span class="k">for</span> i <span class="k">in</span> range(<span class="num">${n.n}</span>):`,n.id]);pyLines(n.body,ind+"    ",out);break;
+      case "while":out.push([ind+`<span class="k">while not</span> <span class="f">traguardo</span>():`,n.id]);pyLines(n.body,ind+"    ",out);break;
+      case "set":out.push([ind+`n = <span class="num">${n.v}</span>`,n.id]);break;
+      case "chg":out.push([ind+(n.v<0?`n -= <span class="num">${-n.v}</span>`:`n += <span class="num">${n.v}</span>`),n.id]);break;
+      case "fwdv":out.push([ind+`<span class="f">avanti</span>(n)`,n.id]);break;
+      case "until":{
+        let head;
+        if(!n.op)head=`<span class="k">while</span> ${pyPart(n.c,!n.na,n.cv)}:`;
+        else head=`<span class="k">while</span> ${pyPart(n.c,!n.na,n.cv)} <span class="k">${n.op==="or"?"and":"or"}</span> ${pyPart(n.b,!n.nb,n.bv)}:`; // De Morgan: not(A o B) = (non A) e (non B)
+        out.push([ind+head,n.id]);pyLines(n.body,ind+"    ",out);break;}
+      case "if":out.push([ind+`<span class="k">if</span> ${pyExpr(n)}:`,n.id]);pyLines(n.body,ind+"    ",out);
+        if(n.els){out.push([ind+`<span class="k">else</span>:`,n.id]);pyLines(n.els,ind+"    ",out);}break;
+    }
+  }
+}
+function pyPart(c,neg,v){
+  if(c==="n")return `n ${neg?"!=":"=="} <span class="num">${v||0}</span>`;
+  return (neg?'<span class="k">not</span> ':"")+`<span class="f">${PY_COND[c]}</span>`;}
+function pyExpr(n){let e=pyPart(n.c,n.na,n.cv);if(n.op)e+=` <span class="k">${n.op}</span> `+pyPart(n.b,n.nb,n.bv);return e;}
+function renderCode(){
+  const out=[];
+  if(lvl().fn){out.push([`<span class="k">def</span> <span class="f">mossa</span>():`,null]);pyLines(prog.fn,"    ",out);out.push(["",null]);}
+  if(!prog.main.length&&!lvl().fn){$("code").innerHTML='<span class="c"># tocca i blocchi a sinistra\n# per scrivere il programma</span>';return;}
+  if(prog.main.length)pyLines(prog.main,"",out); else out.push(['<span class="c"># programma principale vuoto</span>',null]);
+  $("code").innerHTML=out.map(([t,id])=>`<span class="ln" ${id?`data-id="${id}"`:""}>${t||" "}</span>`).join("");
+}
+function highlight(id){
+  document.querySelectorAll(".run").forEach(e=>e.classList.remove("run"));
+  document.querySelectorAll(".ln.hl").forEach(e=>e.classList.remove("hl"));
+  if(id==null)return;
+  const b=document.querySelector(`#areas [data-id="${id}"].blk, #areas [data-id="${id}"].cblk`);if(b)b.classList.add("run");
+  document.querySelectorAll(`.ln[data-id="${id}"]`).forEach(e=>e.classList.add("hl"));
+}
+
+// ---------- pista ----------
+let cellPx=44,kx=0,ky=0,kang=0;
+const KART_SVG=`<svg viewBox="0 0 60 60" width="100%" height="100%">
+ <rect x="12" y="10" width="10" height="8" rx="2" fill="#222"/><rect x="12" y="42" width="10" height="8" rx="2" fill="#222"/>
+ <rect x="38" y="10" width="10" height="8" rx="2" fill="#222"/><rect x="38" y="42" width="10" height="8" rx="2" fill="#222"/>
+ <path d="M8 22 Q8 17 14 17 L44 19 Q54 22 54 30 Q54 38 44 41 L14 43 Q8 43 8 38Z" fill="#ff6680" stroke="#fff" stroke-width="2"/>
+ <rect x="4" y="18" width="5" height="24" rx="2" fill="#ffd23f"/>
+ <circle cx="28" cy="30" r="7" fill="#4c97ff" stroke="#fff" stroke-width="2"/>
+ <path d="M44 25 L52 30 L44 35Z" fill="#fff" opacity=".85"/></svg>`;
+function renderTabs(){
+  const n=getMaps(lvl()).length,t=$("vtabs");
+  if(n<2){t.innerHTML="";return;}
+  t.innerHTML='<span style="font-size:13px;align-self:center">Versioni:</span>'+getMaps(lvl()).map((_,i)=>`<button class="vtab ${i===V?"on":""} ${vres[i]===true?"ok":vres[i]===false?"ko":""}" data-v="${i}">Pista ${VL[i]}</button>`).join("");
+  t.querySelectorAll(".vtab").forEach(b=>b.onclick=()=>{if(running)return;V=+b.dataset.v;renderTabs();buildBoard();});
+}
+function buildBoard(){
+  const m=parseMap(getMaps(lvl())[V]),b=$("board");
+  const w=Math.max(260,$("boardwrap").clientWidth-12);
+  cellPx=Math.floor(Math.min(52,w/m.cols,(window.innerHeight*.42)/m.rows));
+  document.documentElement.style.setProperty("--cell",cellPx+"px");
+  b.style.gridTemplateColumns=`repeat(${m.cols},${cellPx}px)`;
+  let h="";
+  for(let y=0;y<m.rows;y++)for(let x=0;x<m.cols;x++){
+    const ch=m.tile(x,y);
+    if(isTrack(ch)){let c="cell t";
+      if(!isTrack(m.tile(x,y-1)))c+=" eN";if(!isTrack(m.tile(x,y+1)))c+=" eS";if(!isTrack(m.tile(x-1,y)))c+=" eW";if(!isTrack(m.tile(x+1,y)))c+=" eE";
+      if(ch==="F")c+=" F";if(ch==="S")c+=" S";h+=`<div class="${c}" data-xy="${x},${y}"></div>`;}
+    else{const d=ch==="*"?"🌳":ch==="o"?"🌼":ch==="X"?"🪨":"";h+=`<div class="cell" data-xy="${x},${y}">${d?`<span class="deco">${d}</span>`:""}</div>`;}
+  }
+  b.innerHTML=h+`<div class="kart" id="kart"><div class="body" id="kbody">${KART_SVG}</div></div>`;
+  resetKart(); drawGhost(); if(paintOn)paintHint();
+}
+function placeKart(x,y,dir,instant){
+  const k=$("kart");if(!k)return;if(instant)k.style.transition="none";
+  kx=x;ky=y;const t=ANG[dir];kang+=((t-kang)%360+540)%360-180;
+  k.style.transform=`translate(${x*cellPx}px,${y*cellPx}px)`;$("kbody").style.transform=`rotate(${kang}deg)`;
+  if(instant){k.offsetHeight;k.style.transition="";}
+}
+function resetKart(){
+  const m=parseMap(getMaps(lvl())[V]);kang=0;
+  document.querySelectorAll(".trail").forEach(t=>t.remove());
+  const k=$("kart");if(k)k.classList.remove("crash");
+  placeKart(m.sx,m.sy,lvl().h||"R",true);
+  const w=$("watch");if(w){w.style.display=lvl().vars?"block":"none";w.textContent="📦 n = 0";}
+}
+function trail(x,y){const t=document.createElement("div");t.className="trail";t.style.left=(x+.5)*cellPx+"px";t.style.top=(y+.5)*cellPx+"px";$("board").appendChild(t);}
+
+// ---------- anteprima: dove andrà il kart con il programma attuale ----------
+function cellCenter(x,y){return [(x+.5)*cellPx,(y+.5)*cellPx];}
+function drawGhost(){
+  document.querySelectorAll(".gdot,.gend").forEach(e=>e.remove());
+  const gn=$("ghostNote"); if(gn)gn.style.display=(running||!prog.main.length)?"none":"block";
+  if(running||!prog.main.length)return;
+  const b=$("board");if(!b)return;
+  let r;try{r=run(lvl(),prog,V);}catch(e){return;}
+  const add=(cls,x,y,txt)=>{const d=document.createElement("div");d.className=cls;const [cx,cy]=cellCenter(x,y);d.style.left=cx+"px";d.style.top=cy+"px";if(txt)d.textContent=txt;b.appendChild(d);};
+  let lx=null,ly=null;
+  for(const e of r.ev){
+    if(e.t==="move"){add("gdot",e.x,e.y);lx=e.x;ly=e.y;}
+    else if(e.t==="crash")add("gend",e.x,e.y,"❌");
+  }
+  if(!r.ok&&r.reason==="short"){const m=parseMap(getMaps(lvl())[V]);add("gend",lx??m.sx,ly??m.sy,"🛑");}
+  if(!r.ok&&r.reason==="guard"){const m=parseMap(getMaps(lvl())[V]);add("gend",lx??m.sx,ly??m.sy,"♾️");}
+}
+
+// ---------- aiuto visivo ----------
+const HUES=[["#2563eb","#60a5fa"],["#ea580c","#fdba74"],["#16a34a","#86efac"],["#9333ea","#d8b4fe"]];
+let paintOn=false;
+function refProg(){
+  const p=JSON.parse(JSON.stringify(progOf(lvl())));let k=100000;
+  const f=a=>a.forEach(b=>{b.id=k++;if(b.body)f(b.body);if(b.els)f(b.els);});f(p.main);f(p.fn||[]);return p;
+}
+function hidePaint(){paintOn=false;document.querySelectorAll(".paint,.ticon").forEach(e=>e.remove());$("legendCard").style.display="none";}
+function paintHint(){
+  document.querySelectorAll(".paint,.ticon").forEach(e=>e.remove());
+  const p=refProg(), parent={}, inFn=new Set();
+  const walk=(a,par,fn)=>a.forEach(b=>{parent[b.id]=par;if(fn)inFn.add(b.id);if(b.body)walk(b.body,b,fn);if(b.els)walk(b.els,b,fn);});
+  walk(p.main,null,false);walk(p.fn||[],null,true);
+  const loopsOf=id=>{const out=[];let q=parent[id];while(q){if(q.t==="rep")out.unshift(q.id);q=parent[q.id];}return out;};
+  const r=run(lvl(),p,V); const m=parseMap(getMaps(lvl())[V]);
+  const cnt={}; let calls=0, cur=null, x=m.sx, y=m.sy, maxDepth=0, usedFn=false, turns=0, step=0, plain=0, vars=0;
+  const cellEl=(cx,cy)=>document.querySelector(`.cell[data-xy="${cx},${cy}"]`);
+  for(const e of r.ev){
+    if(e.t==="pc"){cur=e.id; const n=findIn(p,e.id); if(n&&n.t==="call")calls++;}
+    else if(e.t==="iter"){cnt[e.id]=(cnt[e.id]||0)+1;}
+    else if(e.t==="turn"){const c=cellEl(x,y);if(c){const t=document.createElement("div");t.className="ticon";t.textContent=e.side==="L"?"↺":"↻";c.appendChild(t);turns++;}}
+    else if(e.t==="var"){const c=cellEl(x,y);if(c){c.querySelectorAll(".nbadge").forEach(q=>q.remove());const t=document.createElement("div");t.className="nbadge";t.textContent="n="+e.v;c.appendChild(t);vars++;}}
+    else if(e.t==="move"){
+      x=e.x;y=e.y; step++; let color=null,label="";
+      if(cur!=null&&inFn.has(cur)){usedFn=true;color=HUES[(calls-1)%2===0?0:1][0];label="🧩";}
+      else if(cur!=null){const ls=loopsOf(cur);maxDepth=Math.max(maxDepth,ls.length);
+        if(ls.length){const o=cnt[ls[0]]||1, i=ls[1]?(cnt[ls[1]]||1):1; color=HUES[(o-1)%4][(ls[1]&&i%2===0)?1:0]; label=String(o);}
+        else {color="#0d9488";label=String(step);plain++;}}
+      const c=cellEl(x,y);
+      if(c&&color&&m.tile(x,y)!=="F"){const d=document.createElement("div");d.className="paint";d.style.background=color;d.textContent=label;c.appendChild(d);}
+    }
+  }
+  // legenda
+  let lg="";
+  if(usedFn)lg+=`<p>Le caselle con 🧩 sono percorse dalla <b>funzione</b>: blu e arancione si alternano a ogni chiamata. Le caselle senza colore sono i blocchi del programma principale.</p>`;
+  else if(maxDepth>=2)lg+=`<p>Il <b>numero</b> e il <b>colore</b> indicano il giro del ciclo <b>esterno</b>. Dentro ogni colore, <b>scuro/chiaro</b> si alternano a ogni giro del ciclo <b>interno</b>. Quante volte si ripete ciascuno?</p>`;
+  else if(maxDepth===1)lg+=`<p>Ogni <b>colore</b> (e numero) è un <b>giro del ciclo</b>. Guarda cosa succede dentro un solo colore: quello è il contenuto del blocco ripeti.</p>`;
+  else lg+=`<p>Il percorso giusto è <b>numerato passo per passo</b>. Quale regola segue il kart a ogni incrocio?</p>`;
+  if(vars)lg+=`<p>I cartellini <b style="color:#ff8c1a">n=…</b> mostrano quanto vale la variabile nel punto in cui cambia.</p>`;
+  if(turns)lg+=`<p><b>↺</b> = gira a sinistra · <b>↻</b> = gira a destra (dal punto di vista del pilota).</p>`;
+  lg+=`<p style="color:#555">${lvl().hint}</p>`;
+  $("legend").innerHTML=lg; $("legendCard").style.display="block"; paintOn=true;
+}
+function findIn(p,id){let f=null;const w=a=>a.forEach(b=>{if(b.id===id)f=b;if(b.body)w(b.body);if(b.els)w(b.els);});w(p.main);w(p.fn||[]);return f;}
+
+// blocchi disegnati in sola lettura (struttura o soluzione)
+function staticCond(n,hide){
+  const part=(c,neg,v)=>c==="n"?`n ${neg?"≠":"="} ${hide?'<span class="q">?</span>':`<span class="q" style="color:#222">${v||0}</span>`}`:`${neg?"NON è":"è"} libero <span class="q" style="color:#0b7a5c">${hide?"?":COND_NAMES[c]}</span>`;
+  let h=part(n.c,n.na,n.cv); if(n.op)h+=` <b>${n.op==="and"?"E":"O"}</b> `+part(n.b,n.nb,n.bv); return h;
+}
+function staticList(list,hide){
+  if(!list.length)return `<div style="color:#999;font-size:12px;padding:4px">…</div>`;
+  return list.map(n=>{
+    const v=x=>hide?'<span class="q">?</span>':`<span class="q" style="color:#222">${x}</span>`;
+    switch(n.t){
+      case "fwd":return `<div class="blk c-mv">avanti ${v(n.n)}</div>`;
+      case "fwdv":return `<div class="blk c-mv">avanti <span class="q" style="background:#ff8c1a;color:#fff">n</span></div>`;
+      case "left":return `<div class="blk c-turn">↺ gira a sinistra</div>`;
+      case "right":return `<div class="blk c-turn">↻ gira a destra</div>`;
+      case "call":return `<div class="blk c-fn">🧩 mossa()</div>`;
+      case "set":return `<div class="blk c-var">n = ${v(n.v)}</div>`;
+      case "chg":return `<div class="blk c-var">n += ${v(n.v)}</div>`;
+      case "rep":return cStatic("c-ctrl",`ripeti ${v(n.n)} volte`,n,hide);
+      case "while":return cStatic("c-ctrl","ripeti finché arrivi al 🏁",n,hide);
+      case "until":return cStatic("c-ctrl","ripeti finché "+staticCond(n,hide),n,hide);
+      case "if":return cStatic("c-sens","se "+staticCond(n,hide),n,hide);
+    }
+  }).join("");
+}
+function cStatic(cls,head,n,hide){
+  let h=`<div class="cblk ${cls}"><div class="chead">${head}</div><div class="cbody">${staticList(n.body,hide)}</div>`;
+  if(n.els)h+=`<div class="chead">altrimenti</div><div class="cbody">${staticList(n.els,hide)}</div>`;
+  return h+`<div class="cfoot"></div></div>`;
+}
+function staticProg(p,hide){
+  let h=`<div class="static"><div class="hat">▶ quando premi Via</div>${staticList(p.main,hide)}</div>`;
+  if(p.fn&&p.fn.length)h+=`<div class="static" style="background:#fff0f3"><div class="hat fnh">🧩 definisci mossa()</div>${staticList(p.fn,hide)}</div>`;
+  return h;
+}
+
+// ---------- esecuzione ----------
+async function animate(res){
+  for(const e of res.ev){
+    if(stopReq)return false;
+    if(e.t==="pc"){highlight(e.id);await sleep(150);}
+    else if(e.t==="iter"){}
+    else if(e.t==="cond"){
+      const cells=e.parts.map(p=>{if(!p.d)return null;const c=document.querySelector(`.cell[data-xy="${e.x+DIRS[p.d][0]},${e.y+DIRS[p.d][1]}"]`);
+        if(c){c.style.outline=`4px solid ${p.raw?"#22c55e":"#ef4444"}`;c.style.outlineOffset="-4px";c.style.zIndex=3;}return c;});
+      const txt=e.parts.map(p=>p.c==="n"?`n ${p.neg?"≠":"="} ${p.v} (n vale ${p.nv}: ${p.val?"vero":"falso"})`:`${p.neg?"NON è":"è"} libero ${COND_NAMES[p.c]} (${p.val?"vero":"falso"})`).join(e.op==="and"?" <b>E</b> ":" <b>O</b> ");
+      setMsg(`🔍 ${txt} → <b>${e.res?"VERO":"FALSO"}</b>`,e.res?"#15803d":"#b33");
+      await sleep(e.parts.length>1?650:420);cells.forEach(c=>{if(c){c.style.outline="";c.style.zIndex="";}});
+    }
+    else if(e.t==="var"){const w=$("watch");w.textContent="📦 n = "+e.v;w.style.transform="scale(1.15)";await sleep(250);w.style.transform="";}
+    else if(e.t==="turn"){placeKart(kx,ky,e.dir);await sleep(260);}
+    else if(e.t==="move"){trail(kx,ky);placeKart(e.x,e.y,e.dir);await sleep(320);}
+    else if(e.t==="crash"){const k=$("kart");k.style.transform=`translate(${(kx+(e.x-kx)*.45)*cellPx}px,${(ky+(e.y-ky)*.45)*cellPx}px)`;
+      await sleep(250);k.style.setProperty("--rot2",(kang+360)+"deg");k.classList.add("crash");await sleep(600);}
+    else if(e.t==="infinite"){setMsg("♾️ Ciclo infinito!","#b33");await sleep(300);}
+  }
+  highlight(null);return true;
+}
+function stopped(){running=false;stopReq=false;vres=[];renderTabs();resetKart();highlight(null);renderAll();if(paintOn)paintHint();setMsg("⏹ Programma fermato. Modificalo e riprova.","#555");}
+async function play(){
+  if(running||!size())return;
+  const n=getMaps(lvl()).length;vres=[];running=true;stopReq=false;selId=null;
+  document.querySelectorAll(".paint,.ticon").forEach(e=>e.remove());renderAll();
+  if(window.innerWidth<=960)$("boardwrap").scrollIntoView({behavior:"smooth",block:"center"});
+  for(let vi=0;vi<n;vi++){
+    V=vi;renderTabs();buildBoard();await sleep(n>1?300:60);
+    if(stopReq)return stopped();
+    setMsg(n>1?`In corsa sulla pista ${VL[vi]}…`:"In corsa…");
+    const res=run(lvl(),prog,vi);
+    if(!(await animate(res)))return stopped();
+    vres[vi]=res.ok;renderTabs();
+    if(!res.ok){
+      running=false;renderAll();const w=n>1?` (pista ${VL[vi]})`:"";
+      setMsg({off:"💥 Il kart è uscito di pista"+w+"! Il blocco che ha sbagliato è l'ultimo evidenziato.",
+        short:"🛑 Il programma è finito ma il kart non è al traguardo"+w+".",
+        guard:"♾️ Ciclo infinito"+w+": il kart è tornato nello stesso punto con la stessa direzione senza arrivare al traguardo. Il ciclo non finirebbe mai.",
+        recursion:"🌀 La funzione chiama sé stessa all'infinito! Non mettere 🧩 dentro la definizione di mossa()."}[res.reason],"#b33");
+      return;
+    }
+    if(n>1&&vi<n-1){setMsg(`✅ Pista ${VL[vi]} completata! Ora la ${VL[vi+1]}…`,"#15803d");await sleep(800);if(stopReq)return stopped();}
+  }
+  running=false;renderAll();win(size());
+}
+$("btnGo").onclick=()=>running?(stopReq=true):play();
+$("btnSpeed").onclick=()=>{speed=speed===1?2:speed===2?4:1;$("btnSpeed").textContent=(speed===1?"🐢":speed===2?"🐇":"🚀")+" x"+speed;};
+
+function win(used){
+  const lv=lvl(),st=stars(lv,used);setMsg("🏁 Traguardo!");
+  save.stars[L]=Math.max(save.stars[L]||0,st);save.unlocked=Math.max(save.unlocked,Math.min(LEVELS.length,L+2));persist();
+  const best=progSize(progOf(lv)),last=L===LEVELS.length-1,nm=getMaps(lv).length;
+  $("winBox").innerHTML=`<div class="stars">${"⭐".repeat(st)}${"☆".repeat(3-st)}</div>
+   <h2 style="text-align:center">${last?"Hai completato Pista Codice PRO!":"Traguardo!"}</h2>
+   <p style="text-align:center">${nm>1?`✅ Funziona su <b>tutte le ${nm} piste</b>: è un algoritmo generale!<br>`:""}Blocchi usati: <b>${used}</b> · ${st===3?"codice compatto come la soluzione di riferimento.":`la soluzione di riferimento ne usa <b>${best}</b>.`}</p>
+   ${showPy?`<pre class="code">${$("code").innerHTML}</pre>`:staticProg(prog,false)}
+   <div class="row" style="justify-content:center;margin-top:12px"><button class="btn" id="wRetry">↺ Riprova</button>
+   ${last?`<button class="btn alt" id="wMenu">Elenco livelli</button>`:`<button class="btn alt" id="wNext">Livello ${L+2} ▶</button>`}</div>`;
+  $("ovWin").classList.add("show");
+  $("wRetry").onclick=()=>{$("ovWin").classList.remove("show");loadLevel(L,false);};
+  if(last)$("wMenu").onclick=()=>{$("ovWin").classList.remove("show");openMenu();};
+  else $("wNext").onclick=()=>{$("ovWin").classList.remove("show");loadLevel(L+1);};
+}
+function showConcept(){
+  const c=CONCEPTS[lvl().c];
+  $("introBox").innerHTML=`<span class="tag">${c.tag}</span><h2>${c.title}</h2><p>${c.text}</p>
+   ${showPy?`<p style="margin-bottom:0;font-size:13px;color:#666">In Python si scrive così:</p><pre class="code">${c.ex.replace(/</g,"&lt;")}</pre>`:""}
+   <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn alt" id="introOk">Ho capito, gioco!</button></div>`;
+  $("ovIntro").classList.add("show");$("introOk").onclick=()=>$("ovIntro").classList.remove("show");
+}
+$("btnConcept").onclick=showConcept;
+function setHintLabel(){$("btnHint").textContent=`💡 Aiuto ${Math.min(hintStage+1,3)}/3`;}
+$("btnHint").onclick=()=>{
+  if(running)return;
+  if(hintStage===0){ // 1) pista colorata per giri del ciclo + frecce delle svolte
+    V=V||0; paintHint(); hintStage=1; setHintLabel(); setMsg("💡 Guarda i colori sulla pista e la spiegazione qui sotto.","#8a5a00"); return;
+  }
+  const p=progOf(lvl()), full=hintStage>=2;
+  $("introBox").innerHTML=`<span class="tag">${full?"Aiuto 3/3 · soluzione":"Aiuto 2/3 · struttura"}</span>
+   <h2>${full?"Una soluzione possibile":"Quali blocchi servono?"}</h2>
+   <p style="font-size:14px">${full?"Confrontala con il tuo programma. Esistono anche altre soluzioni corrette.":"Ecco la <b>forma</b> del programma: quali blocchi e come sono annidati. I numeri e le direzioni nascosti (<b>?</b>) li devi trovare tu guardando la pista."}</p>
+   ${staticProg(p,!full)}
+   <div class="row" style="justify-content:flex-end;margin-top:12px">${full?"":`<button class="btn" id="hintMore">Mostra soluzione completa</button>`}<button class="btn alt" id="introOk">Torno a provare</button></div>`;
+  $("ovIntro").classList.add("show");
+  $("introOk").onclick=()=>$("ovIntro").classList.remove("show");
+  if(!full)$("hintMore").onclick=()=>{hintStage=2;$("btnHint").onclick();};
+  hintStage=Math.max(hintStage,full?2:1); if(!full)hintStage=2; setHintLabel();
+};
+$("btnPy").onclick=()=>{showPy=!showPy;try{localStorage.setItem("pistaCodiceProPy",showPy?"1":"0");}catch(e){}applyPy();};
+function applyPy(){$("pyCard").style.display=showPy?"block":"none";$("btnPy").textContent="🐍 Python: "+(showPy?"sì":"no");}
+function openMenu(){
+  let h="",last="";
+  LEVELS.forEach((lv,i)=>{if(lv.c!==last){h+=`<div class="chapter">${CONCEPTS[lv.c].tag} · ${CONCEPTS[lv.c].title}</div>`;last=lv.c;}
+    const st=save.stars[i]||0;h+=`<button class="lv ${i+1>save.unlocked?"locked":""} ${i===L?"cur":""}" data-i="${i}">${i+1}<small>${st?"★".repeat(st):""}</small></button>`;});
+  $("levels").innerHTML=h;
+  $("levels").querySelectorAll(".lv").forEach(b=>b.onclick=()=>{$("ovMenu").classList.remove("show");loadLevel(+b.dataset.i);});
+  $("ovMenu").classList.add("show");
+}
+$("btnMenu").onclick=openMenu;$("btnCloseMenu").onclick=()=>$("ovMenu").classList.remove("show");
+$("btnReset").onclick=()=>{save={unlocked:1,stars:{}};persist();openMenu();};
+let rz;window.addEventListener("resize",()=>{clearTimeout(rz);rz=setTimeout(()=>{if(!running)buildBoard();},150);});
+applyPy();
+loadLevel(Math.min(save.unlocked,LEVELS.length)-1);
+</script>
+<script src="a11y.js"></script>
+</body>
+</html>

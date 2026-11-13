@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Banca di classe</title>
+<link rel="stylesheet" href="ptl.css">
+<style>
+:root { --accent: #b8860b; --oro: #e0b43c; --verde: #2e9b5f; --rosso: #d64545; }
+.barra-classe { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.barra-classe select { font: 400 22px var(--font-hand); }
+.classi-chip { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.classi-chip button { font: 400 21px var(--font-hand); border: 2px solid var(--ink); border-radius: 99px; padding: 3px 14px; background: #fff; cursor: pointer; }
+.classi-chip button[aria-selected="true"] { background: var(--ink); color: #fff; }
+.classi-chip .piu { border-style: dashed; color: var(--muted); }
+.registro { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; align-items: start; }
+.alunni { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; }
+.alunno { border: 2px solid var(--ink); border-radius: 12px; background: #fff; padding: 8px 6px; cursor: pointer; display: grid; justify-items: center; gap: 2px; font: inherit; color: inherit; }
+.alunno b { font: 400 20px var(--font-hand); line-height: 1.05; text-align: center; word-break: break-word; }
+.alunno span { font-size: 15px; font-variant-numeric: tabular-nums; }
+.alunno[aria-pressed="true"] { background: var(--giallo); box-shadow: 0 0 0 3px var(--ink); }
+.alunno.neg span { color: var(--rosso); font-weight: 700; }
+.regole { display: grid; gap: 6px; }
+.regola { display: grid; grid-template-columns: 34px 1fr auto; gap: 6px; align-items: center; text-align: left; border: 2px solid var(--ink); border-radius: 10px; padding: 7px 10px; background: #fff; cursor: pointer; font: 400 17px var(--font-body); }
+.regola .e { font-size: 22px; }
+.regola .v { font: 700 18px var(--font-body); font-variant-numeric: tabular-nums; }
+.regola.piu { border-color: var(--verde); } .regola.piu .v { color: var(--verde); }
+.regola.meno { border-color: var(--rosso); } .regola.meno .v { color: var(--rosso); }
+.regola:disabled { opacity: .45; cursor: not-allowed; }
+.sezione-tit { font: 400 22px var(--font-hand); margin: 6px 0 2px; }
+.toast { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 10px 16px; border-radius: 12px; display: flex; gap: 12px; align-items: center; z-index: 30; box-shadow: 0 6px 18px rgba(0,0,0,.25); font-size: 16px; }
+.toast button { background: var(--giallo); border: 0; border-radius: 8px; padding: 4px 10px; font-weight: 700; cursor: pointer; }
+.fondo { background: #fff8db; border: 3px solid var(--oro); border-radius: 16px; padding: 14px; display: grid; gap: 8px; }
+.fondo h3 { margin: 0; font: 400 28px var(--font-hand); }
+.prog { height: 26px; border: 2px solid var(--ink); border-radius: 99px; overflow: hidden; background: #fff; }
+.prog div { height: 100%; background: linear-gradient(90deg, var(--oro), #f5d76e); transition: width .4s; }
+.negozio { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+.articolo { border: 2px solid var(--ink); border-radius: 12px; background: #fff; padding: 10px; display: grid; gap: 4px; justify-items: center; text-align: center; }
+.articolo .e { font-size: 34px; }
+.articolo .p { font: 700 19px var(--font-body); color: var(--accent); }
+.lim { background: var(--board); color: var(--chalk); border: 12px solid var(--wood); border-radius: 8px; padding: 22px; display: grid; gap: 18px; }
+.lim h2 { margin: 0; font: 700 clamp(36px, 5vw, 60px) var(--font-chalk); }
+.lim .grande { font: 700 clamp(44px, 7vw, 90px) var(--font-chalk); line-height: 1; }
+.lim .prog { height: 34px; border-color: var(--chalk); background: rgba(255,255,255,.12); }
+.lim .griglia { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.lim .griglia div { background: rgba(255,255,255,.1); border-radius: 10px; padding: 8px; font: 400 24px var(--font-hand); display: flex; justify-content: space-between; }
+.lim .abitudini { display: grid; gap: 6px; font: 400 24px var(--font-hand); }
+.tabella { width: 100%; border-collapse: collapse; font-size: 15px; background: #fff; }
+.tabella th, .tabella td { border-bottom: 1px solid #dfe6ee; padding: 6px 8px; text-align: left; }
+.tabella td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.editor-riga { display: grid; grid-template-columns: 54px 1fr 90px 40px; gap: 6px; align-items: center; }
+.editor-riga input { width: 100%; font: 400 16px var(--font-body); border: 2px solid var(--squares); border-radius: 8px; padding: 5px 7px; }
+.editor-riga button { border: 0; background: none; font-size: 20px; cursor: pointer; color: var(--rosso); }
+.impostazioni { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px; align-items: start; }
+.impostazioni .card { display: grid; gap: 8px; }
+.impostazioni h3 { margin: 0; font: 400 26px var(--font-hand); }
+.impostazioni label { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.impostazioni input[type="text"], .impostazioni input[type="number"], .impostazioni textarea, .impostazioni select { font: 400 16px var(--font-body); border: 2px solid var(--squares); border-radius: 8px; padding: 5px 8px; }
+.impostazioni textarea { width: 100%; min-height: 90px; }
+.avviso { background: #fff2cc; border: 2px solid #b8860b; border-radius: 10px; padding: 8px 12px; font-size: 15px; }
+.mini { font-size: 14px; color: var(--muted); }
+@media (max-width: 860px) { .registro { grid-template-columns: 1fr; } .alunni { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); } }
+</style>
+</head>
+<body>
+<header class="app-bar"><h1 id="titolo-app">Banca di classe</h1><span class="sub">Token economy personalizzabile · per i docenti</span></header>
+<div class="container">
+  <div class="barra-classe">
+    <div class="classi-chip" id="classi-chip" role="tablist" aria-label="Classi"></div>
+    <select id="sel-classe" aria-label="Classe attiva" hidden></select>
+  </div>
+  <span class="mini" id="info-classe"></span>
+  <div class="tabs" role="tablist">
+    <button class="tab" data-t="registro">🏦 Registro</button>
+    <button class="tab" data-t="negozio">🛒 Negozio</button>
+    <button class="tab" data-t="fondo">🎯 Obiettivo di classe</button>
+    <button class="tab" data-t="estratti">📊 Estratti conto</button>
+    <button class="tab" data-t="lim">📺 LIM</button>
+    <button class="tab" data-t="imp">⚙️ Impostazioni</button>
+  </div>
+
+  <!-- REGISTRO -->
+  <section id="s-registro" class="registro">
+    <div class="card" style="display:grid;gap:10px">
+      <div class="row" style="justify-content:space-between">
+        <b class="sezione-tit">1. Tocca uno o più alunni</b>
+        <div class="row"><button class="btn" id="tutti">Tutti</button><button class="btn" id="nessuno">Nessuno</button><button class="btn" id="modifica-nomi" aria-pressed="false">✏️ Nomi</button></div>
+      </div>
+      <div class="alunni" id="alunni"></div>
+      <div id="nomi-extra" hidden style="display:grid;gap:6px">
+        <p class="mini" style="margin:0">Scrivi direttamente nelle caselle, oppure incolla l'elenco in ordine: i nomi sostituiscono quelli attuali, uno per alunno. Bastano nome o soprannome.</p>
+        <textarea id="nomi-incolla" placeholder="Un nome per riga, nell'ordine del registro" style="min-height:70px;font:400 16px var(--font-body);border:2px solid var(--ink);border-radius:8px;padding:6px"></textarea>
+        <div class="row"><button class="btn" id="nomi-incolla-ok">Rinomina in ordine</button><button class="btn primary" id="nomi-fatto">✔ Fatto</button></div>
+      </div>
+    </div>
+    <div class="card" style="display:grid;gap:8px">
+      <b class="sezione-tit">2. Scegli il motivo</b>
+      <p class="mini" id="sel-info" style="margin:0"></p>
+      <div class="regole" id="regole-piu"></div>
+      <div class="regole" id="regole-meno"></div>
+      <details><summary style="cursor:pointer;font-weight:700">Altro importo</summary>
+        <div class="row" style="margin-top:6px"><input type="number" id="altro-val" style="width:90px" placeholder="±"><input type="text" id="altro-mot" placeholder="Motivo" style="flex:1;min-width:140px;font:400 16px var(--font-body);border:2px solid var(--ink);border-radius:8px;padding:4px 8px"><button class="btn" id="altro-ok">Applica</button></div>
+        <p class="mini">Numero positivo per un premio, negativo per una multa.</p></details>
+    </div>
+  </section>
+
+  <!-- NEGOZIO -->
+  <section id="s-negozio" hidden style="display:grid;gap:12px">
+    <div class="card row"><label class="row">Chi compra? <select id="neg-alunno"></select></label><span id="neg-saldo" class="consegna" style="font-size:22px"></span></div>
+    <div class="negozio" id="negozio"></div>
+    <div class="card row"><b>💝 Dona all'obiettivo di classe</b><input type="number" id="dona-val" min="1" style="width:90px"><button class="btn" id="dona-ok">Dona</button></div>
+    <p class="feedback" id="neg-msg" aria-live="polite"></p>
+  </section>
+
+  <!-- FONDO -->
+  <section id="s-fondo" hidden style="display:grid;gap:12px">
+    <div class="fondo" id="fondo-box"></div>
+    <div class="card row"><b>Bonus a tutta la classe:</b><input type="number" id="fondo-bonus" min="1" style="width:90px" placeholder="es. 10"><input type="text" id="fondo-mot" placeholder="Motivo (es. lavoro di gruppo)" style="flex:1;min-width:180px;font:400 16px var(--font-body);border:2px solid var(--ink);border-radius:8px;padding:4px 8px"><button class="btn" id="fondo-bonus-ok">Aggiungi al fondo</button></div>
+    <div class="card"><b>Movimenti del fondo</b><table class="tabella"><tbody id="fondo-mov"></tbody></table></div>
+  </section>
+
+  <!-- ESTRATTI -->
+  <section id="s-estratti" hidden style="display:grid;gap:12px">
+    <div class="card" style="overflow:auto"><table class="tabella" id="tab-saldi"></table></div>
+    <div class="card" id="estratto" style="display:grid;gap:10px"></div>
+  </section>
+
+  <!-- LIM -->
+  <section id="s-lim" hidden>
+    <div class="lim" id="lim"></div>
+  </section>
+
+  <!-- IMPOSTAZIONI -->
+  <section id="s-imp" hidden class="impostazioni">
+    <div class="card">
+      <h3>💰 La moneta</h3>
+      <label>Nome <input type="text" id="m-nome" maxlength="24"></label>
+      <label>Simbolo <input type="text" id="m-simbolo" maxlength="4" style="width:70px"></label>
+      <label>Budget iniziale dei nuovi alunni <input type="number" id="m-budget" min="0" style="width:90px"></label>
+      <label><input type="checkbox" id="m-negativo"> Permetti il saldo negativo (altrimenti le multe si fermano a zero)</label>
+      <label><input type="checkbox" id="m-lim"> Mostra i saldi dei singoli sulla LIM</label>
+      <p class="mini">Consiglio: sulla LIM mostra solo l'obiettivo comune. I saldi individuali in pubblico possono mettere in difficoltà chi ne ha pochi.</p>
+    </div>
+    <div class="card">
+      <h3>🐷 Salvadanaio con interessi</h3>
+      <label><input type="checkbox" id="r-attivo"> Attiva il salvadanaio personale</label>
+      <label>Interesse <input type="number" id="r-tasso" min="0" max="50" style="width:70px"> % ogni volta che premi «Accredita interessi»</label>
+      <p class="mini">Gli alunni spostano una parte del saldo nel salvadanaio; tu accrediti gli interessi quando vuoi (per esempio ogni venerdì). Gli interessi si arrotondano per difetto: insegnano che risparmiare di più rende di più.</p>
+      <button class="btn" id="r-accredita">Accredita interessi alla classe</button>
+    </div>
+    <div class="card">
+      <h3>➕ Premi</h3>
+      <div id="ed-piu" style="display:grid;gap:6px"></div>
+      <button class="btn" id="add-piu">+ Nuovo premio</button>
+    </div>
+    <div class="card">
+      <h3>➖ Multe</h3>
+      <div id="ed-meno" style="display:grid;gap:6px"></div>
+      <button class="btn" id="add-meno">+ Nuova multa</button>
+    </div>
+    <div class="card">
+      <h3>🛒 Negozio</h3>
+      <div id="ed-neg" style="display:grid;gap:6px"></div>
+      <button class="btn" id="add-neg">+ Nuovo articolo</button>
+      <p class="mini">Meglio premi di esperienza (scegliere il posto, fare il DJ) che voti o sconti sulle verifiche.</p>
+    </div>
+    <div class="card">
+      <h3>🎯 Obiettivo di classe</h3>
+      <label>Nome <input type="text" id="f-nome" maxlength="60" style="flex:1"></label>
+      <label>Traguardo <input type="number" id="f-obiettivo" min="1" style="width:100px"></label>
+      <p class="mini">Vale per la classe attiva. Ogni classe ha il suo obiettivo.</p>
+    </div>
+    <div class="card">
+      <h3>🏫 Classi e alunni</h3>
+      <div class="row"><input type="text" id="c-nuova" placeholder="Nome classe (es. 2B)" style="width:150px"><button class="btn" id="c-add">+ Classe</button><span class="mini">fino a 10 classi, ognuna con alunni, movimenti e obiettivo propri</span></div>
+      <label>Rinomina la classe attiva <input type="text" id="c-nome" style="width:150px"></label>
+      <p class="avviso">🔒 I dati restano solo su questo dispositivo e non vengono inviati da nessuna parte. Per gli alunni bastano il <b>numero del registro</b>, un nome o un soprannome: niente cognomi.</p>
+      <label style="display:grid">Aggiungi alunni (uno per riga)<textarea id="c-alunni" placeholder="1&#10;2&#10;3&#10;…oppure nomi brevi"></textarea></label>
+      <div class="row"><button class="btn" id="c-alunni-ok">Aggiungi alla classe</button><button class="btn" id="c-numeri">Crea alunni da 1 a…</button><input type="number" id="c-n" value="24" min="1" max="40" style="width:70px"></div>
+      <div id="ed-alunni" style="display:grid;gap:4px;max-height:260px;overflow:auto"></div>
+      <button class="btn" id="c-elimina" style="color:var(--rosso)">🗑 Elimina la classe attiva</button>
+    </div>
+    <div class="card">
+      <h3>💾 Backup</h3>
+      <p class="mini">Esporta un backup ogni tanto: se cambi dispositivo o browser lo importi e ritrovi tutto.</p>
+      <div class="row"><button class="btn" id="b-esporta">💾 Salva backup (.json)</button><button class="btn" id="b-copia">📋 Copia backup</button><button class="btn" id="b-csv">📄 Saldi in CSV</button></div>
+      <label style="display:grid">Importa un backup (incolla il testo)<textarea id="b-testo"></textarea></label>
+      <div class="row"><button class="btn" id="b-importa">Importa</button><label class="btn" style="cursor:pointer">📂 Apri un file<input type="file" id="b-file" accept=".json,application/json" hidden></label></div>
+      <button class="btn" id="b-reset" style="color:var(--rosso)">Ricomincia da zero</button>
+      <p class="feedback" id="b-msg"></p>
+    </div>
+  </section>
+</div>
+<div class="toast" id="toast" hidden><span id="toast-t"></span><button id="toast-annulla">Annulla</button></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const uid = () => Math.random().toString(36).slice(2, 10);
+const esc = t => String(t).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const KEY = "bancaClasse";
+function predefiniti() {
+  const cl = { id: uid(), nome: "Classe di prova", alunni: [], mov: [], fondo: { nome: "Lezione all'aperto", obiettivo: 150, saldo: 0, mov: [] } };
+  for (let i = 1; i <= 12; i++) cl.alunni.push({ id: uid(), nome: String(i), saldo: 20, risp: 0 });
+  return {
+    v: 1, moneta: { nome: "Gettoni", simbolo: "🪙" }, budget: 20, negativo: false, limSaldi: false,
+    risparmio: { attivo: false, tasso: 10 },
+    regole: [
+      { id: uid(), segno: 1, e: "🤝", nome: "Aiuto un compagno", v: 3 },
+      { id: uid(), segno: 1, e: "✅", nome: "Compito completo", v: 2 },
+      { id: uid(), segno: 1, e: "🧹", nome: "Postazione in ordine", v: 1 },
+      { id: uid(), segno: 1, e: "💡", nome: "Intervento utile", v: 2 },
+      { id: uid(), segno: 1, e: "🌟", nome: "Ottimo lavoro di gruppo", v: 5 },
+      { id: uid(), segno: -1, e: "📵", nome: "Dispositivo usato male", v: 5 },
+      { id: uid(), segno: -1, e: "📚", nome: "Materiale dimenticato", v: 2 },
+      { id: uid(), segno: -1, e: "🔊", nome: "Voce alta dopo il richiamo", v: 1 },
+      { id: uid(), segno: -1, e: "⏰", nome: "Consegna in ritardo", v: 2 }
+    ],
+    negozio: [
+      { id: uid(), e: "💺", nome: "Scelgo il posto per un giorno", p: 15 },
+      { id: uid(), e: "🎧", nome: "Sono il DJ dell'ultima attività", p: 10 },
+      { id: uid(), e: "🎲", nome: "Scelgo il gioco di ripasso", p: 12 },
+      { id: uid(), e: "📆", nome: "Consegna rimandata di un giorno", p: 20 }
+    ],
+    classi: [cl], attiva: cl.id
+  };
+}
+let D; try { D = JSON.parse(localStorage.getItem(KEY)); } catch (e) {}
+if (!D || !Array.isArray(D.classi)) D = predefiniti();
+function salva() { try { localStorage.setItem(KEY, JSON.stringify(D)); } catch (e) { $("b-msg").textContent = "Spazio pieno: esporta un backup."; } }
+const C = () => D.classi.find(c => c.id === D.attiva) || D.classi[0];
+const M = n => `${n} ${D.moneta.simbolo}`;
+let selezionati = new Set(), tab = "registro", ultimo = null, alunnoEstratto = null;
+
+/* ---------- Movimenti ---------- */
+function movimento(cl, al, importo, descr, tipo) {
+  let reale = importo;
+  if (importo < 0 && !D.negativo && al.saldo + importo < 0) reale = -al.saldo;
+  al.saldo += reale;
+  const m = { id: uid(), t: Date.now(), a: al.id, v: reale, d: descr, k: tipo || (reale >= 0 ? "premio" : "multa") };
+  cl.mov.push(m); if (cl.mov.length > 4000) cl.mov.splice(0, cl.mov.length - 4000);
+  return m;
+}
+function mostraToast(testo, annullabili) {
+  ultimo = annullabili; $("toast-t").textContent = testo; $("toast").hidden = false; $("toast-annulla").hidden = !annullabili;
+  clearTimeout(mostraToast.t); mostraToast.t = setTimeout(() => { $("toast").hidden = true; ultimo = null; }, 6000);
+}
+$("toast-annulla").addEventListener("click", () => {
+  if (!ultimo) return; const cl = C();
+  ultimo.forEach(({ m, fondo }) => {
+    if (fondo) { cl.fondo.saldo -= fondo.v; cl.fondo.mov = cl.fondo.mov.filter(x => x.id !== fondo.id); }
+    if (m) { const al = cl.alunni.find(a => a.id === m.a); if (al) { if (m.k === "risparmio") { al.saldo -= m.v; al.risp += m.v; } else al.saldo -= m.v; } cl.mov = cl.mov.filter(x => x.id !== m.id); }
+  });
+  ultimo = null; $("toast").hidden = true; salva(); disegna();
+});
+
+/* ---------- Registro ---------- */
+let modNomi = false;
+function disegnaRegistro() {
+  const cl = C();
+  $("modifica-nomi").setAttribute("aria-pressed", modNomi); $("nomi-extra").hidden = !modNomi;
+  if (modNomi) {
+    $("alunni").innerHTML = cl.alunni.map(a => `<label class="alunno" style="cursor:text"><input type="text" data-id="${a.id}" value="${esc(a.nome)}" maxlength="30" aria-label="Nome" style="width:100%;font:400 19px var(--font-hand);text-align:center;border:2px solid var(--squares);border-radius:8px;padding:2px"><span>${M(a.saldo)}</span></label>`).join("");
+    $("alunni").querySelectorAll("input").forEach(inp => inp.addEventListener("change", () => { const a = cl.alunni.find(x => x.id === inp.dataset.id); if (a && inp.value.trim()) { a.nome = inp.value.trim(); salva(); } }));
+    $("sel-info").textContent = "Stai modificando i nomi: premi «Fatto» per tornare al registro.";
+    document.querySelectorAll("#regole-piu, #regole-meno").forEach(x => x.innerHTML = "");
+    return;
+  }
+  $("alunni").innerHTML = cl.alunni.map(a => `<button class="alunno ${a.saldo < 0 ? "neg" : ""}" data-id="${a.id}" aria-pressed="${selezionati.has(a.id)}"><b>${esc(a.nome)}</b><span>${M(a.saldo)}</span></button>`).join("") || `<p class="mini">Nessun alunno: aggiungili in ⚙️ Impostazioni.</p>`;
+  $("alunni").querySelectorAll(".alunno").forEach(b => b.addEventListener("click", () => { const id = b.dataset.id; selezionati.has(id) ? selezionati.delete(id) : selezionati.add(id); disegnaRegistro(); }));
+  const n = selezionati.size;
+  $("sel-info").textContent = n ? `Selezionati: ${n}` : "Prima seleziona almeno un alunno.";
+  const riga = r => `<button class="regola ${r.segno > 0 ? "piu" : "meno"}" data-id="${r.id}" ${n ? "" : "disabled"}><span class="e">${esc(r.e)}</span><span>${esc(r.nome)}</span><span class="v">${r.segno > 0 ? "+" : "−"}${r.v}</span></button>`;
+  $("regole-piu").innerHTML = D.regole.filter(r => r.segno > 0).map(riga).join("");
+  $("regole-meno").innerHTML = D.regole.filter(r => r.segno < 0).map(riga).join("");
+  document.querySelectorAll("#regole-piu .regola, #regole-meno .regola").forEach(b => b.addEventListener("click", () => {
+    const r = D.regole.find(x => x.id === b.dataset.id); applica(r.segno * r.v, `${r.e} ${r.nome}`, r.id);
+  }));
+}
+function applica(importo, descr, regola) {
+  const cl = C(); if (!selezionati.size || !importo) return;
+  const fatti = [];
+  cl.alunni.filter(a => selezionati.has(a.id)).forEach(a => { const m = movimento(cl, a, importo, descr); if (regola) m.r = regola; fatti.push({ m }); });
+  salva(); mostraToast(`${importo > 0 ? "+" : "−"}${Math.abs(importo)} ${D.moneta.simbolo} · ${descr} · ${fatti.length} ${fatti.length === 1 ? "alunno" : "alunni"}`, fatti);
+  selezionati.clear(); disegna();
+}
+$("modifica-nomi").addEventListener("click", () => { modNomi = !modNomi; selezionati.clear(); disegnaRegistro(); });
+$("nomi-fatto").addEventListener("click", () => { modNomi = false; disegna(); });
+$("nomi-incolla-ok").addEventListener("click", () => {
+  const cl = C(), righe = $("nomi-incolla").value.split("\n").map(x => x.replace(/^\s*\d+[.)\-\s]*/, "").trim()).filter(Boolean);
+  righe.forEach((nm, i) => { if (cl.alunni[i]) cl.alunni[i].nome = nm.slice(0, 30); else cl.alunni.push({ id: uid(), nome: nm.slice(0, 30), saldo: D.budget, risp: 0 }); });
+  $("nomi-incolla").value = ""; salva(); disegnaRegistro();
+});
+$("tutti").addEventListener("click", () => { C().alunni.forEach(a => selezionati.add(a.id)); disegnaRegistro(); });
+$("nessuno").addEventListener("click", () => { selezionati.clear(); disegnaRegistro(); });
+$("altro-ok").addEventListener("click", () => { const v = Math.round(+$("altro-val").value); if (!v) return; applica(v, $("altro-mot").value.trim() || (v > 0 ? "Premio" : "Multa")); $("altro-val").value = ""; $("altro-mot").value = ""; });
+
+/* ---------- Negozio ---------- */
+function disegnaNegozio() {
+  const cl = C(), sel = $("neg-alunno").value;
+  $("neg-alunno").innerHTML = cl.alunni.map(a => `<option value="${a.id}" ${a.id === sel ? "selected" : ""}>${esc(a.nome)}</option>`).join("");
+  const al = cl.alunni.find(a => a.id === $("neg-alunno").value);
+  $("neg-saldo").textContent = al ? `Saldo: ${M(al.saldo)}` : "";
+  $("negozio").innerHTML = D.negozio.map(it => `<div class="articolo"><span class="e">${esc(it.e)}</span><b>${esc(it.nome)}</b><span class="p">${M(it.p)}</span><button class="btn primary" data-id="${it.id}" ${!al || al.saldo < it.p ? "disabled" : ""}>Acquista</button></div>`).join("") || `<p class="mini">Il negozio è vuoto: aggiungi articoli in ⚙️ Impostazioni.</p>`;
+  $("negozio").querySelectorAll("[data-id]").forEach(b => b.addEventListener("click", () => {
+    const it = D.negozio.find(x => x.id === b.dataset.id), a = C().alunni.find(x => x.id === $("neg-alunno").value);
+    if (!a || a.saldo < it.p) return;
+    const m = movimento(C(), a, -it.p, `🛒 ${it.e} ${it.nome}`, "acquisto"); salva();
+    $("neg-msg").textContent = `✔ ${a.nome} ha acquistato: ${it.nome}`; $("neg-msg").className = "feedback ok";
+    mostraToast(`Acquisto: ${it.nome}`, [{ m }]); disegna();
+  }));
+}
+$("neg-alunno").addEventListener("change", disegnaNegozio);
+$("dona-ok").addEventListener("click", () => {
+  const cl = C(), a = cl.alunni.find(x => x.id === $("neg-alunno").value), v = Math.round(+$("dona-val").value);
+  if (!a || !(v > 0)) return;
+  if (a.saldo < v) { $("neg-msg").textContent = "Saldo insufficiente."; $("neg-msg").className = "feedback ko"; return; }
+  const m = movimento(cl, a, -v, `💝 Dono all'obiettivo: ${cl.fondo.nome}`, "dono");
+  const f = { id: uid(), t: Date.now(), v, d: `Dono di ${a.nome}` }; cl.fondo.saldo += v; cl.fondo.mov.push(f);
+  salva(); $("dona-val").value = ""; $("neg-msg").textContent = `✔ Grazie ${a.nome}! +${v} all'obiettivo di classe.`; $("neg-msg").className = "feedback ok";
+  mostraToast(`Dono di ${v}`, [{ m, fondo: f }]); disegna();
+});
+
+/* ---------- Obiettivo di classe ---------- */
+function disegnaFondo() {
+  const f = C().fondo, perc = Math.min(100, f.saldo / Math.max(1, f.obiettivo) * 100), ok = f.saldo >= f.obiettivo;
+  $("fondo-box").innerHTML = `<h3>🎯 ${esc(f.nome)}</h3><div class="prog"><div style="width:${perc}%"></div></div>
+    <b style="font-size:20px">${M(f.saldo)} su ${M(f.obiettivo)}${ok ? " · 🎉 Obiettivo raggiunto!" : ` · mancano ${M(f.obiettivo - f.saldo)}`}</b>
+    ${ok ? `<button class="btn primary" id="fondo-usa">🔓 Sblocca il premio e riparti da zero</button>` : ""}`;
+  if (ok) $("fondo-usa").addEventListener("click", () => { const cl = C(); cl.fondo.mov.push({ id: uid(), t: Date.now(), v: -cl.fondo.saldo, d: `🔓 Sbloccato: ${cl.fondo.nome}` }); cl.fondo.saldo = 0; salva(); disegna(); });
+  $("fondo-mov").innerHTML = f.mov.slice().reverse().slice(0, 40).map(m => `<tr><td>${new Date(m.t).toLocaleDateString("it-IT")}</td><td>${esc(m.d)}</td><td class="num">${m.v > 0 ? "+" : ""}${m.v}</td></tr>`).join("") || `<tr><td class="mini">Ancora nessun movimento.</td></tr>`;
+}
+$("fondo-bonus-ok").addEventListener("click", () => {
+  const v = Math.round(+$("fondo-bonus").value), cl = C(); if (!(v > 0)) return;
+  const f = { id: uid(), t: Date.now(), v, d: `⭐ Bonus classe: ${$("fondo-mot").value.trim() || "premio collettivo"}` };
+  cl.fondo.saldo += v; cl.fondo.mov.push(f); salva(); $("fondo-bonus").value = ""; $("fondo-mot").value = "";
+  mostraToast(`+${v} all'obiettivo di classe`, [{ fondo: f }]); disegna();
+});
+
+/* ---------- Estratti conto ---------- */
+function disegnaEstratti() {
+  const cl = C(), ris = D.risparmio.attivo;
+  $("tab-saldi").innerHTML = `<thead><tr><th>Alunno</th><th class="num">Saldo</th>${ris ? "<th class=\"num\">Salvadanaio</th>" : ""}<th class="num">Guadagnati</th><th class="num">Multe</th><th class="num">Spesi</th><th></th></tr></thead><tbody>` +
+    cl.alunni.map(a => {
+      const mm = cl.mov.filter(m => m.a === a.id), som = k => mm.filter(m => m.k === k).reduce((s, m) => s + m.v, 0);
+      return `<tr><td>${esc(a.nome)}</td><td class="num"><b>${a.saldo}</b></td>${ris ? `<td class="num">${a.risp}</td>` : ""}<td class="num">${som("premio")}</td><td class="num">${-som("multa")}</td><td class="num">${-(som("acquisto") + som("dono"))}</td><td><button class="btn" data-id="${a.id}" style="font-size:16px;padding:2px 10px">Apri</button></td></tr>`;
+    }).join("") + `</tbody>`;
+  $("tab-saldi").querySelectorAll("[data-id]").forEach(b => b.addEventListener("click", () => { alunnoEstratto = b.dataset.id; disegnaEstratti(); $("estratto").scrollIntoView({ behavior: "smooth" }); }));
+  const a = cl.alunni.find(x => x.id === alunnoEstratto);
+  if (!a) { $("estratto").innerHTML = `<p class="mini">Tocca «Apri» per vedere l'estratto conto di un alunno.</p>`; return; }
+  const mm = cl.mov.filter(m => m.a === a.id).slice().reverse();
+  const conta = {}; mm.filter(m => m.r).forEach(m => conta[m.d] = (conta[m.d] || 0) + 1);
+  const top = Object.entries(conta).sort((x, y) => y[1] - x[1]).slice(0, 4);
+  $("estratto").innerHTML = `<div class="row" style="justify-content:space-between"><b style="font:400 28px var(--font-hand)">Estratto conto · ${esc(a.nome)}</b><span class="consegna">Saldo ${M(a.saldo)}${ris ? ` · 🐷 ${M(a.risp)}` : ""}</span></div>
+    ${ris ? `<div class="row"><input type="number" id="r-val" min="1" style="width:90px"><button class="btn" id="r-dep">🐷 Metti nel salvadanaio</button><button class="btn" id="r-pre">↩ Riprendi dal salvadanaio</button></div>` : ""}
+    ${top.length ? `<div><b>Abitudini più frequenti:</b> ${top.map(([d, n]) => `${esc(d)} ×${n}`).join(" · ")}</div>` : ""}
+    <table class="tabella"><tbody>${mm.slice(0, 80).map(m => `<tr><td>${new Date(m.t).toLocaleString("it-IT", { dateStyle: "short", timeStyle: "short" })}</td><td>${esc(m.d)}</td><td class="num" style="color:${m.v >= 0 ? "var(--verde)" : "var(--rosso)"}">${m.v > 0 ? "+" : ""}${m.v}</td></tr>`).join("") || `<tr><td class="mini">Nessun movimento.</td></tr>`}</tbody></table>`;
+  if (ris) {
+    $("r-dep").addEventListener("click", () => { const v = Math.round(+$("r-val").value); if (!(v > 0) || v > a.saldo) return; const m = movimento(cl, a, -v, "🐷 Nel salvadanaio", "risparmio"); a.risp += v; salva(); mostraToast(`${v} nel salvadanaio`, [{ m }]); disegna(); });
+    $("r-pre").addEventListener("click", () => { const v = Math.round(+$("r-val").value); if (!(v > 0) || v > a.risp) return; a.risp -= v; const m = movimento(cl, a, v, "🐷 Ripreso dal salvadanaio", "risparmio"); salva(); mostraToast(`${v} ripresi dal salvadanaio`, [{ m }]); disegna(); });
+  }
+}
+
+/* ---------- LIM ---------- */
+function disegnaLim() {
+  const cl = C(), f = cl.fondo, perc = Math.min(100, f.saldo / Math.max(1, f.obiettivo) * 100);
+  const setteGiorni = Date.now() - 7 * 864e5, recenti = cl.mov.filter(m => m.t >= setteGiorni);
+  const guadagni = recenti.filter(m => m.k === "premio").reduce((s, m) => s + m.v, 0);
+  const conta = {}; recenti.filter(m => m.k === "premio").forEach(m => conta[m.d] = (conta[m.d] || 0) + 1);
+  const top = Object.entries(conta).sort((a, b) => b[1] - a[1]).slice(0, 4);
+  $("lim").innerHTML = `<h2>${esc(D.moneta.simbolo)} ${esc(D.moneta.nome)} · ${esc(cl.nome)}</h2>
+    <div><div style="font:400 30px var(--font-chalk)">🎯 ${esc(f.nome)}</div><div class="prog"><div style="width:${perc}%"></div></div><div class="grande">${f.saldo} / ${f.obiettivo}</div></div>
+    <div style="font:400 30px var(--font-chalk)">Questa settimana la classe ha guadagnato <b>${M(guadagni)}</b></div>
+    ${top.length ? `<div class="abitudini"><b style="font-family:var(--font-chalk);font-size:30px">Le nostre buone abitudini</b>${top.map(([d, n]) => `<div>${esc(d)} · ${n} ${n === 1 ? "volta" : "volte"}</div>`).join("")}</div>` : ""}
+    ${D.limSaldi ? `<div class="griglia">${cl.alunni.map(a => `<div><span>${esc(a.nome)}</span><span>${a.saldo}</span></div>`).join("")}</div>` : ""}`;
+}
+
+/* ---------- Impostazioni ---------- */
+function editorLista(box, lista, campi, onDel) {
+  $(box).innerHTML = lista.map(x => `<div class="editor-riga" data-id="${x.id}"><input data-k="e" value="${esc(x.e)}" maxlength="4" aria-label="Emoji"><input data-k="nome" value="${esc(x.nome)}" maxlength="60" aria-label="Nome"><input data-k="${campi}" type="number" min="1" value="${x[campi]}" aria-label="Valore"><button aria-label="Elimina">🗑</button></div>`).join("");
+  $(box).querySelectorAll(".editor-riga").forEach(r => {
+    const x = lista.find(y => y.id === r.dataset.id);
+    r.querySelectorAll("input").forEach(inp => inp.addEventListener("change", () => { const k = inp.dataset.k; x[k] = k === "e" || k === "nome" ? inp.value.trim() : Math.max(1, Math.round(+inp.value || 1)); salva(); }));
+    r.querySelector("button").addEventListener("click", () => { onDel(x.id); salva(); disegnaImp(); });
+  });
+}
+function disegnaImp() {
+  const cl = C();
+  $("m-nome").value = D.moneta.nome; $("m-simbolo").value = D.moneta.simbolo; $("m-budget").value = D.budget;
+  $("m-negativo").checked = D.negativo; $("m-lim").checked = D.limSaldi;
+  $("r-attivo").checked = D.risparmio.attivo; $("r-tasso").value = D.risparmio.tasso;
+  $("f-nome").value = cl.fondo.nome; $("f-obiettivo").value = cl.fondo.obiettivo; $("c-nome").value = cl.nome;
+  const piu = D.regole.filter(r => r.segno > 0), meno = D.regole.filter(r => r.segno < 0);
+  editorLista("ed-piu", piu, "v", id => D.regole = D.regole.filter(r => r.id !== id));
+  editorLista("ed-meno", meno, "v", id => D.regole = D.regole.filter(r => r.id !== id));
+  editorLista("ed-neg", D.negozio, "p", id => D.negozio = D.negozio.filter(r => r.id !== id));
+  $("ed-alunni").innerHTML = cl.alunni.map(a => `<div class="row" data-id="${a.id}"><input type="text" value="${esc(a.nome)}" maxlength="30" style="flex:1" aria-label="Nome alunno"><span class="mini">${M(a.saldo)}</span><button class="btn" style="font-size:15px;padding:2px 8px;color:var(--rosso)" aria-label="Elimina alunno">🗑</button></div>`).join("");
+  $("ed-alunni").querySelectorAll("[data-id]").forEach(r => {
+    const a = cl.alunni.find(x => x.id === r.dataset.id);
+    r.querySelector("input").addEventListener("change", e => { a.nome = e.target.value.trim() || a.nome; salva(); });
+    r.querySelector("button").addEventListener("click", () => { cl.alunni = cl.alunni.filter(x => x.id !== a.id); selezionati.delete(a.id); salva(); disegnaImp(); });
+  });
+}
+const lega = (id, fn) => $(id).addEventListener("change", () => { fn(); salva(); disegna(); });
+lega("m-nome", () => D.moneta.nome = $("m-nome").value.trim() || "Gettoni");
+lega("m-simbolo", () => D.moneta.simbolo = $("m-simbolo").value.trim() || "🪙");
+lega("m-budget", () => D.budget = Math.max(0, Math.round(+$("m-budget").value || 0)));
+lega("m-negativo", () => D.negativo = $("m-negativo").checked);
+lega("m-lim", () => D.limSaldi = $("m-lim").checked);
+lega("r-attivo", () => D.risparmio.attivo = $("r-attivo").checked);
+lega("r-tasso", () => D.risparmio.tasso = Math.max(0, Math.min(50, +$("r-tasso").value || 0)));
+lega("f-nome", () => C().fondo.nome = $("f-nome").value.trim() || "Obiettivo di classe");
+lega("f-obiettivo", () => C().fondo.obiettivo = Math.max(1, Math.round(+$("f-obiettivo").value || 1)));
+lega("c-nome", () => C().nome = $("c-nome").value.trim() || C().nome);
+$("add-piu").addEventListener("click", () => { D.regole.push({ id: uid(), segno: 1, e: "⭐", nome: "Nuovo premio", v: 1 }); salva(); disegnaImp(); });
+$("add-meno").addEventListener("click", () => { D.regole.push({ id: uid(), segno: -1, e: "⚠️", nome: "Nuova multa", v: 1 }); salva(); disegnaImp(); });
+$("add-neg").addEventListener("click", () => { D.negozio.push({ id: uid(), e: "🎁", nome: "Nuovo articolo", p: 10 }); salva(); disegnaImp(); });
+$("r-accredita").addEventListener("click", () => {
+  const cl = C(), t = D.risparmio.tasso; let tot = 0; const fatti = [];
+  cl.alunni.forEach(a => { const i = Math.floor(a.risp * t / 100); if (i > 0) { a.risp += i; tot += i; fatti.push(a.nome); cl.mov.push({ id: uid(), t: Date.now(), a: a.id, v: 0, d: `🐷 Interessi +${i} nel salvadanaio`, k: "interessi" }); } });
+  salva(); mostraToast(tot ? `Interessi accreditati: ${tot} a ${fatti.length} alunni` : "Nessun interesse: i salvadanai sono vuoti o troppo piccoli", null); disegna();
+});
+$("c-add").addEventListener("click", () => {
+  const n = $("c-nuova").value.trim(); if (!n) return;
+  if (D.classi.length >= MAX_CLASSI) { $("b-msg").textContent = `Puoi gestire al massimo ${MAX_CLASSI} classi: eliminane una per aggiungerne un'altra.`; $("b-msg").className = "feedback ko"; return; }
+  const cl = { id: uid(), nome: n.slice(0, 20), alunni: [], mov: [], fondo: { nome: "Obiettivo di classe", obiettivo: 150, saldo: 0, mov: [] } };
+  D.classi.push(cl); D.attiva = cl.id; $("c-nuova").value = ""; selezionati.clear(); salva(); disegna();
+});
+function aggiungiAlunni(nomi) { const cl = C(); nomi.forEach(n => cl.alunni.push({ id: uid(), nome: n.slice(0, 30), saldo: D.budget, risp: 0 })); salva(); disegna(); }
+$("c-alunni-ok").addEventListener("click", () => { const nomi = $("c-alunni").value.split("\n").map(s => s.trim()).filter(Boolean); if (nomi.length) { aggiungiAlunni(nomi); $("c-alunni").value = ""; } });
+$("c-numeri").addEventListener("click", () => { const n = Math.max(1, Math.min(40, +$("c-n").value || 24)); const esistenti = new Set(C().alunni.map(a => a.nome)); aggiungiAlunni(Array.from({ length: n }, (_, i) => String(i + 1)).filter(x => !esistenti.has(x))); });
+let confClasse = false;
+$("c-elimina").addEventListener("click", () => {
+  if (D.classi.length < 2) { $("b-msg").textContent = "Serve almeno una classe."; return; }
+  if (!confClasse) { confClasse = true; $("c-elimina").textContent = "Tocca ancora: elimini classe e movimenti"; setTimeout(() => { confClasse = false; $("c-elimina").textContent = "🗑 Elimina la classe attiva"; }, 3000); return; }
+  D.classi = D.classi.filter(c => c.id !== D.attiva); D.attiva = D.classi[0].id; confClasse = false; $("c-elimina").textContent = "🗑 Elimina la classe attiva"; selezionati.clear(); salva(); disegna();
+});
+/* Backup */
+async function salvaFile(nome, testo) {
+  try { if (window.parent !== window && typeof window.parent.ptlSalva === "function") return await window.parent.ptlSalva(nome, testo); } catch (e) { return e && e.code === "declined" ? "declined" : null; }
+  return null;
+}
+const msgB = (t, c) => { $("b-msg").textContent = t; $("b-msg").className = "feedback " + (c || ""); };
+$("b-esporta").addEventListener("click", async () => { const r = await salvaFile(`banca-di-classe-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(D)); msgB(r === "saved" ? "✔ Backup salvato." : r === "declined" ? "Salvataggio annullato." : "Salvataggio non disponibile qui: usa «Copia backup».", r === "saved" ? "ok" : "ko"); });
+$("b-copia").addEventListener("click", async () => { try { await navigator.clipboard.writeText(JSON.stringify(D)); msgB("✔ Backup copiato: incollalo in un documento o in una mail a te stesso.", "ok"); } catch (e) { $("b-testo").value = JSON.stringify(D); msgB("Copia il testo qui sopra.", ""); } });
+$("b-csv").addEventListener("click", async () => {
+  const cl = C(), righe = [["Alunno", "Saldo", "Salvadanaio"], ...cl.alunni.map(a => [a.nome, a.saldo, a.risp])];
+  const csv = righe.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(";")).join("\n");
+  const r = await salvaFile(`saldi-${cl.nome.replace(/\W+/g, "-")}.csv`, csv);
+  if (r !== "saved") { try { await navigator.clipboard.writeText(csv); msgB("CSV copiato: incollalo in un foglio di calcolo.", "ok"); } catch (e) { msgB("Non disponibile qui.", "ko"); } } else msgB("✔ CSV salvato.", "ok");
+});
+function importa(t) {
+  try { const x = JSON.parse(t); if (!x || !Array.isArray(x.classi) || !x.moneta) throw 0; D = x; salva(); selezionati.clear(); disegna(); msgB("✔ Backup importato.", "ok"); }
+  catch (e) { msgB("Il testo non è un backup valido della Banca di classe.", "ko"); }
+}
+$("b-importa").addEventListener("click", () => importa($("b-testo").value));
+$("b-file").addEventListener("change", e => { const f = e.target.files[0]; if (!f) return; const rd = new FileReader(); rd.onload = () => importa(String(rd.result)); rd.readAsText(f); e.target.value = ""; });
+let confReset = false;
+$("b-reset").addEventListener("click", () => {
+  if (!confReset) { confReset = true; $("b-reset").textContent = "Sicuro? Tocca ancora (cancella tutto)"; setTimeout(() => { confReset = false; $("b-reset").textContent = "Ricomincia da zero"; }, 3000); return; }
+  D = predefiniti(); confReset = false; $("b-reset").textContent = "Ricomincia da zero"; selezionati.clear(); salva(); disegna(); msgB("Dati riportati all'esempio iniziale.", "");
+});
+
+/* ---------- Generale ---------- */
+const MAX_CLASSI = 10;
+function disegnaChip() {
+  $("classi-chip").innerHTML = D.classi.map(c => `<button role="tab" data-id="${c.id}" aria-selected="${c.id === D.attiva}">${esc(c.nome)}</button>`).join("") +
+    (D.classi.length < MAX_CLASSI ? `<button class="piu" id="chip-nuova" aria-label="Aggiungi una classe">+ Classe</button>` : `<span class="mini">Massimo ${MAX_CLASSI} classi</span>`);
+  $("classi-chip").querySelectorAll("[data-id]").forEach(b => b.addEventListener("click", () => { D.attiva = b.dataset.id; selezionati.clear(); alunnoEstratto = null; salva(); disegna(); }));
+  const n = $("chip-nuova"); if (n) n.addEventListener("click", () => { tab = "imp"; disegna(); $("c-nuova").focus(); });
+}
+$("sel-classe").addEventListener("change", () => { D.attiva = $("sel-classe").value; selezionati.clear(); alunnoEstratto = null; salva(); disegna(); });
+document.querySelectorAll(".tab[data-t]").forEach(b => b.addEventListener("click", () => { tab = b.dataset.t; disegna(); }));
+function disegna() {
+  const cl = C();
+  $("titolo-app").textContent = `${D.moneta.simbolo} Banca di classe`;
+  disegnaChip();
+  $("sel-classe").innerHTML = D.classi.map(c => `<option value="${c.id}" ${c.id === cl.id ? "selected" : ""}>${esc(c.nome)}</option>`).join("");
+  const tot = cl.alunni.reduce((s, a) => s + a.saldo, 0);
+  $("info-classe").textContent = `${cl.alunni.length} alunni · in circolazione ${M(tot)} · obiettivo ${cl.fondo.saldo}/${cl.fondo.obiettivo}`;
+  document.querySelectorAll(".tab[data-t]").forEach(b => b.setAttribute("aria-selected", b.dataset.t === tab));
+  ["registro", "negozio", "fondo", "estratti", "lim", "imp"].forEach(t => $("s-" + t).hidden = t !== tab);
+  if (tab === "registro") disegnaRegistro();
+  if (tab === "negozio") disegnaNegozio();
+  if (tab === "fondo") disegnaFondo();
+  if (tab === "estratti") disegnaEstratti();
+  if (tab === "lim") disegnaLim();
+  if (tab === "imp") disegnaImp();
+}
+salva(); disegna();
+</script>
+<script src="a11y.js"></script>
+</body>
+</html>

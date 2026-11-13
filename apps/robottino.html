@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Robottino in griglia</title>
+<link rel="stylesheet" href="ptl.css">
+<style>
+:root { --accent: var(--cod); }
+.gioco { display: grid; grid-template-columns: minmax(280px, 460px) 1fr; gap: 18px; align-items: start; }
+.griglia { display: grid; gap: 4px; background: #6b8f4e; padding: 8px; border-radius: 14px; border: 3px solid var(--ink); aspect-ratio: 1; position: relative; }
+.cella { background: #9cc56f; border-radius: 6px; display: grid; place-items: center; font-size: clamp(22px, 5vw, 40px); position: relative; }
+.cella.roccia { background: #8a8f98; }
+.cella.passata { background: #c6e3a0; }
+#robot { position: absolute; display: grid; place-items: center; transition: left .35s, top .35s; pointer-events: none; }
+#robot svg { width: 80%; height: 80%; transition: transform .3s; }
+#robot.urto { animation: urto .4s; }
+@keyframes urto { 25% { translate: 6px 0; } 75% { translate: -6px 0; } }
+.comandi { display: flex; flex-wrap: wrap; gap: 8px; }
+.cmd { font: 400 22px var(--font-hand); border: 2px solid var(--ink); border-radius: 12px; background: var(--cod); color: #fff; padding: 8px 14px; cursor: pointer; box-shadow: 0 3px 0 var(--ink); min-width: 64px; }
+.cmd:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--ink); }
+.cmd.rel { background: #8e5bd0; }
+.programma { display: flex; flex-wrap: wrap; gap: 6px; min-height: 58px; background: #fff; border: 2px dashed var(--ink); border-radius: 12px; padding: 8px; align-content: flex-start; }
+.programma:empty::before { content: "Il programma è vuoto: tocca i comandi per aggiungerli"; font-family: var(--font-hand); font-size: 19px; color: var(--muted); }
+.blocco { font: 400 20px var(--font-hand); background: var(--cod); color: #fff; border-radius: 8px; padding: 4px 10px; border: 2px solid var(--ink); cursor: pointer; }
+.blocco.rel { background: #8e5bd0; }
+.blocco.ora { outline: 4px solid var(--giallo); }
+.legenda { font-size: 15px; color: var(--muted); }
+@media (max-width: 760px) { .gioco { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header class="app-bar"><h1>Robottino in griglia</h1><span class="sub">Primi passi nel coding · primaria</span></header>
+<div class="container">
+  <div class="card">
+    <div class="livelli" id="livelli"></div>
+    <p class="consegna" id="consegna" style="margin-top:8px"></p>
+  </div>
+  <div class="gioco">
+    <div class="griglia" id="griglia"><div id="robot"></div></div>
+    <div class="card" style="display:grid;gap:12px">
+      <div><b>Comandi</b><div class="comandi" id="comandi" style="margin-top:6px"></div></div>
+      <div><b>Il tuo programma</b> <span class="nota">(tocca un blocco per toglierlo)</span><div class="programma" id="programma" style="margin-top:6px"></div></div>
+      <div class="row">
+        <button class="btn primary" id="via">▶ Via!</button>
+        <button class="btn" id="annulla">↶ Togli l'ultimo</button>
+        <button class="btn" id="cancella">🗑 Cancella tutto</button>
+      </div>
+      <p class="feedback" id="feedback" aria-live="polite"></p>
+      <p class="legenda">🚩 traguardo · ⭐ stella da raccogliere · 🪨 roccia: non si passa</p>
+    </div>
+  </div>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const DIRS = { N: [-1, 0], E: [0, 1], S: [1, 0], W: [0, -1] };
+const ORD = ["N", "E", "S", "W"];
+const ANG = { N: 0, E: 90, S: 180, W: 270 };
+/* Livelli: tipo "ass" = frecce (il robot va nella direzione della freccia), "rel" = avanti / gira */
+const LIVELLI = [
+  { tipo: "ass", n: 5, start: [2, 0], dir: "E", goal: [2, 3], rocce: [], stelle: [], testo: "Porta il robottino alla bandierina 🚩." },
+  { tipo: "ass", n: 5, start: [4, 1], dir: "N", goal: [1, 1], rocce: [], stelle: [], testo: "Ora sali verso la bandierina." },
+  { tipo: "ass", n: 5, start: [4, 0], dir: "E", goal: [0, 4], rocce: [], stelle: [], testo: "La bandierina è lontana: dovrai cambiare direzione." },
+  { tipo: "ass", n: 5, start: [0, 0], dir: "E", goal: [4, 4], rocce: [[1, 1], [2, 2], [3, 3], [0, 3]], stelle: [], testo: "Attento alle rocce 🪨!" },
+  { tipo: "ass", n: 5, start: [2, 2], dir: "N", goal: [4, 2], rocce: [[2, 1], [2, 3], [3, 1], [3, 3]], stelle: [[0, 2]], testo: "Prima prendi la stella ⭐, poi vai alla bandierina." },
+  { tipo: "rel", n: 5, start: [4, 2], dir: "N", goal: [1, 2], rocce: [], stelle: [], testo: "Nuovi comandi! <b>Avanti</b> fa un passo nella direzione in cui guarda il robot." },
+  { tipo: "rel", n: 5, start: [4, 0], dir: "N", goal: [0, 4], rocce: [], stelle: [], testo: "Usa <b>gira a destra</b>: il robot gira su se stesso, senza muoversi." },
+  { tipo: "rel", n: 5, start: [0, 0], dir: "E", goal: [4, 0], rocce: [[1, 0], [2, 0], [3, 0]], stelle: [], testo: "La strada dritta è bloccata: trova un giro." },
+  { tipo: "rel", n: 6, start: [5, 0], dir: "N", goal: [0, 5], rocce: [[2, 1], [2, 2], [2, 3], [4, 3], [4, 4]], stelle: [[2, 0]], testo: "Raccogli la stella e arriva alla bandierina." },
+  { tipo: "rel", n: 6, start: [0, 0], dir: "E", goal: [5, 5], rocce: [[0, 3], [1, 1], [1, 3], [2, 1], [3, 3], [3, 4], [4, 1], [5, 3]], stelle: [], testo: "Un piccolo labirinto." },
+  { tipo: "rel", n: 6, start: [5, 0], dir: "E", goal: [0, 0], rocce: [[1, 1], [1, 2], [3, 2], [3, 3], [4, 1]], stelle: [[5, 5], [0, 5]], testo: "Due stelle da prendere prima del traguardo!" },
+  { tipo: "rel", n: 6, start: [2, 2], dir: "S", goal: [3, 3], rocce: [[2, 3], [3, 2], [2, 1], [4, 4]], stelle: [[0, 0], [5, 5]], testo: "Il robot guarda in giù. Prendi le stelle negli angoli." },
+  { tipo: "rel", n: 7, start: [6, 0], dir: "N", goal: [0, 6], rocce: [[4, 0], [4, 1], [4, 2], [2, 4], [2, 5], [2, 6], [5, 4]], stelle: [[3, 3]], testo: "Griglia più grande! Passa dalla stella al centro." },
+  { tipo: "rel", n: 7, start: [3, 3], dir: "E", goal: [6, 6], rocce: [[3, 4], [2, 3], [4, 3], [5, 5], [5, 6], [6, 3]], stelle: [[0, 0]], testo: "Il robot è chiuso tra le rocce: trova l'unica uscita." },
+  { tipo: "rel", n: 7, start: [0, 0], dir: "S", goal: [0, 2], rocce: [[0, 1], [1, 1], [2, 1], [3, 1], [4, 1], [5, 3], [4, 3], [3, 3], [2, 3], [1, 3]], stelle: [[6, 6]], testo: "Un lungo serpente: vai fino alla stella in fondo e torna." },
+  { tipo: "rel", n: 7, start: [6, 3], dir: "N", goal: [3, 3], rocce: [[4, 3], [2, 3], [3, 2], [4, 2], [4, 4], [2, 2], [2, 4]], stelle: [[0, 6], [6, 6]], testo: "Sfida finale: due stelle, e il traguardo è al centro del castello." }
+];
+const CMD_ASS = [["N", "⬆️ Su"], ["S", "⬇️ Giù"], ["W", "⬅️ Sinistra"], ["E", "➡️ Destra"]];
+const CMD_REL = [["A", "⬆️ Avanti"], ["L", "↺ Gira a sinistra"], ["R", "↻ Gira a destra"]];
+const ETICHETTE = { N: "⬆️", S: "⬇️", W: "⬅️", E: "➡️", A: "Avanti", L: "↺ Sinistra", R: "↻ Destra" };
+const MAXCMD = 40;
+let prog = []; try { prog = JSON.parse(localStorage.getItem("robottino-prog")) || []; } catch (e) {}
+let liv = Math.min(prog.length, LIVELLI.length - 1), programma = [], inCorsa = false, pos, dir;
+const eq = (a, b) => a[0] === b[0] && a[1] === b[1];
+const fb = (t, c) => { $("feedback").innerHTML = t; $("feedback").className = "feedback " + c; };
+
+/* Programma più corto possibile (ricerca in ampiezza) */
+function minimo(L) {
+  const key = (r, c, d, m) => `${r},${c},${d},${m}`;
+  const full = (1 << L.stelle.length) - 1;
+  const q = [[L.start[0], L.start[1], L.dir, 0, 0]], seen = new Set([key(L.start[0], L.start[1], L.dir, 0)]);
+  const libero = (r, c) => r >= 0 && c >= 0 && r < L.n && c < L.n && !L.rocce.some(x => x[0] === r && x[1] === c);
+  const stellaMask = (r, c, m) => { L.stelle.forEach((s, i) => { if (s[0] === r && s[1] === c) m |= 1 << i; }); return m; };
+  while (q.length) {
+    const [r, c, d, m, k] = q.shift();
+    if (r === L.goal[0] && c === L.goal[1] && m === full) return k;
+    const mosse = L.tipo === "ass" ? ORD.map(x => [x, x]) : [["A", d], ["L", ORD[(ORD.indexOf(d) + 3) % 4]], ["R", ORD[(ORD.indexOf(d) + 1) % 4]]];
+    for (const [cmd, nd] of mosse) {
+      let nr = r, nc = c;
+      if (L.tipo === "ass" || cmd === "A") { nr += DIRS[nd][0]; nc += DIRS[nd][1]; if (!libero(nr, nc)) continue; }
+      const nm = stellaMask(nr, nc, m), kk = key(nr, nc, nd, nm);
+      if (!seen.has(kk)) { seen.add(kk); q.push([nr, nc, nd, nm, k + 1]); }
+    }
+  }
+  return null;
+}
+
+function costruisci() {
+  const L = LIVELLI[liv];
+  $("livelli").innerHTML = LIVELLI.map((l, i) => `<button class="${prog.includes(i) ? "fatto" : ""} ${i === liv ? "attivo" : ""}" ${i > 0 && !prog.includes(i - 1) && !prog.includes(i) ? "disabled" : ""} aria-label="Livello ${i + 1}">${i + 1}</button>`).join("");
+  $("livelli").querySelectorAll("button").forEach((b, i) => b.addEventListener("click", () => { if (inCorsa) return; liv = i; programma = []; costruisci(); }));
+  $("consegna").innerHTML = `Livello ${liv + 1}: ${L.testo}`;
+  const g = $("griglia"); g.style.gridTemplateColumns = `repeat(${L.n}, 1fr)`;
+  g.querySelectorAll(".cella").forEach(c => c.remove());
+  for (let r = 0; r < L.n; r++) for (let c = 0; c < L.n; c++) {
+    const d = document.createElement("div"); d.className = "cella"; d.id = `c-${r}-${c}`;
+    if (L.rocce.some(x => eq(x, [r, c]))) { d.classList.add("roccia"); d.textContent = "🪨"; }
+    if (L.stelle.some(x => eq(x, [r, c]))) d.textContent = "⭐";
+    if (eq(L.goal, [r, c])) d.textContent = "🚩";
+    g.insertBefore(d, $("robot"));
+  }
+  $("comandi").innerHTML = (L.tipo === "ass" ? CMD_ASS : CMD_REL).map(([k, t]) => `<button class="cmd ${L.tipo}" data-k="${k}">${t}</button>`).join("");
+  $("comandi").querySelectorAll("button").forEach(b => b.addEventListener("click", () => { if (inCorsa) return; if (programma.length >= MAXCMD) { fb("Il programma è troppo lungo.", "ko"); return; } programma.push(b.dataset.k); disegnaProg(); }));
+  pos = [...L.start]; dir = L.dir; fb("", ""); disegnaProg(); requestAnimationFrame(posizionaRobot);
+}
+function disegnaProg(ora = -1) {
+  const tipo = LIVELLI[liv].tipo;
+  $("programma").innerHTML = programma.map((k, i) => `<button class="blocco ${tipo}${i === ora ? " ora" : ""}" data-i="${i}" aria-label="Togli il blocco ${i + 1}">${ETICHETTE[k]}</button>`).join("");
+  $("programma").querySelectorAll("button").forEach(b => b.addEventListener("click", () => { if (inCorsa) return; programma.splice(+b.dataset.i, 1); disegnaProg(); }));
+}
+function posizionaRobot() {
+  const cella = $(`c-${pos[0]}-${pos[1]}`); if (!cella) return;
+  const R = $("robot");
+  R.style.left = cella.offsetLeft + "px"; R.style.top = cella.offsetTop + "px";
+  R.style.width = cella.offsetWidth + "px"; R.style.height = cella.offsetHeight + "px";
+  R.innerHTML = `<svg viewBox="0 0 60 60" style="transform:rotate(${ANG[dir]}deg)" aria-label="Robottino"><rect x="12" y="16" width="36" height="32" rx="8" fill="#4dabf7" stroke="#1f2a44" stroke-width="3"/><circle cx="24" cy="30" r="5" fill="#fff" stroke="#1f2a44" stroke-width="2"/><circle cx="36" cy="30" r="5" fill="#fff" stroke="#1f2a44" stroke-width="2"/><circle cx="24" cy="29" r="2" fill="#1f2a44"/><circle cx="36" cy="29" r="2" fill="#1f2a44"/><path d="M22 40h16" stroke="#1f2a44" stroke-width="3" stroke-linecap="round"/><path d="M30 2 L40 14 H20 Z" fill="#ef8a1f" stroke="#1f2a44" stroke-width="2"/></svg>`;
+}
+window.addEventListener("resize", posizionaRobot);
+const attesa = ms => new Promise(r => setTimeout(r, ms));
+
+$("via").addEventListener("click", async () => {
+  if (inCorsa || !programma.length) { if (!programma.length) fb("Aggiungi qualche comando prima di partire.", "ko"); return; }
+  const L = LIVELLI[liv]; inCorsa = true; fb("", "");
+  pos = [...L.start]; dir = L.dir; const prese = new Set();
+  document.querySelectorAll(".cella.passata").forEach(c => c.classList.remove("passata"));
+  L.stelle.forEach(s => { $(`c-${s[0]}-${s[1]}`).textContent = "⭐"; });
+  posizionaRobot(); await attesa(300);
+  let errore = null;
+  for (let i = 0; i < programma.length; i++) {
+    disegnaProg(i); const k = programma[i];
+    if (k === "L") dir = ORD[(ORD.indexOf(dir) + 3) % 4];
+    else if (k === "R") dir = ORD[(ORD.indexOf(dir) + 1) % 4];
+    else {
+      const d = L.tipo === "ass" ? k : dir; dir = d;
+      const nr = pos[0] + DIRS[d][0], nc = pos[1] + DIRS[d][1];
+      if (nr < 0 || nc < 0 || nr >= L.n || nc >= L.n) { errore = "Ops! Il robottino è uscito dalla griglia."; }
+      else if (L.rocce.some(x => eq(x, [nr, nc]))) { errore = "Bonk! Il robottino ha sbattuto contro una roccia."; }
+      else { $(`c-${pos[0]}-${pos[1]}`).classList.add("passata"); pos = [nr, nc]; }
+    }
+    posizionaRobot();
+    if (errore) { $("robot").classList.add("urto"); await attesa(450); $("robot").classList.remove("urto"); break; }
+    const si = L.stelle.findIndex(s => eq(s, pos)); if (si >= 0 && !prese.has(si)) { prese.add(si); $(`c-${pos[0]}-${pos[1]}`).textContent = "✨"; }
+    await attesa(450);
+  }
+  disegnaProg(); inCorsa = false;
+  if (errore) { fb(errore + " Correggi il programma e riprova.", "ko"); return; }
+  if (!eq(pos, L.goal)) { fb("Il robottino si è fermato prima della bandierina. Cosa manca?", "ko"); return; }
+  if (prese.size < L.stelle.length) { fb("Sei arrivato, ma hai dimenticato qualche stella ⭐!", "ko"); return; }
+  const min = minimo(L);
+  if (!prog.includes(liv)) prog.push(liv); try { localStorage.setItem("robottino-prog", JSON.stringify(prog)); } catch (e) {}
+  fb(programma.length <= min ? `🏆 Perfetto! Hai usato il numero minimo di comandi (${min}).` : `🎉 Arrivato! Hai usato ${programma.length} comandi: si può fare con ${min}. Ci riesci?`, "ok");
+  costruisciLivelliSolo();
+});
+function costruisciLivelliSolo() {
+  $("livelli").querySelectorAll("button").forEach((b, i) => { b.className = `${prog.includes(i) ? "fatto" : ""} ${i === liv ? "attivo" : ""}`; b.disabled = i > 0 && !prog.includes(i - 1) && !prog.includes(i); });
+}
+$("annulla").addEventListener("click", () => { if (!inCorsa) { programma.pop(); disegnaProg(); } });
+$("cancella").addEventListener("click", () => { if (!inCorsa) { programma = []; pos = [...LIVELLI[liv].start]; dir = LIVELLI[liv].dir; document.querySelectorAll(".cella.passata").forEach(c => c.classList.remove("passata")); posizionaRobot(); disegnaProg(); fb("", ""); } });
+costruisci();
+</script>
+<script src="a11y.js"></script>
+</body>
+</html>

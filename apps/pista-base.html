@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Pista Codice — Prof Tech Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --grass:#7cc34a; --grass2:#8fd15a; --road:#3d4350; --road-edge:#e9eef2;
+  --ink:#1f2a1a; --card:#ffffffee; --cell:52px;
+  --R:#7bbf2e; --L:#ef4f5f; --U:#1fb6e8; --D:#f5b72a; --OPEN:#8b5cf6; --LOOP:#e2762b;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%}
+body{font-family:Fredoka,system-ui,sans-serif;color:var(--ink);background:radial-gradient(circle at 20% 10%,var(--grass2),var(--grass) 60%);overflow-x:hidden;user-select:none}
+button{font-family:inherit;cursor:pointer;border:none}
+.app{max-width:1100px;margin:0 auto;padding:10px 12px 24px;display:flex;flex-direction:column;gap:10px;min-height:100%}
+header{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.pill{background:#00000026;color:#fff;border-radius:999px;padding:6px 14px;font-weight:600;display:flex;align-items:center;gap:6px}
+.iconbtn{width:44px;height:44px;border-radius:50%;background:#fff;color:#2a7a1b;font-size:22px;display:grid;place-items:center;box-shadow:0 3px 0 #0002}
+.iconbtn:active{transform:translateY(2px);box-shadow:none}
+h1{font-size:20px;margin:0;color:#fff;text-shadow:0 2px 0 #0003;flex:1}
+h1 small{display:block;font-size:12px;font-weight:500;opacity:.9}
+
+/* program bar */
+.progwrap{background:#0000002a;border-radius:16px;padding:8px;display:flex;align-items:center;gap:8px}
+.slots{display:flex;gap:6px;overflow-x:auto;flex:1;padding:2px;scrollbar-width:thin}
+.slot{flex:0 0 auto;width:58px;height:58px;border-radius:12px;border:3px dashed #ffffffcc;display:grid;place-items:center}
+.slot.next{background:#ffffff40}
+.block{width:58px;height:58px;border-radius:12px;color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;gap:2px;font-size:22px;box-shadow:inset 0 -5px 0 #0003;position:relative}
+.block .n{font-size:15px;position:absolute;top:3px;left:6px}
+.block svg{width:30px;height:30px}
+.slots .block{flex:0 0 auto;transition:transform .15s}
+.slots .block.active{transform:translateY(-4px) scale(1.06);outline:4px solid #fff}
+.slots .block.bug{outline:3px dashed #fff6}
+.b-IF{background:#0d9488}.b-ELSE{background:#64748b;font-size:12px}.b-LOOPW{background:#b45309}
+.block .lbl{font-size:12px;font-weight:700;letter-spacing:.3px}
+.block.stack{flex-direction:column;gap:0;line-height:1}
+.block .mini svg{width:20px;height:20px}
+.cell.t.free-hl{box-shadow:inset 0 0 0 4px #5eead4}
+.vtabs{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.vtab{background:#e8f6dc;color:#2a5a1b;border-radius:10px;padding:4px 10px;font-weight:600;font-size:13px}
+.vtab.on{background:#2a7a1b;color:#fff}
+.vtab.ok{outline:2px solid #22c55e}.vtab.ko{outline:2px solid #ef4444}
+.b-R{background:var(--R)}.b-L{background:var(--L)}.b-U{background:var(--U)}.b-D{background:var(--D)}.b-OPEN{background:var(--OPEN)}.b-LOOP{background:var(--LOOP)}
+.go{width:62px;height:62px;border-radius:50%;background:#ffd23f;font-size:30px;box-shadow:0 4px 0 #c79a00;color:#5a3d00}
+.go:disabled{opacity:.5}
+
+/* main */
+.main{display:flex;gap:10px;align-items:stretch}
+.palette{background:#7a4b2a;border-radius:16px;padding:8px;display:flex;flex-direction:column;gap:8px;box-shadow:inset 0 -4px 0 #0003}
+.palette .block{cursor:pointer}
+.palette .block:active{transform:scale(.92)}
+.palette .block.disabled{opacity:.35;pointer-events:none}
+.boardwrap{flex:1;display:flex;align-items:center;justify-content:center;min-height:260px;position:relative}
+.board{position:relative;display:grid;gap:0}
+.cell{width:var(--cell);height:var(--cell);position:relative}
+.cell.t{background:var(--road);box-shadow:inset 0 0 0 2px #ffffff22}
+.cell.t.eN{border-top:3px solid var(--road-edge)}.cell.t.eS{border-bottom:3px solid var(--road-edge)}
+.cell.t.eW{border-left:3px solid var(--road-edge)}.cell.t.eE{border-right:3px solid var(--road-edge)}
+.cell.F{background:repeating-conic-gradient(#fff 0 25%,#1d2b3a 0 50%) 0 0/50% 50%}
+.cell.S::after{content:"";position:absolute;inset:30%;border-radius:50%;background:#ffffff30}
+.gate{position:absolute;inset:6px;border-radius:6px;background:repeating-linear-gradient(45deg,var(--OPEN) 0 8px,#c4b5fd 8px 16px);transition:opacity .4s,transform .4s;display:grid;place-items:center;font-size:calc(var(--cell)*.4)}
+.gate.open{opacity:0;transform:scale(.3)}
+.deco{position:absolute;font-size:calc(var(--cell)*.5);opacity:.85;pointer-events:none}
+.kart{position:absolute;width:var(--cell);height:var(--cell);left:0;top:0;transition:transform .32s linear;z-index:5;pointer-events:none}
+.kart .body{width:100%;height:100%;transition:transform .2s}
+.kart.crash .body{animation:spin .6s ease-out}
+@keyframes spin{to{transform:rotate(var(--rot2))}}
+.trail{position:absolute;width:10px;height:10px;border-radius:50%;background:#ffd23f;z-index:4;transform:translate(-50%,-50%);opacity:.8;pointer-events:none}
+
+/* side panel */
+.side{display:flex;flex-direction:column;gap:8px;width:250px}
+.card{background:var(--card);border-radius:16px;padding:10px 12px;box-shadow:0 4px 0 #0002}
+.card h3{margin:0 0 4px;font-size:15px;color:#2a7a1b}
+.card p{margin:4px 0;font-size:14px;line-height:1.35}
+pre.code{font-family:"JetBrains Mono",monospace;font-size:12.5px;background:#1d2433;color:#dfe7ff;border-radius:10px;padding:8px 10px;margin:4px 0 0;white-space:pre-wrap;min-height:44px}
+pre.code .k{color:#ff9e64}pre.code .f{color:#7dd3fc}pre.code .num{color:#fde047}pre.code .c{color:#7c8aa5}
+pre.code .hl{background:#ffffff26;border-radius:4px}
+.row{display:flex;gap:6px;flex-wrap:wrap}
+.btn{background:#fff;border-radius:12px;padding:8px 12px;font-weight:600;font-size:14px;box-shadow:0 3px 0 #0002;color:#2a5a1b}
+.btn.alt{background:#2a7a1b;color:#fff}
+.msg{font-size:14px;min-height:20px;font-weight:500}
+
+/* overlays */
+.overlay{position:fixed;inset:0;background:#0b1a0b99;display:none;align-items:center;justify-content:center;z-index:50;padding:16px}
+.overlay.show{display:flex}
+.modal{background:#fff;border-radius:22px;max-width:520px;width:100%;padding:20px;box-shadow:0 10px 0 #0003;max-height:92vh;overflow:auto}
+.modal h2{margin:0 0 6px;color:#2a7a1b}
+.modal .tag{display:inline-block;background:#e8f6dc;color:#2a7a1b;border-radius:999px;padding:3px 10px;font-size:13px;font-weight:600;margin-bottom:6px}
+.stars{font-size:40px;letter-spacing:4px;text-align:center}
+.levels{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:8px;margin-top:10px}
+.lv{background:#e8f6dc;border-radius:14px;padding:8px 4px;text-align:center;font-weight:700;color:#2a5a1b;font-size:20px}
+.lv small{display:block;font-size:12px;font-weight:500;color:#e2a400;min-height:15px}
+.lv.locked{opacity:.4;pointer-events:none}
+.lv.cur{outline:3px solid #2a7a1b}
+.chapter{grid-column:1/-1;font-size:13px;font-weight:600;color:#666;margin-top:6px}
+
+@media (max-width:820px){
+  .main{flex-direction:column}
+  .palette{flex-direction:row;flex-wrap:wrap;justify-content:center;order:2}
+  .boardwrap{order:1}
+  .side{width:auto;order:3}
+  .block,.slot{width:52px;height:52px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <button class="iconbtn" id="btnMenu" title="Livelli" aria-label="Elenco livelli">☰</button>
+    <h1>Pista Codice<small>Prof Tech Lab · programma il kart fino al traguardo</small></h1>
+    <span class="pill" id="lvlPill">🏁 1</span>
+    <span class="pill" id="slotPill">🧱 0/0</span>
+    <a class="pill" href="pista-codice.html" style="text-decoration:none;color:inherit">⬅ Menu</a>
+  </header>
+
+  <div class="progwrap">
+    <div class="slots" id="slots" aria-label="Il tuo programma"></div>
+    <button class="iconbtn" id="btnUndo" title="Togli l'ultimo blocco" aria-label="Togli ultimo blocco">⌫</button>
+    <button class="go" id="btnGo" title="Avvia" aria-label="Avvia il programma">▶</button>
+  </div>
+
+  <div class="main">
+    <div class="palette" id="palette" aria-label="Blocchi disponibili"></div>
+    <div class="boardwrap" id="boardwrap"><div class="board" id="board"></div></div>
+    <div class="side">
+      <div class="card">
+        <h3 id="goalTitle">Obiettivo</h3>
+        <p id="goalText"></p>
+        <div class="msg" id="msg"></div>
+      </div>
+      <div class="card">
+        <h3>Il tuo codice</h3>
+        <pre class="code" id="code"></pre>
+      </div>
+      <div class="row">
+        <button class="btn" id="btnClear">🗑 Svuota</button>
+        <button class="btn" id="btnHint">💡 Aiuto</button>
+        <button class="btn" id="btnConcept">📘 Concetto</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ovIntro"><div class="modal" id="introBox"></div></div>
+<div class="overlay" id="ovWin"><div class="modal" id="winBox"></div></div>
+<div class="overlay" id="ovMenu"><div class="modal">
+  <h2>Livelli</h2>
+  <p style="margin:0;font-size:14px">I livelli si sbloccano in ordine. Le stelle dipendono da quanti blocchi usi: meno blocchi, codice più efficiente.</p>
+  <div class="levels" id="levels"></div>
+  <div class="row" style="margin-top:12px;justify-content:space-between">
+    <button class="btn" id="btnReset">Azzera progressi</button>
+    <button class="btn alt" id="btnCloseMenu">Chiudi</button>
+  </div>
+</div></div>
+
+<script>
+/*ENGINE_START*/
+const DIRS={R:[1,0],L:[-1,0],U:[0,-1],D:[0,1]};
+const ANG={R:0,D:90,L:180,U:270};
+
+const CONCEPTS={
+  seq:{tag:"Capitolo 1",title:"Sequenza",text:"Un programma è un elenco di istruzioni eseguite <b>una dopo l'altra, nell'ordine in cui le scrivi</b>. Il computer non indovina: fa esattamente quello che dici.",ex:"destra(1)\ndestra(1)\ngiu(1)"},
+  param:{tag:"Capitolo 2",title:"Parametri",text:"Il numero sul blocco è un <b>parametro</b>: dice all'istruzione <i>quanto</i> fare. Con il parametro giusto un solo blocco sostituisce tanti blocchi uguali.",ex:"destra(4)   # invece di 4 volte destra(1)"},
+  loop:{tag:"Capitolo 3",title:"Ciclo (ripeti)",text:"Se una parte del percorso si ripete, non serve riscriverla. Il blocco <b>Ripeti ×N</b> fa ricominciare dall'inizio tutti i blocchi che lo precedono, per N volte in totale. Poi il programma prosegue con i blocchi successivi.",ex:"for giro in range(3):\n    destra(1)\n    giu(1)"},
+  action:{tag:"Capitolo 4",title:"Azioni",text:"Non tutte le istruzioni muovono il kart. <b>Apri</b> è un'azione: apre i cancelli viola <b>attaccati</b> alla casella in cui si trova il kart. Se provi a passare da un cancello chiuso... schianto!",ex:"destra(2)\napri_cancello()\ndestra(3)"},
+  debug:{tag:"Capitolo 5",title:"Debug",text:"Qui il programma è già scritto, ma contiene uno o più <b>bug</b> (errori). Avvialo, osserva dove si ferma il kart e correggilo: tocca un blocco per eliminarlo e aggiungi quello giusto. Trovare e correggere errori è metà del lavoro di un programmatore.",ex:"# prima: osserva\n# poi: individua la riga sbagliata\n# infine: correggi e riprova"},
+  cond:{tag:"Capitolo 7",title:"Condizioni (se… altrimenti)",text:"Da qui in poi ogni livello ha <b>più versioni della pista</b> (A, B…) e lo <b>stesso programma</b> deve funzionare su tutte. Una frana 🪨 può bloccare una strada diversa ogni volta. Il blocco <b>SE libero</b> usa un <i>sensore</i>: controlla se la casella accanto al kart, in quella direzione, è pista libera. Se è vero esegue il blocco successivo; se è falso lo salta. Con <b>ALTRIMENTI</b> scegli cosa fare quando la condizione è falsa.<br><br>⚠️ Regola di sintassi: dopo SE e dopo ALTRIMENTI deve esserci un blocco di movimento o 🔑.",ex:"if libero(\"destra\"):\n    destra(4)\nelse:\n    giu(4)"},
+  algo:{tag:"Capitolo 8",title:"Algoritmi: ripeti finché",text:"Il blocco <b>Ripeti finché 🏁</b> ripete i blocchi precedenti <b>finché il kart non arriva al traguardo</b>, senza sapere quanti giri servono. Se lo unisci a una condizione ottieni un <b>algoritmo</b>: un insieme di regole che risolve <i>tutte</i> le piste di un certo tipo, anche quelle che non hai mai visto.<br><br>Attenzione: se il kart non arriva mai al traguardo, il ciclo gira all'infinito!",ex:"while not traguardo():\n    if libero(\"destra\"):\n        destra(1)\n    else:\n        giu(1)"},
+  final:{tag:"Capitolo 6",title:"Sfida: tutto insieme",text:"Ora metti insieme tutto: <b>sequenza, parametri, cicli e azioni</b>. Prima di toccare i blocchi, segui la pista con il dito e cerca le parti che si ripetono.",ex:"for giro in range(2):\n    apri_cancello()\n    destra(2)\n    giu(1)\ndestra(2)"}
+};
+
+// Mappa: . erba  # pista  S partenza  F traguardo  G cancello  * albero  o cespuglio
+const LEVELS=[
+ {c:"seq",goal:"Porta il kart al traguardo usando solo blocchi da 1 passo.",max:6,pal:["R1"],sol:["R1","R1","R1","R1"],
+  map:["*......","......o",".S###F.","o......","...*..."]},
+ {c:"seq",goal:"Prima la curva! Ricorda: l'ordine dei blocchi conta.",max:8,pal:["R1","D1"],sol:["R1","R1","D1","D1","R1","R1"],
+  map:[".......","*S##..o","...#...","...##F.","o....*."]},
+ {c:"seq",goal:"Su e giù: segui la pista casella per casella.",max:10,pal:["R1","D1","U1"],sol:["R1","D1","R1","R1","R1","U1","U1","R1"],
+  map:["*.......",".....#F.",".S#..#..","..####.o","o.....*."]},
+ {c:"param",goal:"Hai solo 3 spazi: scegli il numero giusto.",max:3,pal:["R1","R2","R4"],sol:["R4","R4"],
+  map:["*........o",".S#######F","....*....."]},
+ {c:"param",goal:"Ogni lato della pista ha una lunghezza diversa. Contale!",max:4,pal:["R2","R3","D2","D3"],sol:["R3","D3","R3"],
+  map:["o........",".S###...*","....#....","....#..o.","....###F.","*........"]},
+ {c:"param",goal:"Un circuito vero. Pianifica il percorso prima di iniziare.",max:9,pal:["R2","R3","U1","U2","D2","D3","L2"],sol:["R2","U2","R3","U1","R2","D3","L2","D2"],
+  map:["*..........","......###.o","...####.#..","...#....#..",".S##..###..","......#..*.","o.....F....","..*........"]},
+ {c:"loop",goal:"Una scala! Con 3 spazi devi per forza usare Ripeti.",max:3,pal:["R1","D1","LOOP3"],sol:["R1","D1","LOOP3"],
+  map:["o.......",".S#....*","..##....","...##...","....F..o","*......."]},
+ {c:"loop",goal:"Scala in salita: quale schema si ripete? Quante volte?",max:3,pal:["R1","R2","U1","LOOP2","LOOP3"],sol:["R2","U1","LOOP3"],
+  map:["*.........",".......F.o",".....###..","...###....",".S##.....*","o........."]},
+ {c:"loop",goal:"Ripeti, poi continua: i blocchi dopo il ciclo vengono eseguiti alla fine.",max:4,pal:["D1","R2","U2","LOOP2","LOOP3"],sol:["D1","R2","LOOP2","U2"],
+  map:["o......*",".S...F..",".###.#..","...###.o","*......."]},
+ {c:"loop",goal:"Serpentina! Trova lo schema più lungo che si ripete.",max:5,pal:["D2","R2","U2","LOOP2","LOOP3"],sol:["D2","R2","U2","R2","LOOP2"],
+  map:["*.........o",".S.###.##F.",".#.#.#.#...",".###.###..*","o.........."]},
+ {c:"action",goal:"Un cancello! Fermati accanto e usa Apri.",max:4,pal:["R1","R2","R3","OPEN"],sol:["R2","OPEN","R3"],
+  map:["*......o",".S##G#F.","...o...*"]},
+ {c:"action",goal:"Due cancelli: aprili al momento giusto.",max:6,pal:["R2","R3","D1","D2","OPEN"],sol:["R2","OPEN","D2","OPEN","R3"],
+  map:["o......*",".S##....","...G...o","...#G#F.","*......."]},
+ {c:"action",goal:"Cancelli in fila: azione + movimento, ripetuti.",max:3,pal:["R1","R2","OPEN","LOOP2","LOOP3"],sol:["OPEN","R2","LOOP3"],
+  map:["*.......o",".SG#G#GF.","o...*...."]},
+ {c:"debug",goal:"Questo programma ha un bug. Avvialo, guarda dove sbaglia e correggilo.",max:4,pal:["R2","R3","D2","D3"],pre:["R3","D3","R2"],sol:["R3","D2","R2"],
+  map:["o.......",".S###..*","....#...","....##F.","*......o"]},
+ {c:"debug",goal:"L'ordine dei blocchi è giusto? Il programma funziona ma... qualcosa non va.",max:3,pal:["R1","R3","OPEN"],pre:["R1","R3","OPEN"],sol:["R1","OPEN","R3"],
+  map:["*......o",".S#G#F..","o......."]},
+ {c:"debug",goal:"Doppio bug nel ciclo: ordine e numero di ripetizioni.",max:3,pal:["R2","D1","LOOP3","LOOP4"],pre:["D1","R2","LOOP3"],sol:["R2","D1","LOOP4"],
+  map:["*..........",".S##......o","...###.....",".....###...",".......###.","o........F*"]},
+ {c:"final",goal:"Ciclo + azione. Hai 5 spazi, ma il codice perfetto ne usa solo 4!",max:5,pal:["R1","R2","D1","D2","OPEN","LOOP2","LOOP3"],sol:["OPEN","R2","D1","LOOP3"],
+  map:["o.......",".SG#...*","...#G#..",".....##F","*......o"]},
+ {c:"final",goal:"Il gran premio: serpentina e cancello finale in 7 blocchi.",max:7,pal:["D2","R2","U2","R1","OPEN","LOOP2","LOOP3"],sol:["D2","R2","U2","R2","LOOP2","OPEN","R2"],
+  map:["*...........",".S.###.###GF",".#.#.#.#....",".###.###...o","o.....*....."]}
+ // ---- Capitolo 7: condizioni (più versioni della stessa pista) ----
+ ,{c:"cond",goal:"La frana cambia posto! Lo stesso programma deve funzionare sulle piste A e B.",max:4,pal:["R4","D4","R2","IF_R","IF_D","ELSE"],sol:["IF_R","R4","D4"],
+  maps:[
+   ["o......","*S###F.",".X....o",".#.....",".#..*..",".F.....","......."],
+   ["o......","*SX##F.",".#....o",".#.....",".#..*..",".F.....","......."]]}
+ ,{c:"cond",goal:"SE senza ALTRIMENTI: se la condizione è falsa, il blocco viene saltato e si va avanti.",max:4,pal:["U1","U2","R3","IF_U","IF_R","ELSE"],sol:["IF_U","U2","R3"],
+  maps:[
+   ["o......",".###F.*",".X.....",".S##F..","*.....o"],
+   ["o......",".###F.*",".#.....",".SX#F..","*.....o"]]}
+ ,{c:"cond",goal:"Bivio: su o giù? Qui serve ALTRIMENTI, perché dopo la strada continua uguale.",max:6,pal:["U2","D2","R2","R3","IF_U","IF_D","ELSE"],sol:["IF_U","U2","ELSE","D2","R2"],
+  maps:[
+   ["*......",".##F..o",".X.....",".S...*.",".#.....",".##F...","o......"],
+   ["*......",".##F..o",".#.....",".S...*.",".X.....",".##F...","o......"]]}
+ // ---- Capitolo 8: algoritmi ----
+ ,{c:"algo",goal:"Tre piste diverse, un solo programma. Regola: se puoi vai a destra, altrimenti giù.",max:5,pal:["R1","D1","IF_R","IF_D","ELSE","LOOP3","LOOPW"],sol:["IF_R","R1","ELSE","D1","LOOPW"],
+  maps:[
+   ["o.....",".S#..*","..##..","...##.","....F.","*....o"],
+   ["o.....",".S...*",".#....",".###..","...##F","*....o"],
+   ["o.....",".S###*","....#.","....#.","....F.","*....o"]]}
+ ,{c:"algo",goal:"Occhio alla strada senza uscita: quale sensore controlli per primo?",max:5,pal:["U1","R1","IF_U","IF_R","ELSE","LOOPW"],sol:["IF_U","U1","ELSE","R1","LOOPW"],
+  maps:[
+   [".......",".....F.","...###.","...#...",".S###..","o.....*"],
+   [".......",".#F....",".#.....",".#.....",".S##...","o.....*"],
+   [".......","...#F..","..##...",".##....",".S.....","o.....*"]]}
+ ,{c:"algo",goal:"Gran finale: cancelli in posti diversi su ogni pista. Costruisci l'algoritmo completo.",max:6,pal:["R1","D1","OPEN","IF_R","IF_D","ELSE","LOOP3","LOOPW"],sol:["OPEN","IF_R","R1","ELSE","D1","LOOPW"],
+  maps:[
+   ["o......",".SG#..*","...G#..","....#..","....F.o"],
+   ["o......",".S#...*","..G....","..#G#F.","*.....o"]]}
+];
+const getMaps=lv=>lv.maps||[lv.map];
+
+function parseMap(map){
+  const rows=map.length, cols=map[0].length; let sx=0,sy=0;
+  for(let y=0;y<rows;y++)for(let x=0;x<cols;x++){ if(map[y][x]==="S"){sx=x;sy=y;} }
+  return {rows,cols,sx,sy,tile:(x,y)=> (y<0||y>=rows||x<0||x>=cols)?".":map[y][x]};
+}
+function isTrack(ch){return ch==="#"||ch==="S"||ch==="F"||ch==="G";}
+function blockInfo(b){
+  if(b==="OPEN")return {k:"OPEN"};
+  if(b==="ELSE")return {k:"ELSE"};
+  if(b==="LOOPW")return {k:"LOOP",n:Infinity,w:true};
+  if(b.startsWith("LOOP"))return {k:"LOOP",n:+b.slice(4)};
+  if(b.startsWith("IF_"))return {k:"IF",d:b[3]};
+  return {k:"MOVE",d:b[0],n:+b.slice(1)};
+}
+const isAction=b=>{const k=blockInfo(b).k;return k==="MOVE"||k==="OPEN";};
+// Controllo di "sintassi": SE e ALTRIMENTI vogliono un'azione subito dopo
+function validate(prog){
+  for(let i=0;i<prog.length;i++){
+    const k=blockInfo(prog[i]).k;
+    if(k==="IF"&&!(i+1<prog.length&&isAction(prog[i+1])))return {ok:false,i,msg:"Dopo un blocco SE serve un blocco di movimento o 🔑."};
+    if(k==="ELSE"){
+      if(!(i>=2&&blockInfo(prog[i-2]).k==="IF"))return {ok:false,i,msg:"ALTRIMENTI deve stare subito dopo SE + un blocco."};
+      if(!(i+1<prog.length&&isAction(prog[i+1])))return {ok:false,i,msg:"Dopo ALTRIMENTI serve un blocco di movimento o 🔑."};
+    }
+  }
+  if(prog.filter(b=>b.startsWith("LOOP")).length>1)return {ok:false,i:prog.length-1,msg:"Un solo blocco Ripeti per programma."};
+  return {ok:true};
+}
+// Esegue il programma su una versione della pista: restituisce la traccia degli eventi (funzione pura, testabile)
+function run(level,prog,vi=0){
+  const m=parseMap(getMaps(level)[vi]); let x=m.sx,y=m.sy,dir="R"; const open=new Set(); const ev=[];
+  const v=validate(prog); if(!v.ok){ev.push({t:"syntax",i:v.i,msg:v.msg});return {ok:false,ev,reason:"syntax",msg:v.msg};}
+  const loops={}; prog.forEach((b,i)=>{const bi=blockInfo(b); if(bi.k==="LOOP")loops[i]=bi.n-1;});
+  const free=d=>{const nx=x+DIRS[d][0],ny=y+DIRS[d][1],ch=m.tile(nx,ny);return isTrack(ch)&&!(ch==="G"&&!open.has(nx+","+ny));};
+  // esegue un singolo blocco azione; restituisce "ok" | "win" | motivo dell'errore
+  const exec=i=>{
+    const b=blockInfo(prog[i]); ev.push({t:"pc",i});
+    if(b.k==="OPEN"){
+      const opened=[];
+      for(const d of "RLUD"){const nx=x+DIRS[d][0],ny=y+DIRS[d][1],k=nx+","+ny;
+        if(m.tile(nx,ny)==="G"&&!open.has(k)){open.add(k);opened.push(k);} }
+      ev.push({t:"open",cells:opened}); return "ok";
+    }
+    dir=b.d; ev.push({t:"turn",dir});
+    for(let s=0;s<b.n;s++){
+      const nx=x+DIRS[dir][0],ny=y+DIRS[dir][1],ch=m.tile(nx,ny);
+      if(!isTrack(ch)){ev.push({t:"crash",x:nx,y:ny,dir,reason:"off"});return "off";}
+      if(ch==="G"&&!open.has(nx+","+ny)){ev.push({t:"crash",x:nx,y:ny,dir,reason:"gate"});return "gate";}
+      x=nx;y=ny; ev.push({t:"move",x,y,dir});
+    }
+    return m.tile(x,y)==="F"?"win":"ok";
+  };
+  let pc=0,guard=0; const seen=new Set();
+  while(pc<prog.length){
+    if(++guard>300){ev.push({t:"infinite"});return {ok:false,ev,reason:"guard"};}
+    const b=blockInfo(prog[pc]);
+    let r="ok";
+    if(b.k==="IF"){
+      const res=free(b.d), hasElse=prog[pc+2]==="ELSE";
+      ev.push({t:"pc",i:pc}); ev.push({t:"cond",i:pc,d:b.d,res,x,y});
+      if(res){r=exec(pc+1); pc+=hasElse?4:2;}
+      else if(hasElse){ev.push({t:"pc",i:pc+2}); r=exec(pc+3); pc+=4;}
+      else pc+=2;
+    }else if(b.k==="LOOP"){
+      ev.push({t:"pc",i:pc});
+      if(b.w){ // stessa posizione + stessi cancelli di un giro precedente = il ciclo non finirà mai
+        const key=x+","+y+"|"+[...open].sort().join(";");
+        if(seen.has(key)){ev.push({t:"infinite"});return {ok:false,ev,reason:"guard"};}
+        seen.add(key);
+      }
+      if(loops[pc]>0){loops[pc]--;ev.push({t:"jump",w:!!b.w});pc=0;continue;}
+      pc++;
+    }else{ r=exec(pc); pc++; }
+    if(r==="win"){ev.push({t:"win"});return {ok:true,ev,used:prog.length};}
+    if(r!=="ok")return {ok:false,ev,reason:r};
+  }
+  return {ok:false,ev,reason:"short"};
+}
+function runAll(level,prog){return getMaps(level).map((_,vi)=>run(level,prog,vi));}
+function stars(level,used){const best=level.sol.length; return used<=best?3:used<=best+1?2:1;}
+/*ENGINE_END*/
+
+// ---------- UI ----------
+const $=id=>document.getElementById(id);
+const ARROW={
+  R:'<svg viewBox="0 0 24 24"><path d="M4 12h14M13 6l6 6-6 6" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  L:'<svg viewBox="0 0 24 24"><path d="M20 12H6M11 6l-6 6 6 6" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  U:'<svg viewBox="0 0 24 24"><path d="M12 20V6M6 11l6-6 6 6" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  D:'<svg viewBox="0 0 24 24"><path d="M12 4v14M6 13l6 6 6-6" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+};
+const NAMEF={R:"destra",L:"sinistra",U:"su",D:"giu"};
+function blockHTML(b,extra=""){
+  const bi=blockInfo(b);
+  if(bi.k==="OPEN")return `<div class="block b-OPEN ${extra}" data-b="${b}" title="Apri cancello">🔑</div>`;
+  if(bi.k==="IF")return `<div class="block stack b-IF ${extra}" data-b="${b}" title="SE libero ${NAMEF[bi.d]}"><span class="lbl">SE ✓</span><span class="mini">${ARROW[bi.d]}</span></div>`;
+  if(bi.k==="ELSE")return `<div class="block b-ELSE ${extra}" data-b="${b}" title="Altrimenti"><span class="lbl">ALTRI-<br>MENTI</span></div>`;
+  if(bi.w)return `<div class="block stack b-LOOPW ${extra}" data-b="${b}" title="Ripeti finché arrivi al traguardo"><span style="font-size:20px">↻</span><span class="lbl">finché 🏁</span></div>`;
+  if(bi.k==="LOOP")return `<div class="block b-LOOP ${extra}" data-b="${b}" title="Ripeti ${bi.n} volte"><span style="font-size:24px">↻</span><span style="font-size:16px">×${bi.n}</span></div>`;
+  return `<div class="block b-${bi.d} ${extra}" data-b="${b}" title="${NAMEF[bi.d]} ${bi.n}"><span class="n">${bi.n}</span>${ARROW[bi.d]}</div>`;
+}
+
+let save={unlocked:1,stars:{}};
+try{const s=JSON.parse(localStorage.getItem("pistaCodice")||"null"); if(s&&s.unlocked)save=s;}catch(e){}
+function persist(){try{localStorage.setItem("pistaCodice",JSON.stringify(save));}catch(e){}}
+
+let L=0, prog=[], running=false, hintStep=0, V=0, vres=[];
+const VL="ABCDE";
+const lvl=()=>LEVELS[L];
+
+function loadLevel(i,showIntro=true){
+  L=i; const lv=lvl(); prog=lv.pre?[...lv.pre]:[]; hintStep=0;
+  $("lvlPill").textContent="🏁 "+(i+1)+"/"+LEVELS.length;
+  $("goalTitle").textContent=CONCEPTS[lv.c].title+" · livello "+(i+1);
+  $("goalText").textContent=lv.goal;
+  setMsg(""); V=0; vres=[];
+  renderPalette(); renderTabs(); buildBoard(); renderProg();
+  const first=LEVELS.findIndex(l=>l.c===lv.c);
+  if(showIntro&&first===i)showConcept();
+}
+function renderTabs(){
+  const n=getMaps(lvl()).length, g=$("goalText");
+  let t=$("vtabs"); if(!t){t=document.createElement("div");t.id="vtabs";t.className="vtabs";g.after(t);}
+  if(n<2){t.innerHTML="";return;}
+  t.innerHTML='<span style="font-size:13px;align-self:center">Versioni:</span>'+getMaps(lvl()).map((_,i)=>`<button class="vtab ${i===V?"on":""} ${vres[i]===true?"ok":vres[i]===false?"ko":""}" data-v="${i}">Pista ${VL[i]}</button>`).join("");
+  t.querySelectorAll(".vtab").forEach(b=>b.onclick=()=>{if(running)return;V=+b.dataset.v;renderTabs();buildBoard();});
+}
+function setMsg(t,color){const m=$("msg");m.innerHTML=t;m.style.color=color||"#2a5a1b";}
+
+function renderPalette(){
+  const p=$("palette"); p.innerHTML=lvl().pal.map(b=>blockHTML(b)).join("");
+  p.querySelectorAll(".block").forEach(el=>el.onclick=()=>addBlock(el.dataset.b));
+  updatePaletteState();
+}
+function updatePaletteState(){
+  const full=prog.length>=lvl().max, hasLoop=prog.some(b=>b.startsWith("LOOP"));
+  $("palette").querySelectorAll(".block").forEach(el=>{
+    el.classList.toggle("disabled",running||full||(hasLoop&&el.dataset.b.startsWith("LOOP")));
+  });
+}
+function addBlock(b){
+  if(running)return; if(prog.length>=lvl().max){setMsg("Spazi finiti! Togli un blocco o cerca una soluzione più corta.","#b33");return;}
+  if(b.startsWith("LOOP")&&prog.some(x=>x.startsWith("LOOP"))){setMsg("Puoi usare un solo blocco Ripeti per programma.","#b33");return;}
+  prog.push(b); setMsg(""); vres=[]; renderTabs(); resetKart(); renderProg();
+}
+function renderProg(activeIdx=-1){
+  const s=$("slots"); let h="";
+  for(let i=0;i<lvl().max;i++){
+    if(i<prog.length)h+=blockHTML(prog[i],(i===activeIdx?"active":"")+(lvl().pre?" bug":""));
+    else h+=`<div class="slot ${i===prog.length?"next":""}"></div>`;
+  }
+  s.innerHTML=h;
+  s.querySelectorAll(".block").forEach((el,i)=>el.onclick=()=>{ if(running)return; prog.splice(i,1); resetKart(); renderProg(); });
+  $("slotPill").textContent="🧱 "+prog.length+"/"+lvl().max;
+  const g=$("btnGo"); g.disabled=!running&&prog.length===0;
+  g.textContent=running?"⏹":"▶"; g.title=running?"Ferma":"Avvia"; g.style.background=running?"#ef4444":""; g.style.color=running?"#fff":"";
+  renderCode(activeIdx); updatePaletteState();
+}
+function esc(s){return s.replace(/</g,"&lt;");}
+function renderCode(active){
+  const li=prog.findIndex(b=>b.startsWith("LOOP"));
+  const lines=[]; // [text, progIndex]
+  const stmt=(b)=>{const bi=blockInfo(b);
+    if(bi.k==="OPEN")return `<span class="f">apri_cancello</span>()`;
+    if(bi.k==="IF")return `<span class="k">if</span> <span class="f">libero</span>(<span class="num">"${NAMEF[bi.d]}"</span>):`;
+    if(bi.k==="ELSE")return `<span class="k">else</span>:`;
+    if(bi.k==="LOOP")return `<span class="c"># ripeti</span>`;
+    return `<span class="f">${NAMEF[bi.d]}</span>(<span class="num">${bi.n}</span>)`;};
+  // segmento di blocchi -> righe con indentazione (if/else annidano il blocco successivo)
+  const seg=(a,b,ind)=>{let i=a;while(i<b){const k=blockInfo(prog[i]).k;
+      if(k==="IF"){lines.push([ind+stmt(prog[i]),i]);
+        if(i+1<b&&isAction(prog[i+1]))lines.push([ind+"    "+stmt(prog[i+1]),i+1]); else {lines.push([ind+'    <span class="c"># ⚠ manca il blocco!</span>',-1]);i++;continue;}
+        if(prog[i+2]==="ELSE"&&i+2<b){lines.push([ind+stmt(prog[i+2]),i+2]);
+          if(i+3<b&&isAction(prog[i+3])){lines.push([ind+"    "+stmt(prog[i+3]),i+3]);i+=4;} else {lines.push([ind+'    <span class="c"># ⚠ manca il blocco!</span>',-1]);i+=3;}}
+        else i+=2;}
+      else if(k==="ELSE"){lines.push([ind+stmt(prog[i])+' <span class="c"># ⚠ ALTRIMENTI senza SE</span>',i]);i++;}
+      else {lines.push([ind+stmt(prog[i]),i]);i++;}}};
+  if(prog.length===0){$("code").innerHTML='<span class="c"># tocca i blocchi colorati\n# per scrivere il programma</span>';return;}
+  if(li>=0){
+    const lb=blockInfo(prog[li]);
+    lines.push([lb.w?`<span class="k">while not</span> <span class="f">traguardo</span>():`:`<span class="k">for</span> giro <span class="k">in</span> range(<span class="num">${lb.n}</span>):`,li]);
+    if(li===0)lines.push(["    <span class=\"k\">pass</span>  <span class=\"c\"># ciclo vuoto!</span>",-1]);
+    seg(0,li,"    "); seg(li+1,prog.length,"");
+  }else seg(0,prog.length,"");
+  $("code").innerHTML=lines.map(([t,i])=>i===active&&i>=0?`<span class="hl">${t}</span>`:t).join("\n");
+}
+
+// ---------- board ----------
+let cellPx=52;
+function buildBoard(){
+  const lv=lvl(), m=parseMap(getMaps(lv)[V]), b=$("board");
+  const wrapW=$("boardwrap").clientWidth||600;
+  const maxH=Math.max(240,window.innerHeight*0.48);
+  cellPx=Math.floor(Math.min(64,(wrapW-8)/m.cols,maxH/m.rows));
+  document.documentElement.style.setProperty("--cell",cellPx+"px");
+  b.style.gridTemplateColumns=`repeat(${m.cols},${cellPx}px)`;
+  let h="";
+  for(let y=0;y<m.rows;y++)for(let x=0;x<m.cols;x++){
+    const ch=m.tile(x,y);
+    if(isTrack(ch)){
+      let cls="cell t";
+      if(!isTrack(m.tile(x,y-1)))cls+=" eN"; if(!isTrack(m.tile(x,y+1)))cls+=" eS";
+      if(!isTrack(m.tile(x-1,y)))cls+=" eW"; if(!isTrack(m.tile(x+1,y)))cls+=" eE";
+      if(ch==="F")cls+=" F"; if(ch==="S")cls+=" S";
+      h+=`<div class="${cls}" data-xy="${x},${y}">${ch==="G"?`<div class="gate" data-g="${x},${y}">🔒</div>`:""}</div>`;
+    }else{
+      const deco=ch==="*"?"🌳":ch==="o"?"🌼":ch==="X"?"🪨":"";
+      h+=`<div class="cell" data-xy="${x},${y}">${deco?`<span class="deco" style="left:20%;top:15%">${deco}</span>`:""}</div>`;
+    }
+  }
+  h+=`<div class="kart" id="kart"><div class="body" id="kbody">${KART_SVG}</div></div>`;
+  b.innerHTML=h; resetKart();
+}
+const KART_SVG=`<svg viewBox="0 0 60 60" width="100%" height="100%">
+ <rect x="12" y="10" width="10" height="8" rx="2" fill="#222"/><rect x="12" y="42" width="10" height="8" rx="2" fill="#222"/>
+ <rect x="38" y="10" width="10" height="8" rx="2" fill="#222"/><rect x="38" y="42" width="10" height="8" rx="2" fill="#222"/>
+ <path d="M8 22 Q8 17 14 17 L44 19 Q54 22 54 30 Q54 38 44 41 L14 43 Q8 43 8 38Z" fill="#ff7a1a" stroke="#fff" stroke-width="2"/>
+ <rect x="4" y="18" width="5" height="24" rx="2" fill="#ffd23f"/>
+ <circle cx="28" cy="30" r="7" fill="#1fb6e8" stroke="#fff" stroke-width="2"/>
+ <path d="M44 25 L52 30 L44 35Z" fill="#fff" opacity=".8"/>
+</svg>`;
+let kx=0,ky=0,kang=0;
+function placeKart(x,y,dir,instant){
+  const k=$("kart"); if(!k)return;
+  if(instant){k.style.transition="none";}
+  kx=x;ky=y;
+  // rotazione col percorso più breve
+  const target=ANG[dir]; let diff=((target-kang)%360+540)%360-180; kang+=diff;
+  k.style.transform=`translate(${x*cellPx}px,${y*cellPx}px)`;
+  $("kbody").style.transform=`rotate(${kang}deg)`;
+  if(instant){k.offsetHeight;k.style.transition="";}
+}
+function resetKart(){
+  const m=parseMap(getMaps(lvl())[V]); kang=0;
+  document.querySelectorAll(".trail").forEach(t=>t.remove());
+  document.querySelectorAll(".gate").forEach(g=>g.classList.remove("open"));
+  const k=$("kart"); if(k)k.classList.remove("crash");
+  // direzione iniziale: verso la prima casella di pista
+  let d="R"; for(const c of "RDUL"){if(isTrack(m.tile(m.sx+DIRS[c][0],m.sy+DIRS[c][1]))){d=c;break;}}
+  placeKart(m.sx,m.sy,d,true);
+}
+function trail(x,y){const t=document.createElement("div");t.className="trail";t.style.left=(x+.5)*cellPx+"px";t.style.top=(y+.5)*cellPx+"px";$("board").appendChild(t);}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+let stopReq=false;
+async function animate(res){
+  let loopsDone=0;
+  for(const e of res.ev){
+    if(stopReq)return false;
+    if(e.t==="pc"){renderProg(e.i);await sleep(140);}
+    else if(e.t==="syntax"){renderProg(e.i);}
+    else if(e.t==="cond"){
+      const nx=e.x+DIRS[e.d][0],ny=e.y+DIRS[e.d][1];
+      const c=document.querySelector(`.cell[data-xy="${nx},${ny}"]`);
+      if(c){c.style.outline=`4px solid ${e.res?"#22c55e":"#ef4444"}`;c.style.outlineOffset="-4px";c.style.zIndex=3;}
+      setMsg(`🔍 SE libero ${NAMEF[e.d]}? ${e.res?"<b>Sì</b> → eseguo il blocco":"<b>No</b> → salto"}`, e.res?"#15803d":"#b33");
+      await sleep(550); if(c){c.style.outline="";c.style.zIndex="";}
+    }
+    else if(e.t==="turn"){placeKart(kx,ky,e.dir);await sleep(120);}
+    else if(e.t==="move"){trail(kx,ky);placeKart(e.x,e.y,e.dir);await sleep(330);}
+    else if(e.t==="open"){
+      if(!e.cells.length)setMsg("🔑 Nessun cancello attaccato al kart: l'azione non ha effetto.","#8b5cf6");
+      e.cells.forEach(c=>{const g=document.querySelector(`.gate[data-g="${c}"]`);if(g)g.classList.add("open");});
+      await sleep(e.cells.length?450:200);
+    }
+    else if(e.t==="jump"){loopsDone++;setMsg(e.w?`↻ Non sono al traguardo: ricomincio (giro ${loopsDone+1})`:`↻ Ripeti: giro ${loopsDone+1}`);await sleep(250);}
+    else if(e.t==="infinite"){setMsg("♾️ Ciclo infinito!","#b33");await sleep(400);}
+    else if(e.t==="crash"){
+      const k=$("kart"); k.style.transform=`translate(${(kx+(e.x-kx)*.45)*cellPx}px,${(ky+(e.y-ky)*.45)*cellPx}px)`;
+      await sleep(250); k.style.setProperty("--rot2",(kang+360)+"deg"); k.classList.add("crash"); await sleep(600);
+    }
+  }
+  return true;
+}
+function stopRun(){ if(running)stopReq=true; }
+async function play(){
+  if(running||!prog.length)return;
+  const n=getMaps(lvl()).length; vres=[];
+  running=true; stopReq=false;
+  for(let vi=0;vi<n;vi++){
+    V=vi; renderTabs(); buildBoard(); await sleep(n>1?350:60);
+    renderProg(); setMsg(n>1?`In corsa sulla pista ${VL[vi]}…`:"In corsa…");
+    const res=run(lvl(),prog,vi);
+    if(!(await animate(res))){
+      running=false; stopReq=false; vres=[]; renderTabs(); resetKart(); renderProg();
+      setMsg("⏹ Programma fermato. Modificalo e riprova.","#555"); return;
+    }
+    vres[vi]=res.ok; renderTabs();
+    if(!res.ok){
+      running=false; renderProg();
+      const where=n>1?` (pista ${VL[vi]})`:"";
+      const why={off:"💥 Il kart è uscito di pista"+where+"! Guarda il blocco evidenziato: è lì che il programma sbaglia.",
+        gate:"💥 Cancello chiuso"+where+"! Serve un blocco 🔑 Apri prima di passare.",
+        short:"🛑 Il programma è finito ma il kart non è al traguardo"+where+". Mancano dei blocchi.",
+        guard:"♾️ Ciclo infinito"+where+": il kart è tornato in una situazione già vista senza arrivare al traguardo, quindi il ciclo non finirebbe mai. Controlla le condizioni e l'ordine dei blocchi.",
+        syntax:"⚠️ Errore di sintassi: "+(res.msg||"")}[res.reason];
+      setMsg(why,"#b33"); return;
+    }
+    if(n>1&&vi<n-1){setMsg(`✅ Pista ${VL[vi]} completata! Ora la ${VL[vi+1]}…`,"#15803d");await sleep(900);
+      if(stopReq){running=false;stopReq=false;vres=[];renderTabs();resetKart();renderProg();setMsg("⏹ Programma fermato.","#555");return;}}
+  }
+  running=false; renderProg();
+  win(prog.length);
+}
+
+function win(used){
+  const lv=lvl(), st=stars(lv,used), prev=save.stars[L]||0; setMsg("🏁 Traguardo!");
+  save.stars[L]=Math.max(prev,st); save.unlocked=Math.max(save.unlocked,Math.min(LEVELS.length,L+2)); persist();
+  const best=lv.sol.length; const last=L===LEVELS.length-1;
+  const tip=st===3?"Codice efficiente: hai usato il minimo dei blocchi possibili.":`Funziona! Ma si può fare con <b>${best}</b> blocchi. Riesci a trovare la soluzione più corta?`;
+  $("winBox").innerHTML=`<div class="stars">${"⭐".repeat(st)}${"☆".repeat(3-st)}</div>
+   <h2 style="text-align:center">${last?"Gran premio vinto!":"Traguardo!"}</h2>
+   <p style="text-align:center">${getMaps(lv).length>1?`✅ Funziona su <b>tutte le ${getMaps(lv).length} piste</b>: è un algoritmo generale!<br>`:""}Blocchi usati: <b>${used}</b> · ${tip}</p>
+   <pre class="code">${$("code").innerHTML}</pre>
+   <div class="row" style="justify-content:center;margin-top:12px">
+     <button class="btn" id="wRetry">↺ Riprova</button>
+     ${last?`<button class="btn alt" id="wMenu">Elenco livelli</button>`:`<button class="btn alt" id="wNext">Livello ${L+2} ▶</button>`}
+   </div>`;
+  $("ovWin").classList.add("show");
+  $("wRetry").onclick=()=>{$("ovWin").classList.remove("show");loadLevel(L,false);};
+  if(last)$("wMenu").onclick=()=>{$("ovWin").classList.remove("show");openMenu();};
+  else $("wNext").onclick=()=>{$("ovWin").classList.remove("show");loadLevel(L+1);};
+}
+
+function showConcept(){
+  const c=CONCEPTS[lvl().c];
+  $("introBox").innerHTML=`<span class="tag">${c.tag}</span><h2>${c.title}</h2><p>${c.text}</p>
+   <p style="margin-bottom:0;font-size:13px;color:#666">Come si scrive in un vero linguaggio (Python):</p>
+   <pre class="code">${esc(c.ex)}</pre>
+   <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn alt" id="introOk">Ho capito, gioco!</button></div>`;
+  $("ovIntro").classList.add("show");
+  $("introOk").onclick=()=>$("ovIntro").classList.remove("show");
+}
+function openMenu(){
+  let h="",lastC="";
+  LEVELS.forEach((lv,i)=>{
+    if(lv.c!==lastC){h+=`<div class="chapter">${CONCEPTS[lv.c].tag} · ${CONCEPTS[lv.c].title}</div>`;lastC=lv.c;}
+    const st=save.stars[i]||0;
+    h+=`<button class="lv ${i+1>save.unlocked?"locked":""} ${i===L?"cur":""}" data-i="${i}">${i+1}<small>${st?"★".repeat(st):""}</small></button>`;
+  });
+  $("levels").innerHTML=h;
+  $("levels").querySelectorAll(".lv").forEach(b=>b.onclick=()=>{$("ovMenu").classList.remove("show");loadLevel(+b.dataset.i);});
+  $("ovMenu").classList.add("show");
+}
+
+function hint(){
+  if(running)return; const sol=lvl().sol;
+  // primo blocco in cui il programma diverge dalla soluzione
+  let i=0; while(i<prog.length&&i<sol.length&&prog[i]===sol[i])i++;
+  if(i===sol.length&&prog.length===sol.length){setMsg("Il programma è già corretto: premi ▶!");return;}
+  const tmp=document.createElement("span"); const bi=blockInfo(sol[i]||sol[sol.length-1]);
+  const name=bi.k==="OPEN"?"🔑 Apri":bi.k==="IF"?`SE libero ${NAMEF[bi.d]}`:bi.k==="ELSE"?"ALTRIMENTI":bi.w?"↻ Ripeti finché 🏁":bi.k==="LOOP"?`↻ Ripeti ×${bi.n}`:`${NAMEF[bi.d]} ${bi.n}`;
+  if(i<prog.length)setMsg(`💡 I primi ${i} blocchi vanno bene. Il blocco n° ${i+1} dovrebbe essere: <b>${name}</b>`,"#8a5a00");
+  else setMsg(`💡 Il prossimo blocco (n° ${i+1}) è: <b>${name}</b>`,"#8a5a00");
+}
+
+$("btnGo").onclick=()=>running?stopRun():play();
+$("btnUndo").onclick=()=>{if(running||!prog.length)return;prog.pop();resetKart();renderProg();};
+$("btnClear").onclick=()=>{if(running)return;prog=[];resetKart();setMsg("");renderProg();};
+$("btnHint").onclick=hint;
+$("btnConcept").onclick=showConcept;
+$("btnMenu").onclick=openMenu;
+$("btnCloseMenu").onclick=()=>$("ovMenu").classList.remove("show");
+$("btnReset").onclick=()=>{save={unlocked:1,stars:{}};persist();openMenu();};
+let rz; window.addEventListener("resize",()=>{clearTimeout(rz);rz=setTimeout(()=>{if(!running){buildBoard();}},150);});
+
+loadLevel(Math.min(save.unlocked,LEVELS.length)-1);
+</script>
+<script src="a11y.js"></script>
+</body>
+</html>

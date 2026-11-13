@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Frazioni da tagliare</title>
+<link rel="stylesheet" href="ptl.css">
+<style>
+:root { --accent: var(--mat); --pizza: #f2b84b; --cioc: #7a4b2a; --nastro: #2f6fd6; }
+.gioco { display: grid; grid-template-columns: 1.2fr 1fr; gap: 16px; align-items: start; }
+.tavolo { background: #fff; border: 3px solid var(--ink); border-radius: 14px; padding: 12px; display: grid; gap: 10px; justify-items: center; }
+.tavolo svg { width: 100%; max-width: 420px; touch-action: manipulation; }
+.fetta { cursor: pointer; transition: fill .15s; }
+.fetta:focus-visible { outline: none; stroke: var(--giallo); stroke-width: 5; }
+.tagli { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.tagli button { width: 46px; height: 46px; border-radius: 50%; border: 2px solid var(--ink); background: #fff; font: 400 22px var(--font-hand); cursor: pointer; }
+.tagli button[aria-pressed="true"] { background: var(--giallo); }
+.frazione { display: inline-grid; justify-items: center; font: 400 44px var(--font-hand); line-height: 1; vertical-align: middle; margin: 0 6px; }
+.frazione span:first-child { border-bottom: 3px solid currentColor; padding: 0 6px; }
+.frazione input { width: 70px; text-align: center; font-size: 30px; }
+.conf { display: flex; gap: 10px; justify-content: center; }
+.conf button { width: 64px; height: 64px; font: 400 36px var(--font-hand); border: 3px solid var(--ink); border-radius: 12px; background: #fff; cursor: pointer; }
+.conf button[aria-pressed="true"] { background: var(--giallo); }
+.caramelle { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; max-width: 420px; }
+.caramelle button { width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--ink); font-size: 22px; background: #fff; cursor: pointer; }
+.caramelle button.presa { background: var(--giallo); }
+@media (max-width: 860px) { .gioco { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header class="app-bar"><h1>Frazioni da tagliare</h1><span class="sub">Pizze, cioccolato e nastri · primaria e 1ª media</span></header>
+<div class="container">
+  <div class="tabs">
+    <button class="tab" id="tab-sfide" aria-selected="true">Sfide</button>
+    <button class="tab" id="tab-libero" aria-selected="false">Laboratorio libero</button>
+  </div>
+  <div class="gioco">
+    <div class="tavolo" id="tavolo"></div>
+    <div class="card" style="display:grid;gap:10px">
+      <div class="livelli" id="livelli"></div>
+      <p class="nota" id="contatore"></p>
+      <p class="consegna" id="consegna"></p>
+      <div id="input"></div>
+      <div class="row"><button class="btn primary" id="verifica">✔ Controlla</button></div>
+      <p class="feedback" id="feedback" aria-live="polite"></p>
+    </div>
+  </div>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const pick = a => a[rnd(0, a.length - 1)];
+const mcd = (a, b) => b ? mcd(b, a % b) : a;
+const COL = { pizza: ["#fbe3b0", "#e2572b"], cioc: ["#e9d6c5", "#7a4b2a"], nastro: ["#dce8fb", "#2f6fd6"] };
+
+/* Una forma divisa in d parti; colorate = insieme di indici */
+function svgForma(forma, d, colorate, opts = {}) {
+  const [vuoto, pieno] = COL[forma], id = opts.id || "f";
+  let s = "";
+  if (forma === "pizza") {
+    s += `<svg viewBox="0 0 220 220" role="img" aria-label="Pizza divisa in ${d} parti, ${colorate.size} colorate"><circle cx="110" cy="110" r="100" fill="#c98a3a"/>`;
+    for (let i = 0; i < d; i++) {
+      const a0 = -Math.PI / 2 + i * 2 * Math.PI / d, a1 = a0 + 2 * Math.PI / d, r = 92;
+      const p = d === 1 ? `M110,110 m-92,0 a92,92 0 1,0 184,0 a92,92 0 1,0 -184,0` : `M110,110 L${110 + r * Math.cos(a0)},${110 + r * Math.sin(a0)} A${r},${r} 0 ${a1 - a0 > Math.PI ? 1 : 0},1 ${110 + r * Math.cos(a1)},${110 + r * Math.sin(a1)} Z`;
+      s += `<path class="fetta" data-i="${i}" tabindex="${opts.clic ? 0 : -1}" role="${opts.clic ? "button" : "presentation"}" aria-label="Fetta ${i + 1}" d="${p}" fill="${colorate.has(i) ? pieno : vuoto}" stroke="#7a4b2a" stroke-width="2.5"/>`;
+    }
+    return s + `</svg>`;
+  }
+  if (forma === "cioc") {
+    const righe = d % 2 === 0 && d > 2 ? 2 : 1, col = d / righe, W = 220, H = righe === 1 ? 90 : 150;
+    s += `<svg viewBox="-4 -4 ${W + 8} ${H + 8}" role="img" aria-label="Tavoletta divisa in ${d} quadretti, ${colorate.size} colorati">`;
+    for (let i = 0; i < d; i++) { const r = Math.floor(i / col), c = i % col; s += `<rect class="fetta" data-i="${i}" tabindex="${opts.clic ? 0 : -1}" role="${opts.clic ? "button" : "presentation"}" aria-label="Quadretto ${i + 1}" x="${c * W / col}" y="${r * H / righe}" width="${W / col}" height="${H / righe}" rx="5" fill="${colorate.has(i) ? pieno : vuoto}" stroke="#4a2c16" stroke-width="3"/>`; }
+    return s + `</svg>`;
+  }
+  const W = 300, H = 46;
+  s += `<svg viewBox="-3 -3 ${W + 6} ${H + 6}" role="img" aria-label="Nastro diviso in ${d} parti, ${colorate.size} colorate">`;
+  for (let i = 0; i < d; i++) s += `<rect class="fetta" data-i="${i}" tabindex="${opts.clic ? 0 : -1}" role="${opts.clic ? "button" : "presentation"}" aria-label="Parte ${i + 1}" x="${i * W / d}" y="0" width="${W / d}" height="${H}" fill="${colorate.has(i) ? pieno : vuoto}" stroke="#1f2a44" stroke-width="2.5"/>`;
+  return s + `</svg>`;
+}
+const fraz = (n, d) => `<span class="frazione"><span>${n}</span><span>${d}</span></span>`;
+function collegaFette(el, cb) {
+  el.querySelectorAll(".fetta").forEach(f => { const go = () => cb(+f.dataset.i); f.addEventListener("click", go); f.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } }); });
+}
+
+/* ---------- Livelli ---------- */
+const LIV = [
+  { t: "Colora la frazione", tipo: "colora", forme: ["pizza"], den: [2, 3, 4] },
+  { t: "Taglia e colora", tipo: "taglia", forme: ["pizza", "cioc"], den: [2, 3, 4, 5, 6, 8] },
+  { t: "Che frazione è?", tipo: "leggi", forme: ["pizza", "cioc", "nastro"], den: [2, 3, 4, 5, 6, 8, 10] },
+  { t: "Più grande o più piccola?", tipo: "confronta" },
+  { t: "Frazioni equivalenti", tipo: "equivalenti" },
+  { t: "Frazione di un numero", tipo: "dinumero" },
+  { t: "Il tutto: frazioni uguali a 1", tipo: "intero" }
+];
+const PER = 5;
+let prog = []; try { prog = JSON.parse(localStorage.getItem("frazioni-prog")) || []; } catch (e) {}
+let liv = Math.min(prog.length, LIV.length - 1), dom = 0, sf = null, modo = "sfide";
+const fb = (t, c) => { $("feedback").innerHTML = t; $("feedback").className = "feedback " + c; };
+function disegnaLiv() {
+  $("livelli").innerHTML = LIV.map((l, i) => `<button title="${l.t}" class="${prog.includes(i) ? "fatto" : ""} ${i === liv ? "attivo" : ""}" ${i > 0 && !prog.includes(i - 1) && !prog.includes(i) ? "disabled" : ""} aria-label="Livello ${i + 1}: ${l.t}">${i + 1}</button>`).join("");
+  $("livelli").querySelectorAll("button").forEach((b, i) => b.addEventListener("click", () => { liv = i; dom = 0; nuova(); }));
+}
+function tavolaInterattiva() {
+  const tagli = sf.tagliabile ? `<div class="tagli" id="tagli">${[1, 2, 3, 4, 5, 6, 8, 10, 12].filter(d => sf.forma !== "cioc" || d % 2 === 0 || d <= 5).map(d => `<button data-d="${d}" aria-pressed="${d === sf.d}" aria-label="Taglia in ${d} parti">${d}</button>`).join("")}</div><p class="nota" style="margin:0">Scegli in quante parti tagliare, poi tocca le parti da colorare.</p>` : "";
+  $("tavolo").innerHTML = svgForma(sf.forma, sf.d, sf.col, { clic: true }) + tagli + `<div style="font:400 26px var(--font-hand)">Colorate: ${fraz(sf.col.size, sf.d)}</div>`;
+  collegaFette($("tavolo"), i => { sf.col.has(i) ? sf.col.delete(i) : sf.col.add(i); tavolaInterattiva(); fb("", ""); });
+  if (sf.tagliabile) $("tagli").querySelectorAll("button").forEach(b => b.addEventListener("click", () => { sf.d = +b.dataset.d; sf.col = new Set(); tavolaInterattiva(); }));
+}
+function nuova() {
+  const L = LIV[liv]; sf = { tipo: L.tipo }; $("input").innerHTML = ""; $("verifica").hidden = false;
+  if (L.tipo === "colora" || L.tipo === "taglia") {
+    sf.forma = pick(L.forme); const d = pick(L.den); sf.n = rnd(1, d - 1); sf.dt = d;
+    sf.tagliabile = L.tipo === "taglia"; sf.d = sf.tagliabile ? 1 : d; sf.col = new Set();
+    $("consegna").innerHTML = `${sf.tagliabile ? "Taglia e colora" : "Colora"} ${fraz(sf.n, sf.dt)} ${sf.forma === "pizza" ? "della pizza" : "della tavoletta di cioccolato"}.`;
+    tavolaInterattiva();
+  }
+  if (L.tipo === "leggi") {
+    sf.forma = pick(L.forme); sf.d = pick(L.den); sf.n = rnd(1, sf.d - 1);
+    const idx = new Set(); while (idx.size < sf.n) idx.add(rnd(0, sf.d - 1));
+    $("tavolo").innerHTML = svgForma(sf.forma, sf.d, sf.forma === "nastro" ? new Set([...Array(sf.n).keys()]) : idx);
+    $("consegna").innerHTML = "Che frazione è colorata?";
+    $("input").innerHTML = `<span class="frazione"><input type="number" id="num" min="0" max="20" aria-label="Numeratore"><input type="number" id="den" min="1" max="20" aria-label="Denominatore" style="border-top:3px solid var(--ink)"></span>`;
+  }
+  if (L.tipo === "confronta") {
+    let a, b, c, d; do { b = pick([2, 3, 4, 5, 6, 8]); d = pick([2, 3, 4, 5, 6, 8]); a = rnd(1, b - 1); c = rnd(1, d - 1); } while (a * d === c * b && Math.random() < .7);
+    sf.a = [a, b]; sf.b = [c, d]; sf.target = a * d > c * b ? ">" : a * d < c * b ? "<" : "="; sf.scelta = null;
+    $("tavolo").innerHTML = `<div>${fraz(a, b)}</div>` + svgForma("nastro", b, new Set([...Array(a).keys()])) + `<div>${fraz(c, d)}</div>` + svgForma("nastro", d, new Set([...Array(c).keys()]));
+    $("consegna").innerHTML = `Confronta: ${fraz(a, b)} ? ${fraz(c, d)}`;
+    $("input").innerHTML = `<div class="conf" id="conf">${["<", "=", ">"].map(x => `<button data-v="${x}" aria-pressed="false">${x}</button>`).join("")}</div>`;
+    $("conf").querySelectorAll("button").forEach(btn => btn.addEventListener("click", () => { sf.scelta = btn.dataset.v; $("conf").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === btn)); }));
+  }
+  if (L.tipo === "equivalenti") {
+    const base = pick([[1, 2], [1, 3], [2, 3], [1, 4], [3, 4]]), k = pick([2, 3, 4].filter(x => base[1] * x <= 12));
+    sf.base = base; sf.forma = "nastro"; sf.tagliabile = true; sf.d = 1; sf.col = new Set(); sf.dt = base[1] * k;
+    $("consegna").innerHTML = `Il primo nastro è colorato per ${fraz(base[0], base[1])}. Taglia il secondo in <b>${sf.dt}</b> parti e colorane quante servono per avere la <b>stessa quantità</b>.`;
+    const disegna = () => {
+      $("tavolo").innerHTML = svgForma("nastro", base[1], new Set([...Array(base[0]).keys()])) + `<div class="tagli" id="tagli">${[2, 3, 4, 6, 8, 9, 10, 12].map(d => `<button data-d="${d}" aria-pressed="${d === sf.d}">${d}</button>`).join("")}</div>` + svgForma("nastro", sf.d, sf.col, { clic: true }) + `<div style="font:400 26px var(--font-hand)">${fraz(base[0], base[1])} = ${fraz(sf.col.size, sf.d)}</div>`;
+      collegaFette($("tavolo"), i => { sf.col.has(i) ? sf.col.delete(i) : sf.col.add(i); disegna(); fb("", ""); });
+      $("tagli").querySelectorAll("button").forEach(b => b.addEventListener("click", () => { sf.d = +b.dataset.d; sf.col = new Set(); disegna(); }));
+    };
+    disegna();
+  }
+  if (L.tipo === "dinumero") {
+    const d = pick([2, 3, 4, 5, 6]), k = rnd(2, 4), tot = d * k, n = rnd(1, d - 1);
+    sf.target = n * k; sf.tot = tot; sf.prese = new Set(); const emo = pick(["🍬", "🍓", "⚽", "🖍️", "🍪"]);
+    $("consegna").innerHTML = `Ci sono <b>${tot}</b> oggetti. Prendine ${fraz(n, d)}: tocca quelli da prendere.`;
+    const disegna = () => {
+      $("tavolo").innerHTML = `<div class="caramelle">${Array.from({ length: tot }, (_, i) => `<button class="${sf.prese.has(i) ? "presa" : ""}" data-i="${i}" aria-label="Oggetto ${i + 1}${sf.prese.has(i) ? ", preso" : ""}">${emo}</button>`).join("")}</div><div style="font:400 26px var(--font-hand)">Presi: ${sf.prese.size}</div><p class="nota">Aiuto: dividi i ${tot} oggetti in ${d} gruppi uguali, poi prendi ${n} ${n === 1 ? "gruppo" : "gruppi"}.</p>`;
+      $("tavolo").querySelectorAll("button").forEach(b => b.addEventListener("click", () => { const i = +b.dataset.i; sf.prese.has(i) ? sf.prese.delete(i) : sf.prese.add(i); disegna(); fb("", ""); }));
+    };
+    disegna();
+  }
+  if (L.tipo === "intero") {
+    sf.forma = pick(["pizza", "cioc"]); const d = pick([3, 4, 5, 6, 8]); sf.dt = d; sf.n = d; sf.tagliabile = false; sf.d = d; sf.col = new Set();
+    $("consegna").innerHTML = `Colora ${fraz(d, d)}. Quanta ${sf.forma === "pizza" ? "pizza" : "cioccolata"} è?`;
+    tavolaInterattiva();
+  }
+  $("contatore").textContent = `Livello ${liv + 1} · ${L.t} · domanda ${dom + 1} di ${PER}`;
+  fb("", ""); disegnaLiv();
+}
+$("verifica").addEventListener("click", () => {
+  if (modo !== "sfide") return;
+  let ok = false;
+  if (sf.tipo === "colora" || sf.tipo === "intero") {
+    ok = sf.col.size === sf.n;
+    if (!ok) { fb(`Hai colorato ${sf.col.size} parti: ne servono ${sf.n}. Il numero sopra la linea dice quante parti colorare.`, "ko"); return; }
+    if (sf.tipo === "intero") fb("✔ È tutta la " + (sf.forma === "pizza" ? "pizza" : "tavoletta") + "! Quando numeratore e denominatore sono uguali, la frazione vale 1.", "ok");
+  }
+  if (sf.tipo === "taglia") {
+    if (sf.d !== sf.dt) { fb(`Prima taglia in <b>${sf.dt}</b> parti: è il numero sotto la linea.`, "ko"); return; }
+    ok = sf.col.size === sf.n; if (!ok) { fb(`Il taglio è giusto! Ora colora ${sf.n} parti.`, "ko"); return; }
+  }
+  if (sf.tipo === "leggi") {
+    const n = +$("num").value, d = +$("den").value;
+    if (!$("num").value || !$("den").value) { fb("Scrivi numeratore (sopra) e denominatore (sotto).", "ko"); return; }
+    ok = n === sf.n && d === sf.d;
+    if (!ok) { fb(d !== sf.d ? "Conta tutte le parti: quel numero va sotto la linea." : "Conta solo le parti colorate: quel numero va sopra.", "ko"); return; }
+  }
+  if (sf.tipo === "confronta") {
+    if (!sf.scelta) { fb("Scegli <, = oppure >.", "ko"); return; }
+    ok = sf.scelta === sf.target;
+    if (!ok) { fb("Guarda bene i due nastri: quale parte colorata è più lunga?", "ko"); return; }
+  }
+  if (sf.tipo === "equivalenti") {
+    if (sf.d !== sf.dt) { fb(`Taglia il secondo nastro in ${sf.dt} parti.`, "ko"); return; }
+    ok = sf.col.size * sf.base[1] === sf.base[0] * sf.d;
+    const giuste = sf.base[0] * sf.d / sf.base[1];
+    if (!ok) { fb(`Non ancora: confronta le lunghezze colorate dei due nastri.`, "ko"); return; }
+    fb(`✔ ${sf.base[0]}/${sf.base[1]} = ${giuste}/${sf.d}: hai moltiplicato sopra e sotto per lo stesso numero (${sf.d / sf.base[1]}).`, "ok");
+  }
+  if (sf.tipo === "dinumero") {
+    ok = sf.prese.size === sf.target;
+    if (!ok) { fb(`Ne hai presi ${sf.prese.size}. Dividi in gruppi uguali e riprova.`, "ko"); return; }
+  }
+  dom++;
+  const msgOk = $("feedback").className.includes("ok") ? $("feedback").innerHTML : "✔ Giusto!";
+  if (dom >= PER) {
+    if (!prog.includes(liv)) prog.push(liv); try { localStorage.setItem("frazioni-prog", JSON.stringify(prog)); } catch (e) {}
+    fb(liv < LIV.length - 1 ? "🎉 Livello completato!" : "🏆 Sei un mago delle frazioni!", "ok"); disegnaLiv();
+    if (liv < LIV.length - 1) setTimeout(() => { liv++; dom = 0; nuova(); }, 1600);
+  } else { fb(msgOk, "ok"); setTimeout(nuova, sf.tipo === "equivalenti" || sf.tipo === "intero" ? 2400 : 1200); }
+});
+function setModo(m) {
+  modo = m; $("tab-sfide").setAttribute("aria-selected", m === "sfide"); $("tab-libero").setAttribute("aria-selected", m === "libero");
+  if (m === "libero") {
+    sf = { tipo: "libero", forma: "pizza", d: 4, col: new Set(), tagliabile: true };
+    $("livelli").innerHTML = ""; $("contatore").textContent = ""; $("verifica").hidden = true; fb("", "");
+    $("consegna").innerHTML = "Scegli la forma, tagliala e colora: osserva la frazione che ottieni.";
+    $("input").innerHTML = `<div class="row">${["pizza", "cioc", "nastro"].map(f => `<button class="btn" data-f="${f}">${{ pizza: "🍕 Pizza", cioc: "🍫 Cioccolato", nastro: "🎀 Nastro" }[f]}</button>`).join("")}</div>`;
+    $("input").querySelectorAll("[data-f]").forEach(b => b.addEventListener("click", () => { sf.forma = b.dataset.f; sf.col = new Set(); if (sf.forma === "cioc" && sf.d % 2 && sf.d > 5) sf.d = 4; tavolaInterattiva(); }));
+    tavolaInterattiva();
+  } else nuova();
+}
+$("tab-sfide").addEventListener("click", () => setModo("sfide"));
+$("tab-libero").addEventListener("click", () => setModo("libero"));
+setModo("sfide");
+</script>
+<script src="a11y.js"></script>
+</body>
+</html>

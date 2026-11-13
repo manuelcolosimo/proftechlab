@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Circuito Lab</title>
+<link rel="stylesheet" href="ptl.css">
+<style>
+:root { --accent: var(--tec); }
+.lab { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; align-items: start; }
+.banco { background: #2b3440; border: 3px solid var(--ink); border-radius: 14px; padding: 8px; }
+#schema { width: 100%; display: block; }
+.filo { fill: none; stroke: #c9822b; stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; }
+.flusso { fill: none; stroke: #ffe066; stroke-width: 3; stroke-dasharray: 5 13; stroke-linecap: round; stroke-linejoin: round; opacity: 0; }
+.flusso.on { opacity: 1; animation: scorre .7s linear infinite; }
+@keyframes scorre { to { stroke-dashoffset: -18; } }
+.cliccabile { cursor: pointer; }
+.cliccabile:focus-visible { outline: none; }
+.cliccabile:focus-visible .bersaglio { stroke: var(--giallo); stroke-width: 3; }
+.domande { display: grid; gap: 14px; }
+.domanda p { margin: 0 0 6px; font-family: var(--font-hand); font-size: 22px; line-height: 1.2; }
+.opz { display: grid; gap: 6px; }
+.opz button { text-align: left; font: 400 18px var(--font-body); padding: 8px 10px; border-radius: 10px; border: 2px solid var(--ink); background: #fff; cursor: pointer; }
+.opz button.giusta { background: var(--ok); color: #fff; }
+.opz button.sbagliata { background: #f6d2d2; }
+.materiali { display: flex; flex-wrap: wrap; gap: 6px; }
+.materiali button { font: 400 18px var(--font-hand); border: 2px solid var(--ink); border-radius: 99px; padding: 3px 12px; background: #fff; cursor: pointer; }
+.materiali button[aria-pressed="true"] { background: var(--giallo); }
+.sicurezza { background: #fff2cc; border: 2px solid #b8860b; border-radius: 10px; padding: 8px 12px; font-size: 15px; }
+@media (max-width: 860px) { .lab { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header class="app-bar"><h1>Circuito Lab</h1><span class="sub">Circuiti elettrici · scuola media</span></header>
+<div class="container">
+  <div class="card">
+    <div class="livelli" id="livelli"></div>
+    <p class="consegna" id="titolo" style="margin-top:8px"></p>
+    <p class="nota" id="istruzioni"></p>
+  </div>
+  <div class="lab">
+    <div style="display:grid;gap:10px">
+      <div class="banco"><svg id="schema" viewBox="0 0 660 360" role="img" aria-label="Circuito elettrico"></svg></div>
+      <div class="materiali" id="materiali" hidden></div>
+      <p class="sicurezza">⚠️ Nella realtà questi esperimenti si fanno solo con pile (da 1,5 a 9 volt), <b>mai</b> con la corrente della presa di casa.</p>
+      <p class="nota">Modello semplificato: lampadine tutte uguali, luminosità proporzionale alla potenza. Le lampadine vere cambiano un po' il loro comportamento quando si scaldano.</p>
+    </div>
+    <div class="card domande" id="domande"></div>
+  </div>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+/* ---------- Componenti grafici ---------- */
+function pila(x, y) { // + in alto
+  return `<g><rect x="${x - 34}" y="${y - 44}" width="68" height="88" rx="8" fill="#3a4656" stroke="#9fb0c8" stroke-width="2"/>
+  <line x1="${x - 22}" y1="${y - 8}" x2="${x + 22}" y2="${y - 8}" stroke="#fff" stroke-width="4"/><line x1="${x - 12}" y1="${y + 8}" x2="${x + 12}" y2="${y + 8}" stroke="#fff" stroke-width="8"/>
+  <text x="${x + 26}" y="${y - 22}" fill="#ff8a80" font-family="Patrick Hand" font-size="24">+</text><text x="${x + 26}" y="${y + 34}" fill="#90caf9" font-family="Patrick Hand" font-size="26">−</text>
+  <text x="${x + 42}" y="${y + 6}" fill="#cfd8e3" font-family="Patrick Hand" font-size="17">pila 4,5 V</text></g>`;
+}
+function interruttore(id, x1, y1, x2, y2, chiuso) {
+  const vert = x1 === x2; const len = vert ? y2 - y1 : x2 - x1;
+  const ex = vert ? (chiuso ? x2 : x2 + len * .5) : x2, ey = vert ? y2 : (chiuso ? y2 : y2 - len * .5);
+  return `<g class="cliccabile" tabindex="0" role="button" data-sw="${id}" aria-label="Interruttore ${id} ${chiuso ? "chiuso" : "aperto"}">
+    <rect class="bersaglio" x="${Math.min(x1, x2) - 22}" y="${Math.min(y1, y2) - 30}" width="${Math.abs(x2 - x1) + 44}" height="${Math.abs(y2 - y1) + 60}" rx="10" fill="rgba(255,255,255,.06)" stroke="rgba(255,255,255,.25)" stroke-dasharray="4 4"/>
+    <circle cx="${x1}" cy="${y1}" r="6" fill="#e0e6ee"/><circle cx="${x2}" cy="${y2}" r="6" fill="#e0e6ee"/>
+    <line x1="${x1}" y1="${y1}" x2="${ex}" y2="${ey}" stroke="#e0e6ee" stroke-width="6" stroke-linecap="round"/>
+    <text x="${vert ? x1 - 30 : (x1 + x2) / 2}" y="${vert ? (y1 + y2) / 2 + 6 : y1 - 36}" fill="#e0e6ee" font-family="Patrick Hand" font-size="20" text-anchor="middle">${id}</text></g>`;
+}
+function lampadina(id, x, y, lum, svitata, svitabile, oriz) {
+  const op = svitata ? 0 : Math.min(1, Math.sqrt(lum));
+  const testo = svitata ? "svitata" : lum >= .99 ? "forte" : lum >= .4 ? "media" : lum >= .2 ? "debole" : lum > 0 ? "debolissima" : "spenta";
+  return `<g ${svitabile ? `class="cliccabile" tabindex="0" role="button" data-lamp="${id}" aria-label="Lampadina ${id}: ${testo}. Tocca per ${svitata ? "avvitarla" : "svitarla"}"` : `aria-label="Lampadina ${id}: ${testo}"`}>
+    <circle cx="${x}" cy="${y}" r="${30 + op * 26}" fill="#ffe066" opacity="${op * .55}"/>
+    <circle class="bersaglio" cx="${x}" cy="${y}" r="24" fill="${svitata ? "#2b3440" : op > 0 ? "#fff3b0" : "#dfe6ee"}" stroke="${svitata ? "#e57373" : "#e0e6ee"}" stroke-width="3" ${svitata ? 'stroke-dasharray="5 4"' : ""}/>
+    ${svitata ? "" : `<path d="M${x - 10} ${y + 6} q5 -16 10 0 q5 -16 10 0" fill="none" stroke="${op > 0 ? "#e67700" : "#6b7785"}" stroke-width="2.5"/>`}
+    ${oriz ? `<text x="${x}" y="${y - 32}" fill="#fff" font-family="Patrick Hand" font-size="20" text-anchor="middle">${id}</text>
+    <text x="${x}" y="${y + 46}" fill="#cfd8e3" font-family="Patrick Hand" font-size="16" text-anchor="middle">${testo}</text>`
+    : `<text x="${x - 32}" y="${y + 7}" fill="#fff" font-family="Patrick Hand" font-size="20" text-anchor="end">${id}</text>
+    <text x="${x + 32}" y="${y + 6}" fill="#cfd8e3" font-family="Patrick Hand" font-size="16">${testo}</text>`}</g>`;
+}
+const pts = a => a.map(p => p.join(",")).join(" ");
+function filo(punti, gruppo) { return `<polyline class="filo" points="${pts(punti)}"/><polyline class="flusso" data-g="${gruppo}" points="${pts(punti)}"/>`; }
+
+/* ---------- Circuiti ---------- */
+const MATERIALI = [
+  ["Rame", 1, "conduttore"], ["Alluminio", 1, "conduttore"], ["Chiodo di ferro", 1, "conduttore"], ["Moneta", 1, "conduttore"],
+  ["Mina di matita (grafite)", .3, "conduttore, ma meno dei metalli"], ["Plastica", 0, "isolante"], ["Legno", 0, "isolante"],
+  ["Gomma", 0, "isolante"], ["Vetro", 0, "isolante"], ["Carta", 0, "isolante"]
+];
+const LIV = [
+  { titolo: "Il circuito semplice", istr: "Tocca l'interruttore S per aprirlo e chiuderlo.",
+    stato: { S: false }, lamp: [],
+    calcola: s => ({ L: { L1: s.S ? 1 : 0 }, g: { main: s.S } }),
+    disegna: (s, r) => pila(80, 180) + filo([[80, 136], [80, 80], [250, 80]], "main") + interruttore("S", 250, 80, 330, 80, s.S) + filo([[330, 80], [520, 80], [520, 156]], "main") + lampadina("L1", 520, 180, r.L.L1) + filo([[520, 204], [520, 280], [80, 280], [80, 224]], "main"),
+    domande: [
+      ["Perché la lampadina si accende solo con l'interruttore chiuso?", ["Il circuito diventa chiuso e la corrente può circolare", "L'interruttore produce elettricità", "La pila si ricarica quando chiudi"], 0],
+      ["Cosa fa la pila nel circuito?", ["Fornisce l'energia che mette in movimento le cariche elettriche", "Contiene la luce che va nella lampadina", "Serve a tenere fermi i fili"], 0]
+    ] },
+  { titolo: "Due lampadine in serie", istr: "Chiudi S. Poi tocca una lampadina per svitarla e guarda l'altra.",
+    stato: { S: false }, lamp: ["L1", "L2"],
+    calcola: (s, sv) => { const on = s.S && !sv.L1 && !sv.L2; return { L: { L1: on ? .25 : 0, L2: on ? .25 : 0 }, g: { main: on } }; },
+    disegna: (s, r, sv) => pila(80, 180) + filo([[80, 136], [80, 80], [250, 80]], "main") + interruttore("S", 250, 80, 330, 80, s.S) + filo([[330, 80], [520, 80], [520, 106]], "main") + lampadina("L1", 520, 130, r.L.L1, sv.L1, true) + filo([[520, 154], [520, 206]], "main") + lampadina("L2", 520, 230, r.L.L2, sv.L2, true) + filo([[520, 254], [520, 290], [80, 290], [80, 224]], "main"),
+    domande: [
+      ["Svita una lampadina. Cosa succede all'altra?", ["Si spegne: il circuito si interrompe", "Diventa più luminosa", "Non cambia niente"], 0],
+      ["Rispetto al circuito con una sola lampadina, due lampadine in serie…", ["brillano di meno", "brillano di più", "brillano uguale"], 0]
+    ] },
+  { titolo: "Due lampadine in parallelo", istr: "Chiudi S, poi S1 e S2. Prova a svitare una lampadina.",
+    stato: { S: false, S1: true, S2: true }, lamp: ["L1", "L2"],
+    calcola: (s, sv) => { const b1 = s.S && s.S1 && !sv.L1, b2 = s.S && s.S2 && !sv.L2; return { L: { L1: b1 ? 1 : 0, L2: b2 ? 1 : 0 }, g: { main: b1 || b2, b1, b2 } }; },
+    disegna: (s, r, sv) => pila(80, 180) + filo([[80, 136], [80, 80], [140, 80]], "main") + interruttore("S", 140, 80, 210, 80, s.S) + filo([[210, 80], [330, 80]], "main") + filo([[330, 80], [520, 80]], "b2") +
+      filo([[330, 80], [330, 110]], "b1") + interruttore("S1", 330, 110, 330, 160, s.S1) + filo([[330, 160], [330, 196]], "b1") + lampadina("L1", 330, 220, r.L.L1, sv.L1, true) + filo([[330, 244], [330, 300]], "b1") +
+      filo([[520, 80], [520, 110]], "b2") + interruttore("S2", 520, 110, 520, 160, s.S2) + filo([[520, 160], [520, 196]], "b2") + lampadina("L2", 520, 220, r.L.L2, sv.L2, true) + filo([[520, 244], [520, 300], [330, 300]], "b2") + filo([[330, 300], [80, 300], [80, 224]], "main"),
+    domande: [
+      ["Svita L1. Cosa succede a L2?", ["Resta accesa: ha un suo percorso verso la pila", "Si spegne anche lei", "Diventa più debole"], 0],
+      ["Perché in casa le luci e le prese sono collegate in parallelo?", ["Così ogni apparecchio funziona anche se un altro è spento", "Perché serve meno filo", "Perché in serie le lampadine brillano di più"], 0],
+      ["Con due lampadine accese in parallelo invece di una, la pila…", ["si scarica più in fretta", "dura di più", "dura uguale"], 0]
+    ] },
+  { titolo: "Tre lampadine in serie", istr: "Chiudi S e confronta con il circuito a due lampadine.",
+    stato: { S: false }, lamp: ["L1", "L2", "L3"],
+    calcola: (s, sv) => { const on = s.S && !sv.L1 && !sv.L2 && !sv.L3; const b = on ? 1 / 9 : 0; return { L: { L1: b, L2: b, L3: b }, g: { main: on } }; },
+    disegna: (s, r, sv) => pila(80, 180) + filo([[80, 136], [80, 80], [180, 80]], "main") + interruttore("S", 180, 80, 250, 80, s.S) + filo([[250, 80], [376, 80]], "main") + lampadina("L1", 400, 80, r.L.L1, sv.L1, true, true) + filo([[424, 80], [520, 80], [520, 156]], "main") + lampadina("L2", 520, 180, r.L.L2, sv.L2, true) + filo([[520, 204], [520, 290], [324, 290]], "main") + lampadina("L3", 300, 290, r.L.L3, sv.L3, true, true) + filo([[276, 290], [80, 290], [80, 224]], "main"),
+    domande: [
+      ["Aggiungendo lampadine in serie, la luce di ciascuna…", ["diminuisce", "aumenta", "resta uguale"], 0],
+      ["Nelle vecchie luci di Natale collegate in serie, se si brucia una lampadina…", ["si spegne tutta la fila", "si spengono solo quelle vicine", "le altre brillano di più"], 0]
+    ] },
+  { titolo: "Circuito misto", istr: "Chiudi solo S2, poi chiudi anche S3. Guarda come cambia L1.",
+    stato: { S2: false, S3: false }, lamp: ["L1", "L2", "L3"],
+    calcola: (s, sv) => {
+      const b2 = s.S2 && !sv.L2, b3 = s.S3 && !sv.L3, on = !sv.L1 && (b2 || b3);
+      let L = { L1: 0, L2: 0, L3: 0 };
+      if (on && b2 && b3) L = { L1: 4 / 9, L2: 1 / 9, L3: 1 / 9 };
+      else if (on) L = { L1: .25, L2: b2 ? .25 : 0, L3: b3 ? .25 : 0 };
+      return { L, g: { main: on, b2: on && b2, b3: on && b3 } };
+    },
+    disegna: (s, r, sv) => pila(80, 180) + filo([[80, 136], [80, 80], [186, 80]], "main") + lampadina("L1", 210, 80, r.L.L1, sv.L1, true, true) + filo([[234, 80], [380, 80]], "main") + filo([[380, 80], [520, 80]], "b3") +
+      filo([[380, 80], [380, 110]], "b2") + interruttore("S2", 380, 110, 380, 160, s.S2) + filo([[380, 160], [380, 196]], "b2") + lampadina("L2", 380, 220, r.L.L2, sv.L2, true) + filo([[380, 244], [380, 300]], "b2") +
+      filo([[520, 80], [520, 110]], "b3") + interruttore("S3", 520, 110, 520, 160, s.S3) + filo([[520, 160], [520, 196]], "b3") + lampadina("L3", 520, 220, r.L.L3, sv.L3, true) + filo([[520, 244], [520, 300], [380, 300]], "b3") + filo([[380, 300], [80, 300], [80, 224]], "main"),
+    domande: [
+      ["Con solo S2 chiuso, perché L1 e L2 brillano uguale?", ["Sono in serie: le attraversa la stessa corrente", "Sono in parallelo", "Perché S2 è vicino a L2"], 0],
+      ["Chiudendo anche S3, quale lampadina brilla di più?", ["L1, perché la attraversa tutta la corrente, che poi si divide tra L2 e L3", "L3, perché è l'ultima", "Brillano tutte uguale"], 0]
+    ] },
+  { titolo: "Conduttori e isolanti", istr: "Scegli un materiale da mettere tra le due pinze e guarda la lampadina.",
+    stato: {}, lamp: [], materiali: true,
+    calcola: (s, sv, mat) => { const c = mat ? mat[1] : 0; return { L: { L1: c >= 1 ? 1 : c > 0 ? .12 : 0 }, g: { main: c > 0 } }; },
+    disegna: (s, r, sv, mat) => pila(80, 180) + filo([[80, 136], [80, 80], [240, 80]], "main") +
+      `<rect x="240" y="66" width="18" height="28" rx="3" fill="#d64545"/><rect x="342" y="66" width="18" height="28" rx="3" fill="#1f2a44" stroke="#e0e6ee"/>` +
+      (mat ? `<rect x="256" y="70" width="88" height="20" rx="4" fill="${mat[1] >= 1 ? "#b0bec5" : mat[1] > 0 ? "#555" : "#c8a27a"}" stroke="#fff" stroke-width="1.5"/><text x="300" y="56" fill="#fff" font-family="Patrick Hand" font-size="20" text-anchor="middle">${mat[0]}</text>` : `<text x="300" y="56" fill="#cfd8e3" font-family="Patrick Hand" font-size="18" text-anchor="middle">scegli un materiale</text>`) +
+      filo([[360, 80], [520, 80], [520, 156]], "main") + lampadina("L1", 520, 180, r.L.L1) + filo([[520, 204], [520, 280], [80, 280], [80, 224]], "main") +
+      (mat ? `<text x="300" y="130" fill="${mat[1] > 0 ? "#a5d6a7" : "#ef9a9a"}" font-family="Patrick Hand" font-size="22" text-anchor="middle">${mat[2]}</text>` : ""),
+    domande: [
+      ["Quali materiali fanno accendere la lampadina?", ["I metalli, come rame e alluminio: sono buoni conduttori", "Tutti i materiali duri", "Solo i materiali trasparenti"], 0],
+      ["A cosa serve la plastica che ricopre i fili elettrici?", ["A isolare: impedisce alla corrente di arrivare a noi", "A far passare meglio la corrente", "Solo a dare colore ai fili"], 0]
+    ] },
+  { titolo: "Il cortocircuito", istr: "Chiudi S: la lampadina si accende. Poi chiudi K e guarda dove passa la corrente.",
+    stato: { S: false, K: false }, lamp: [],
+    calcola: s => { const on = s.S, corto = on && s.K; return { L: { L1: on && !corto ? 1 : 0 }, g: { main: on, lamp: on && !corto, corto } }; },
+    disegna: (s, r) => pila(80, 180) + filo([[80, 136], [80, 80], [180, 80]], "main") + interruttore("S", 180, 80, 250, 80, s.S) + filo([[250, 80], [400, 80]], "main") +
+      filo([[400, 80], [520, 80], [520, 156]], "lamp") + lampadina("L1", 520, 180, r.L.L1) + filo([[520, 204], [520, 290], [400, 290]], "lamp") +
+      filo([[400, 80], [400, 140]], "corto") + interruttore("K", 400, 140, 400, 200, s.K) + filo([[400, 200], [400, 290]], "corto") +
+      filo([[400, 290], [80, 290], [80, 224]], "main") +
+      (r.g.corto ? `<rect x="150" y="306" width="420" height="40" rx="8" fill="#d64545"/><text x="360" y="333" fill="#fff" font-family="Patrick Hand" font-size="21" text-anchor="middle">⚠️ CORTOCIRCUITO: corrente fortissima, la pila si scalda!</text>` : ""),
+    domande: [
+      ["Perché, chiudendo K, la lampadina si spegne?", ["La corrente passa quasi tutta nel filo di K, dove non incontra quasi nessuna resistenza", "K produce una corrente al contrario", "La pila si scarica all'istante"], 0],
+      ["Perché il cortocircuito è pericoloso?", ["Passa una corrente molto forte che scalda fili e pila: può provocare incendi", "Fa accendere troppo le lampadine", "Non è pericoloso, spegne solo la luce"], 0],
+      ["A cosa servono fusibili e interruttore salvavita in casa?", ["Interrompono il circuito quando la corrente diventa pericolosa", "Fanno risparmiare energia", "Aumentano la corrente nelle prese"], 0]
+    ] },
+  { titolo: "Interruttori logici: E e O", istr: "Prova tutte le combinazioni: quando si accende L1? E L2?",
+    stato: { S1: false, S2: false, S3: false, S4: false }, lamp: [],
+    calcola: s => { const a = s.S1 && s.S2, b = s.S3 || s.S4; return { L: { L1: a ? 1 : 0, L2: b ? 1 : 0 }, g: { main: a || b, gA: a, gB: b, gB1: b && s.S3, gB2: b && s.S4 } }; },
+    disegna: (s, r) => pila(80, 190) + filo([[80, 146], [80, 50], [300, 50]], "main") + filo([[300, 50], [520, 50]], "gB") +
+      filo([[300, 50], [300, 80]], "gA") + interruttore("S1", 300, 80, 300, 120, s.S1) + filo([[300, 120], [300, 145]], "gA") + interruttore("S2", 300, 145, 300, 185, s.S2) + filo([[300, 185], [300, 226]], "gA") + lampadina("L1", 300, 250, r.L.L1) + filo([[300, 274], [300, 320]], "gA") +
+      filo([[520, 50], [520, 80]], "gB") + filo([[520, 80], [470, 80], [470, 110]], "gB1") + interruttore("S3", 470, 110, 470, 160, s.S3) + filo([[470, 160], [470, 195], [520, 195]], "gB1") +
+      filo([[520, 80], [580, 80], [580, 110]], "gB2") + interruttore("S4", 580, 110, 580, 160, s.S4) + filo([[580, 160], [580, 195], [520, 195]], "gB2") +
+      filo([[520, 195], [520, 226]], "gB") + lampadina("L2", 520, 250, r.L.L2) + filo([[520, 274], [520, 320], [300, 320]], "gB") + filo([[300, 320], [80, 320], [80, 234]], "main") +
+      `<text x="245" y="345" fill="#ffe066" font-family="Patrick Hand" font-size="20">E (AND)</text><text x="490" y="345" fill="#ffe066" font-family="Patrick Hand" font-size="20">O (OR)</text>`,
+    domande: [
+      ["L1 si accende solo se S1 E S2 sono chiusi. Che collegamento è?", ["Interruttori in serie: funziona come E (AND)", "Interruttori in parallelo: funziona come O (OR)", "Un cortocircuito"], 0],
+      ["L2 si accende se S3 O S4 è chiuso (o tutti e due). Che collegamento è?", ["Interruttori in parallelo: funziona come O (OR)", "Interruttori in serie: funziona come E (AND)", "Non dipende dagli interruttori"], 0],
+      ["Dove si usa la logica E per sicurezza?", ["In una pressa che parte solo se premi due pulsanti, uno per mano", "In una lampada da comodino", "Nel campanello di casa"], 0]
+    ] }
+];
+
+let prog = []; try { prog = JSON.parse(localStorage.getItem("circuitoLab-prog")) || []; } catch (e) {}
+let liv = Math.min(prog.length, LIV.length - 1), st, svit, mat, risposte;
+
+function render() {
+  const L = LIV[liv], r = L.calcola(st, svit, mat);
+  $("schema").innerHTML = L.disegna(st, r, svit, mat);
+  $("schema").querySelectorAll(".flusso").forEach(f => f.classList.toggle("on", !!r.g[f.dataset.g]));
+  $("schema").querySelectorAll("[data-sw]").forEach(g => { const f = () => { st[g.dataset.sw] = !st[g.dataset.sw]; render(); }; g.addEventListener("click", f); g.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); f(); } }); });
+  $("schema").querySelectorAll("[data-lamp]").forEach(g => { const f = () => { svit[g.dataset.lamp] = !svit[g.dataset.lamp]; render(); }; g.addEventListener("click", f); g.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); f(); } }); });
+}
+function apri(i) {
+  liv = i; const L = LIV[i];
+  st = { ...L.stato }; svit = {}; mat = null; risposte = L.domande.map(() => false);
+  $("titolo").textContent = `Livello ${i + 1}: ${L.titolo}`; $("istruzioni").textContent = L.istr;
+  $("materiali").hidden = !L.materiali;
+  if (L.materiali) {
+    $("materiali").innerHTML = MATERIALI.map((m, k) => `<button data-k="${k}" aria-pressed="false">${m[0]}</button>`).join("");
+    $("materiali").querySelectorAll("button").forEach(b => b.addEventListener("click", () => { mat = MATERIALI[+b.dataset.k]; $("materiali").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b)); render(); }));
+  }
+  $("domande").innerHTML = `<b style="font-family:var(--font-hand);font-size:24px">Prima prova, poi rispondi</b>` + L.domande.map((d, k) => {
+    const ordine = d[1].map((t, j) => [t, j]).sort(() => Math.random() - .5);
+    return `<div class="domanda"><p>${k + 1}. ${d[0]}</p><div class="opz" data-q="${k}">${ordine.map(([t, j]) => `<button data-j="${j}">${t}</button>`).join("")}</div></div>`;
+  }).join("") + `<p class="feedback" id="esito" aria-live="polite"></p>`;
+  $("domande").querySelectorAll(".opz").forEach(box => box.querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
+    const q = +box.dataset.q;
+    if (risposte[q]) return;
+    if (+b.dataset.j === L.domande[q][2]) { b.classList.add("giusta"); risposte[q] = true; }
+    else b.classList.add("sbagliata");
+    if (risposte.every(Boolean)) {
+      if (!prog.includes(liv)) prog.push(liv); try { localStorage.setItem("circuitoLab-prog", JSON.stringify(prog)); } catch (e) {}
+      $("esito").textContent = liv < LIV.length - 1 ? "🎉 Livello completato! Puoi passare al prossimo." : "🏆 Hai completato Circuito Lab!"; $("esito").className = "feedback ok";
+      disegnaLiv();
+    }
+  })));
+  disegnaLiv(); render();
+}
+function disegnaLiv() {
+  $("livelli").innerHTML = LIV.map((l, i) => `<button title="${l.titolo}" class="${prog.includes(i) ? "fatto" : ""} ${i === liv ? "attivo" : ""}" ${i > 0 && !prog.includes(i - 1) && !prog.includes(i) ? "disabled" : ""} aria-label="Livello ${i + 1}: ${l.titolo}">${i + 1}</button>`).join("");
+  $("livelli").querySelectorAll("button").forEach((b, i) => b.addEventListener("click", () => apri(i)));
+}
+apri(liv);
+</script>
+<script src="a11y.js"></script>
+</body>
+</html>
