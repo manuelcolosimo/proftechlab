@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Abaco Vivo</title>
+<link rel="stylesheet" href="ptl.css">
+<style>
+:root { --h: #d64545; --da: #2f6fd6; --u: #2e9b5f; --accent: var(--mat); }
+.tavolo { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.col { background: var(--label); border: 3px solid var(--c); border-radius: 14px; display: grid; grid-template-rows: auto 1fr auto; min-height: 330px; overflow: hidden; }
+.col.troppi { animation: pulsa 1s infinite; }
+@keyframes pulsa { 50% { box-shadow: 0 0 0 6px var(--giallo); } }
+.col-head { background: var(--c); color: #fff; text-align: center; font-family: var(--font-chalk); font-size: 34px; line-height: 1.1; padding: 4px; }
+.col-head small { display: block; font-family: var(--font-hand); font-size: 17px; }
+.pezzi { display: flex; flex-wrap: wrap-reverse; align-content: flex-start; align-items: flex-end; justify-content: center; gap: 8px; padding: 10px; }
+.pila-u { display: flex; flex-direction: column-reverse; }
+.fila-da { display: flex; }
+/* Stessa scala per tutti i pezzi: 1 decina = 10 cubetti in colonna, 1 centinaio = 10 × 10 cubetti */
+.tavolo { --s: 14px; }
+.u { width: var(--s); height: var(--s); background: var(--u); box-shadow: inset 0 0 0 1px #1d6b41; border-radius: 2px; }
+.da { width: var(--s); height: calc(var(--s) * 10); border-radius: 2px;
+  background: repeating-linear-gradient(180deg, var(--da) 0 calc(var(--s) - 1px), #1f4fa0 calc(var(--s) - 1px) var(--s));
+  box-shadow: inset 0 0 0 1px #1f4fa0; }
+.h { width: calc(var(--s) * 10); height: calc(var(--s) * 10); border-radius: 2px;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 calc(var(--s) - 1px), #a33030 calc(var(--s) - 1px) var(--s)),
+    repeating-linear-gradient(90deg, var(--h) 0 calc(var(--s) - 1px), #a33030 calc(var(--s) - 1px) var(--s));
+  box-shadow: inset 0 0 0 1px #a33030; }
+.pezzo-nuovo { animation: entra .35s ease-out; }
+@keyframes entra { from { transform: scale(.3); opacity: 0; } }
+.col-foot { display: grid; gap: 6px; padding: 8px; border-top: 2px dashed var(--squares); }
+.cifra { text-align: center; font-family: var(--font-hand); font-size: 40px; line-height: 1; color: var(--c); }
+.cifra.troppi { color: var(--ko); }
+.col-foot .row { justify-content: center; }
+.col-foot .btn { padding: 2px 12px; font-size: 22px; }
+.cambio { background: var(--giallo) !important; }
+.numero { text-align: center; font-family: var(--font-hand); font-size: clamp(26px, 4vw, 40px); }
+.numero .v { font-size: 1.6em; }
+.numero .h-t { color: var(--h); } .numero .da-t { color: var(--da); } .numero .u-t { color: var(--u); }
+@media (max-width: 900px) { .tavolo { --s: 10px; } }
+@media (max-width: 560px) { .tavolo { --s: 7px; gap: 6px; } .col { min-height: 220px; } .col-head { font-size: 26px; } .pezzi { gap: 3px; padding: 6px; } }
+</style>
+</head>
+<body>
+<header class="app-bar"><h1>Abaco Vivo</h1><span class="sub">Unità, decine, centinaia · primaria</span></header>
+<div class="container">
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="tab-sfide" aria-selected="true">Sfide</button>
+    <button class="tab" role="tab" id="tab-libero" aria-selected="false">Gioco libero</button>
+  </div>
+
+  <div class="card" id="box-sfida">
+    <div class="row" style="justify-content:space-between">
+      <div class="livelli" id="livelli" aria-label="Livelli"></div>
+      <span class="nota" id="contatore"></span>
+    </div>
+    <p class="consegna" id="consegna" style="margin-top:10px"></p>
+    <div class="row" style="margin-top:10px" id="risposta-box" hidden>
+      <label class="row">Il numero è <input type="number" id="risposta" min="0" max="9999"></label>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button class="btn primary" id="verifica">✔ Controlla</button>
+      <button class="btn" id="svuota">Svuota</button>
+    </div>
+    <p class="feedback" id="feedback" aria-live="polite"></p>
+  </div>
+
+  <div class="tavolo" id="tavolo"></div>
+  <div class="numero" id="numero" aria-live="polite"></div>
+  <p class="nota">Quando in una colonna arrivi a 10 pezzi, premi <b>Cambia</b>: 10 unità diventano 1 decina, 10 decine diventano 1 centinaio. Con <b>Rompi</b> fai il contrario.</p>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const COLS = [
+  { k: "h", nome: "h", lungo: "centinaia", c: "var(--h)", val: 100 },
+  { k: "da", nome: "da", lungo: "decine", c: "var(--da)", val: 10 },
+  { k: "u", nome: "u", lungo: "unità", c: "var(--u)", val: 1 }
+];
+const MAX = 19;
+let st = { h: 0, da: 0, u: 0 };
+let bloccaH = false; // nelle prime sfide si lavora solo con da e u
+const valore = s => s.h * 100 + s.da * 10 + s.u;
+const canonico = s => s.h <= 9 && s.da <= 9 && s.u <= 9;
+let ultimoAggiunto = null;
+
+/* Unità in pile da 10 (alta come una decina), decine in file da 10 (larga come un centinaio) */
+function pezziHTML(k, n) {
+  const pezzo = i => `<span class="${k}${ultimoAggiunto === k && i === n - 1 ? " pezzo-nuovo" : ""}"></span>`;
+  if (k === "h") return Array.from({ length: n }, (_, i) => pezzo(i)).join("");
+  let html = "";
+  for (let g = 0; g < n; g += 10) {
+    html += `<div class="${k === "u" ? "pila-u" : "fila-da"}">` + Array.from({ length: Math.min(10, n - g) }, (_, j) => pezzo(g + j)).join("") + "</div>";
+  }
+  return html;
+}
+function render() {
+  $("tavolo").innerHTML = "";
+  COLS.forEach((c, idx) => {
+    const n = st[c.k];
+    const col = document.createElement("div");
+    col.className = "col" + (n >= 10 ? " troppi" : ""); col.style.setProperty("--c", c.c);
+    const fisso = modo === "sfide" && sfida && sfida.tipo === "leggi";
+    const dis = fisso || (c.k === "h" && bloccaH);
+    col.innerHTML = `<div class="col-head">${c.nome}<small>${c.lungo}</small></div>
+      <div class="pezzi">${pezziHTML(c.k, n)}</div>
+      <div class="col-foot">
+        <div class="cifra${n >= 10 ? " troppi" : ""}">${n}</div>
+        <div class="row"><button class="btn" data-a="meno" aria-label="Togli ${c.lungo.slice(0, -1)}" ${n === 0 || dis ? "disabled" : ""}>−</button><button class="btn" data-a="piu" aria-label="Aggiungi" ${n >= MAX || dis ? "disabled" : ""}>+</button></div>
+        ${!fisso && idx > 0 && n >= 10 ? `<button class="btn cambio" data-a="cambia">Cambia 10 → 1 ${COLS[idx - 1].nome}</button>` : ""}
+        ${!fisso && idx < 2 && n > 0 && !(c.k === "h" && bloccaH) ? `<button class="btn" data-a="rompi">Rompi 1 → 10 ${COLS[idx + 1].nome}</button>` : ""}
+      </div>`;
+    col.querySelectorAll("button").forEach(b => b.addEventListener("click", () => azione(c.k, idx, b.dataset.a)));
+    $("tavolo").appendChild(col);
+  });
+  const v = valore(st);
+  $("numero").innerHTML = `<span class="h-t">${st.h} h</span> + <span class="da-t">${st.da} da</span> + <span class="u-t">${st.u} u</span> = <b class="v">${modo === "sfide" && sfida && sfida.tipo === "leggi" ? "?" : v}</b>`;
+  ultimoAggiunto = null;
+}
+function azione(k, idx, a) {
+  if (modo === "sfide" && sfida && sfida.tipo === "leggi") return;
+  if (a === "piu") { st[k]++; ultimoAggiunto = k; }
+  if (a === "meno") st[k]--;
+  if (a === "cambia") { st[k] -= 10; st[COLS[idx - 1].k]++; ultimoAggiunto = COLS[idx - 1].k; }
+  if (a === "rompi") { if (st[COLS[idx + 1].k] + 10 > MAX) { msg("Non c'è spazio: prima togli qualche pezzo nella colonna accanto.", "ko"); return; } st[k]--; st[COLS[idx + 1].k] += 10; }
+  msg("", ""); render();
+}
+function msg(t, cls) { $("feedback").textContent = t; $("feedback").className = "feedback " + cls; }
+
+/* ---------- Sfide ---------- */
+const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const LIVELLI = [
+  { tipo: "costruisci", gen: () => ({ n: rnd(11, 20) }), soloDaU: true, titolo: "Costruisci fino a 20" },
+  { tipo: "costruisci", gen: () => ({ n: rnd(21, 99) }), soloDaU: true, titolo: "Costruisci fino a 99" },
+  { tipo: "costruisci", gen: () => ({ n: rnd(101, 999) }), titolo: "Costruisci fino a 999" },
+  { tipo: "leggi", gen: () => ({ s: { h: 0, da: rnd(1, 9), u: rnd(0, 9) } }), titolo: "Leggi il numero" },
+  { tipo: "leggi", gen: () => ({ s: { h: rnd(1, 9), da: rnd(0, 9), u: rnd(0, 9) } }), titolo: "Leggi le centinaia" },
+  { tipo: "leggi", gen: () => ({ s: { h: rnd(0, 3), da: rnd(1, 6), u: rnd(10, 16) } }), titolo: "Attento ai pezzi in più" },
+  { tipo: "cambia", gen: () => ({ s: { h: 0, da: rnd(1, 5), u: rnd(10, 15) } }), soloDaU: true, titolo: "Fai il cambio delle unità" },
+  { tipo: "cambia", gen: () => ({ s: { h: rnd(1, 4), da: rnd(10, 14), u: rnd(0, 9) } }), titolo: "Fai il cambio delle decine" },
+  { tipo: "cambia", gen: () => ({ s: { h: rnd(1, 3), da: rnd(10, 13), u: rnd(10, 13) } }), titolo: "Doppio cambio" },
+  { tipo: "aggiungi", gen: () => { const n = rnd(12, 45); return { s: scomponi(n), m: rnd(3, 9), n }; }, soloDaU: true, titolo: "Aggiungi unità" },
+  { tipo: "aggiungi", gen: () => { const n = rnd(115, 480); return { s: scomponi(n), m: rnd(12, 38), n }; }, titolo: "Aggiungi un numero" },
+  { tipo: "togli", gen: () => { const n = rnd(30, 90); return { s: scomponi(n), m: rnd(n % 10 + 1, 9), n }; }, soloDaU: true, titolo: "Togli: serve rompere una decina" },
+  { tipo: "toglida", gen: () => { const h = rnd(2, 5), da = rnd(0, 3), u = rnd(0, 9), n = h * 100 + da * 10 + u; return { s: scomponi(n), m: rnd(da + 1, 9), n }; }, titolo: "Togli decine: rompi un centinaio" },
+  { tipo: "indovinello", gen: () => { const h = rnd(1, 9), da = rnd(0, 1) ? 0 : rnd(1, 9), u = da === 0 ? rnd(1, 9) : rnd(0, 1) ? 0 : rnd(1, 9); return { h, da, u, n: h * 100 + da * 10 + u }; }, titolo: "Indovinello con lo zero" },
+  { tipo: "massimo", gen: () => { const c = new Set(); while (c.size < 3) c.add(rnd(1, 9)); const arr = [...c]; return { cifre: arr, n: +arr.slice().sort((a, b) => b - a).join(""), piccolo: rnd(0, 1) === 1 }; }, titolo: "Il numero più grande (o più piccolo)" }
+];
+const PER_LIVELLO = 5;
+function scomponi(n) { return { h: Math.floor(n / 100), da: Math.floor(n / 10) % 10, u: n % 10 }; }
+let prog = { fatti: [] };
+try { prog = JSON.parse(localStorage.getItem("abacoVivo-prog")) || prog; } catch (e) {}
+const salva = () => { try { localStorage.setItem("abacoVivo-prog", JSON.stringify(prog)); } catch (e) {} };
+let livello = 0, domanda = 0, sfida = null, modo = "sfide";
+
+function disegnaLivelli() {
+  $("livelli").innerHTML = LIVELLI.map((l, i) => `<button title="${l.titolo}" class="${prog.fatti.includes(i) ? "fatto" : ""} ${i === livello ? "attivo" : ""}" ${i > 0 && !prog.fatti.includes(i - 1) && !prog.fatti.includes(i) ? "disabled" : ""} aria-label="Livello ${i + 1}: ${l.titolo}">${i + 1}</button>`).join("");
+  $("livelli").querySelectorAll("button").forEach((b, i) => b.addEventListener("click", () => { livello = i; domanda = 0; nuova(); }));
+}
+function nuova() {
+  const L = LIVELLI[livello]; sfida = { ...L.gen(), tipo: L.tipo }; bloccaH = !!L.soloDaU;
+  $("risposta-box").hidden = L.tipo !== "leggi"; $("risposta").value = "";
+  $("svuota").hidden = L.tipo === "leggi";
+  if (L.tipo === "costruisci") { st = { h: 0, da: 0, u: 0 }; $("consegna").innerHTML = `Costruisci il numero <b>${sfida.n}</b> con i pezzi.`; }
+  if (L.tipo === "leggi") { st = { ...sfida.s }; $("consegna").innerHTML = `Conta i pezzi: <b>che numero è?</b>`; }
+  if (L.tipo === "cambia") { st = { ...sfida.s }; sfida.n = valore(st); $("consegna").innerHTML = `Troppi pezzi! Fai i <b>cambi</b> finché ogni colonna ha al massimo 9 pezzi.`; }
+  if (L.tipo === "aggiungi") { st = { ...sfida.s }; $("consegna").innerHTML = `Qui c'è ${sfida.n}. <b>Aggiungi ${sfida.m}</b> e fai i cambi che servono.`; sfida.n = sfida.n + sfida.m; }
+  if (L.tipo === "toglida") { st = { ...sfida.s }; $("consegna").innerHTML = `Qui c'è ${sfida.n}. <b>Togli ${sfida.m} decine</b>. Non bastano? Rompi un centinaio.`; sfida.n = sfida.n - sfida.m * 10; }
+  if (L.tipo === "indovinello") { st = { h: 0, da: 0, u: 0 }; const p = (k, sing, plur) => k === 1 ? "1 " + sing : k + " " + plur; $("consegna").innerHTML = `Indovinello: ho <b>${p(sfida.h, "centinaio", "centinaia")}</b>, <b>${p(sfida.da, "decina", "decine")}</b> e <b>${p(sfida.u, "unità", "unità")}</b>. Costruiscimi!`; }
+  if (L.tipo === "massimo") {
+    st = { h: 0, da: 0, u: 0 };
+    if (sfida.piccolo) sfida.n = +sfida.cifre.slice().sort((a, b) => a - b).join("");
+    $("consegna").innerHTML = `Con le cifre <b>${sfida.cifre.join(" · ")}</b> (usale tutte, una volta sola) costruisci il numero <b>${sfida.piccolo ? "più piccolo" : "più grande"}</b>.`;
+  }
+  if (L.tipo === "togli") { st = { ...sfida.s }; $("consegna").innerHTML = `Qui c'è ${sfida.n}. <b>Togli ${sfida.m} unità</b>. Non bastano? Rompi una decina.`; sfida.n = sfida.n - sfida.m; }
+  $("contatore").textContent = `Livello ${livello + 1} · domanda ${domanda + 1} di ${PER_LIVELLO}`;
+  msg("", ""); disegnaLivelli(); render();
+}
+$("verifica").addEventListener("click", () => {
+  if (modo !== "sfide") return;
+  let giusto = false;
+  if (sfida.tipo === "leggi") {
+    const r = $("risposta").value.trim();
+    if (r === "") { msg("Scrivi il numero nella casella.", "ko"); return; }
+    giusto = +r === valore(st);
+    if (!giusto) { msg(sfida.s.u >= 10 ? "Non ancora. Ricorda: 10 unità valgono 1 decina!" : "Non ancora: conta di nuovo colonna per colonna.", "ko"); return; }
+  } else {
+    if (valore(st) !== sfida.n) { msg(`Non ancora: ora hai ${valore(st)}, ti serve ${sfida.n}.`, "ko"); return; }
+    if (!canonico(st)) { msg("Il valore è giusto! Ma una colonna ha 10 o più pezzi: fai il cambio.", "ko"); return; }
+    giusto = true;
+  }
+  domanda++;
+  if (domanda >= PER_LIVELLO) {
+    if (!prog.fatti.includes(livello)) prog.fatti.push(livello); salva();
+    msg(livello < LIVELLI.length - 1 ? "🎉 Livello completato! Si apre il prossimo." : "🏆 Hai finito tutte le sfide!", "ok");
+    disegnaLivelli();
+    if (livello < LIVELLI.length - 1) setTimeout(() => { livello++; domanda = 0; nuova(); }, 1400);
+  } else { msg("✔ Bravo! Prossima domanda…", "ok"); setTimeout(nuova, 900); }
+});
+$("svuota").addEventListener("click", () => { if (modo === "libero" || sfida.tipo === "costruisci") { st = { h: 0, da: 0, u: 0 }; render(); } else nuova(); });
+
+function setModo(m) {
+  modo = m; $("tab-sfide").setAttribute("aria-selected", m === "sfide"); $("tab-libero").setAttribute("aria-selected", m === "libero");
+  $("box-sfida").hidden = m !== "sfide";
+  if (m === "libero") { sfida = null; bloccaH = false; st = { h: 0, da: 0, u: 0 }; render(); } else nuova();
+}
+$("tab-sfide").addEventListener("click", () => setModo("sfide"));
+$("tab-libero").addEventListener("click", () => setModo("libero"));
+livello = Math.min(prog.fatti.length, LIVELLI.length - 1);
+setModo("sfide");
+</script>
+<script src="a11y.js"></script>
+</body>
+</html>

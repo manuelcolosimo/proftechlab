@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>La classe in scala</title>
+<link rel="stylesheet" href="ptl.css">
+<style>
+:root { --accent: var(--tec); }
+.pianta-layout { display: grid; grid-template-columns: 300px 1fr; gap: 16px; align-items: start; }
+.foglio { background: #fff; border: 2px solid var(--ink); border-radius: 6px; box-shadow: 4px 5px 0 rgba(31,42,68,.15); }
+#tavola { width: 100%; display: block; touch-action: none; }
+.oggetto { cursor: grab; }
+.oggetto.sel rect { stroke: var(--ko); stroke-width: .8; }
+.pannello { display: grid; gap: 12px; }
+.palette { display: flex; flex-wrap: wrap; gap: 6px; }
+.palette button { font: 400 18px var(--font-hand); border: 2px solid var(--ink); border-radius: 8px; background: #fff; padding: 3px 10px; cursor: pointer; }
+.avviso { color: var(--ko); font-family: var(--font-hand); font-size: 20px; margin: 0; }
+.formula { font-family: var(--font-hand); font-size: 22px; background: #eef6ee; border: 2px dashed var(--tec); border-radius: 10px; padding: 6px 12px; }
+input.risp { width: 130px; }
+@media (max-width: 860px) { .pianta-layout { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header class="app-bar"><h1>La classe in scala</h1><span class="sub">Rapporto di scala e pianta · scuola media</span></header>
+<div class="container">
+  <div class="tabs">
+    <button class="tab" id="tab-es" aria-selected="true">Esercizi</button>
+    <button class="tab" id="tab-pi" aria-selected="false">Disegna la pianta</button>
+  </div>
+
+  <section id="sez-es" class="card" style="display:grid;gap:10px">
+    <div class="livelli" id="livelli"></div>
+    <p class="nota" id="contatore"></p>
+    <p class="consegna" id="domanda"></p>
+    <div class="row" id="input-box"><input type="text" inputmode="decimal" class="risp" id="risposta" aria-label="Risposta"><span id="unita" class="consegna" style="font-size:22px"></span></div>
+    <div class="row" id="scelte-box" hidden></div>
+    <div class="row"><button class="btn primary" id="verifica">✔ Controlla</button><button class="btn" id="aiuto">💡 Aiuto</button></div>
+    <p class="formula" id="formula" hidden></p>
+    <p class="feedback" id="feedback" aria-live="polite"></p>
+  </section>
+
+  <section id="sez-pi" hidden>
+    <div class="pianta-layout">
+      <div class="card pannello">
+        <div><b>1. Misura l'aula vera</b>
+          <div class="row" style="margin-top:6px"><label>Lunghezza <input type="number" id="aula-l" min="2" max="30" step="0.1" value="8"> m</label></div>
+          <div class="row" style="margin-top:6px"><label>Larghezza <input type="number" id="aula-w" min="2" max="30" step="0.1" value="6"> m</label></div>
+        </div>
+        <div><b>2. Scegli la scala</b>
+          <div class="row" style="margin-top:6px"><select id="scala"><option value="20">1 : 20</option><option value="50" selected>1 : 50</option><option value="100">1 : 100</option><option value="200">1 : 200</option></select></div>
+          <p class="nota" id="info-scala"></p>
+          <p class="avviso" id="avviso" hidden></p>
+        </div>
+        <div><b>3. Aggiungi gli arredi</b>
+          <div class="palette" id="palette" style="margin-top:6px"></div>
+          <p class="nota">Trascina gli oggetti nella pianta. Le misure sono quelle tipiche: controllale con il metro.</p>
+        </div>
+        <div id="sel-box" hidden style="display:grid;gap:6px">
+          <b id="sel-nome"></b>
+          <div class="row"><label>Lungo <input type="number" id="sel-l" min="5" max="1000"> cm</label></div>
+          <div class="row"><label>Largo <input type="number" id="sel-w" min="5" max="1000"> cm</label></div>
+          <p class="formula" id="sel-carta"></p>
+          <div class="row"><button class="btn" id="sel-ruota">↻ Ruota</button><button class="btn" id="sel-del">🗑 Elimina</button></div>
+        </div>
+      </div>
+      <div class="foglio"><svg id="tavola" viewBox="0 0 297 210" aria-label="Foglio A4 con la pianta in scala"></svg></div>
+    </div>
+  </section>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const num = s => parseFloat(String(s).replace(",", ".").trim());
+const fmt = n => (Math.round(n * 100) / 100).toString().replace(".", ",");
+const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const pick = a => a[rnd(0, a.length - 1)];
+
+/* ---------- Esercizi ---------- */
+const OGG = [["un banco", 70], ["la cattedra", 140], ["la porta", 90], ["la LIM", 160], ["un armadio", 100], ["la finestra", 120], ["una sedia", 40], ["la lavagna", 200]];
+const LIV = [
+  { t: "Scala 1:10", gen: () => { const [o, l] = pick(OGG); return { q: `${cap(o)} misura ${l} cm. In scala <b>1:10</b>, quanto misura sul disegno?`, r: l / 10, u: "cm", f: `misura sul disegno = misura reale : 10 = ${l} : 10` }; } },
+  { t: "Scale 1:20 e 1:50", gen: () => { const [o, l] = pick(OGG); const s = pick([20, 50]); return { q: `${cap(o)} misura ${l} cm. In scala <b>1:${s}</b>, quanto misura sul disegno?`, r: l / s, u: "cm", f: `misura sul disegno = ${l} : ${s}` }; } },
+  { t: "Dai metri ai centimetri", gen: () => { const m = pick([4, 5, 6, 7, 8, 9, 10, 12]); const s = pick([50, 100]); return { q: `L'aula è lunga <b>${m} m</b>. In scala <b>1:${s}</b>, quanti cm è lunga sul disegno?`, r: m * 100 / s, u: "cm", f: `prima trasforma: ${m} m = ${m * 100} cm, poi ${m * 100} : ${s}` }; } },
+  { t: "Dal disegno alla realtà", gen: () => { const s = pick([10, 20, 50]); const [o, l] = pick(OGG); return { q: `Su un disegno in scala <b>1:${s}</b> ${o} misura <b>${fmt(l / s)} cm</b>. Quanto misura nella realtà?`, r: l, u: "cm", f: `misura reale = misura sul disegno × ${s} = ${fmt(l / s)} × ${s}` }; } },
+  { t: "Trova la scala", gen: () => { const m = pick([4, 5, 6, 8, 10]); const s = pick([20, 50, 100, 200]); return { q: `Una stanza lunga <b>${m} m</b> è disegnata lunga <b>${fmt(m * 100 / s)} cm</b>. Che scala è stata usata?`, scelte: [20, 50, 100, 200].map(x => "1:" + x), r: "1:" + s, f: `${m} m = ${m * 100} cm; ${m * 100} : ${fmt(m * 100 / s)} = ${s}` }; } },
+  { t: "Scegli la scala giusta", gen: () => { const [o, m] = pick([["Un'aula lunga 8 m", 8], ["Una palestra lunga 30 m", 30], ["Un campo da calcetto lungo 40 m", 40], ["Un giardino lungo 18 m", 18], ["Un corridoio lungo 45 m", 45], ["Una casa lunga 12 m", 12]]); const scale = [50, 100, 200, 500]; const ok = scale.find(x => m * 100 / x <= 25); return { q: `Devi disegnare ${o.charAt(0).toLowerCase() + o.slice(1)} su un foglio dove hai al massimo <b>25 cm</b>. Quale scala fa il disegno <b>più grande possibile</b> che entra nel foglio?`, scelte: scale.map(x => "1:" + x), r: "1:" + ok, f: scale.map(x => `1:${x} → ${fmt(m * 100 / x)} cm${m * 100 / x <= 25 ? " ✔ entra" : " ✘ troppo lungo"}`).join(" · ") }; } },
+  { t: "Scala di ingrandimento", gen: () => { const [o, l] = pick([["una vite", 4], ["un chiodino", 6], ["una formica", 5], ["un chip", 8], ["un seme", 3]]); const s = pick([2, 5, 10]); return { q: `${cap(o)} misura ${l} mm. In scala <b>${s}:1</b> (ingrandimento), quanto misura sul disegno?`, r: l * s, u: "mm", f: `ingrandimento: misura sul disegno = ${l} × ${s}` }; } }
+];
+function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+const PER = 5;
+let prog = []; try { prog = JSON.parse(localStorage.getItem("classeScala-prog")) || []; } catch (e) {}
+let liv = Math.min(prog.length, LIV.length - 1), dom = 0, d = null, scelta = null;
+const fb = (t, c) => { $("feedback").innerHTML = t; $("feedback").className = "feedback " + c; };
+function disegnaLiv() {
+  $("livelli").innerHTML = LIV.map((l, i) => `<button title="${l.t}" class="${prog.includes(i) ? "fatto" : ""} ${i === liv ? "attivo" : ""}" ${i > 0 && !prog.includes(i - 1) && !prog.includes(i) ? "disabled" : ""} aria-label="Livello ${i + 1}: ${l.t}">${i + 1}</button>`).join("");
+  $("livelli").querySelectorAll("button").forEach((b, i) => b.addEventListener("click", () => { liv = i; dom = 0; nuova(); }));
+}
+function nuova() {
+  d = LIV[liv].gen(); scelta = null;
+  $("domanda").innerHTML = d.q; $("risposta").value = ""; $("formula").hidden = true; fb("", "");
+  $("input-box").hidden = !!d.scelte; $("scelte-box").hidden = !d.scelte; $("unita").textContent = d.u || "";
+  if (d.scelte) {
+    $("scelte-box").innerHTML = d.scelte.map(s => `<button class="btn" data-s="${s}">${s}</button>`).join("");
+    $("scelte-box").querySelectorAll("button").forEach(b => b.addEventListener("click", () => { scelta = b.dataset.s; $("scelte-box").querySelectorAll("button").forEach(x => x.classList.toggle("giallo", x === b)); }));
+  }
+  $("contatore").textContent = `Livello ${liv + 1} · ${LIV[liv].t} · domanda ${dom + 1} di ${PER}`;
+  disegnaLiv();
+}
+$("aiuto").addEventListener("click", () => { $("formula").textContent = "💡 " + d.f; $("formula").hidden = false; });
+$("verifica").addEventListener("click", () => {
+  let ok;
+  if (d.scelte) { if (!scelta) { fb("Scegli una scala.", "ko"); return; } ok = scelta === d.r; }
+  else { const v = num($("risposta").value); if (isNaN(v)) { fb("Scrivi un numero (puoi usare la virgola).", "ko"); return; } ok = Math.abs(v - d.r) < 0.011; }
+  if (!ok) { fb("Non ancora. Premi 💡 Aiuto per vedere il ragionamento.", "ko"); return; }
+  dom++;
+  if (dom >= PER) {
+    if (!prog.includes(liv)) prog.push(liv); try { localStorage.setItem("classeScala-prog", JSON.stringify(prog)); } catch (e) {}
+    fb(liv < LIV.length - 1 ? "🎉 Livello completato!" : "🏆 Ora disegna la pianta della tua aula!", "ok"); disegnaLiv();
+    if (liv < LIV.length - 1) setTimeout(() => { liv++; dom = 0; nuova(); }, 1400);
+  } else { fb(`✔ Giusto: ${typeof d.r === "number" ? fmt(d.r) + " " + d.u : d.r}`, "ok"); setTimeout(nuova, 1200); }
+});
+
+/* ---------- Pianta ---------- */
+const ARREDI = [["Banco", 70, 50, "#f5d76e"], ["Cattedra", 140, 70, "#c08552"], ["Armadio", 100, 50, "#9aa7a0"], ["Tavolo di gruppo", 160, 80, "#a7d8ff"], ["LIM", 160, 10, "#1f2a44"], ["Porta", 90, 10, "#d64545"], ["Finestra", 120, 10, "#4dabf7"], ["Sedia", 40, 40, "#ef8a1f"]];
+let oggetti = [], sel = null, prossimoId = 1;
+const M = 12; // margine in mm sul foglio
+function scala() { return +$("scala").value; }
+function aula() { return { l: num($("aula-l").value) * 100 || 800, w: num($("aula-w").value) * 100 || 600 }; }
+const cm2mm = cm => cm / scala() * 10; // cm reali -> mm sul foglio
+function disegnaPianta() {
+  const s = scala(), a = aula(), L = cm2mm(a.l), W = cm2mm(a.w);
+  $("info-scala").textContent = `1 cm sul foglio = ${s} cm reali (${fmt(s / 100)} m). L'aula sul foglio: ${fmt(L / 10)} × ${fmt(W / 10)} cm.`;
+  const entra = L <= 297 - 2 * M && W <= 210 - 2 * M - 8;
+  $("avviso").hidden = entra; $("avviso").textContent = "L'aula non entra nel foglio A4: scegli una scala che rimpicciolisce di più (es. 1:100).";
+  let g = "";
+  for (let x = 0; x <= 297; x += 5) g += `<line x1="${x}" y1="0" x2="${x}" y2="210" stroke="${x % 10 ? "#eef3f9" : "#d7e3ef"}" stroke-width="${x % 10 ? .25 : .4}"/>`;
+  for (let y = 0; y <= 210; y += 5) g += `<line x1="0" y1="${y}" x2="297" y2="${y}" stroke="${y % 10 ? "#eef3f9" : "#d7e3ef"}" stroke-width="${y % 10 ? .25 : .4}"/>`;
+  g += `<rect x="${M}" y="${M}" width="${L}" height="${W}" fill="rgba(46,155,95,.05)" stroke="#1f2a44" stroke-width="1.6"/>`;
+  g += `<text x="${M + L / 2}" y="${M - 3}" font-family="Patrick Hand" font-size="5" text-anchor="middle" fill="#1f2a44">${fmt(a.l / 100)} m → ${fmt(L / 10)} cm</text>`;
+  g += `<text x="${M + L + 3}" y="${M + W / 2}" font-family="Patrick Hand" font-size="5" fill="#1f2a44" transform="rotate(90 ${M + L + 3} ${M + W / 2})" text-anchor="middle">${fmt(a.w / 100)} m → ${fmt(W / 10)} cm</text>`;
+  oggetti.forEach(o => {
+    const w = cm2mm(o.rot ? o.w : o.l), h = cm2mm(o.rot ? o.l : o.w), x = M + cm2mm(o.x), y = M + cm2mm(o.y);
+    g += `<g class="oggetto${sel === o.id ? " sel" : ""}" data-id="${o.id}"><rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${o.c}" fill-opacity=".85" stroke="#1f2a44" stroke-width=".4"/>${w > 12 && h > 4 ? `<text x="${x + w / 2}" y="${y + h / 2 + 1.4}" font-family="Patrick Hand" font-size="${Math.min(4, h * .8)}" text-anchor="middle" fill="${o.c === "#1f2a44" ? "#fff" : "#1f2a44"}" pointer-events="none">${o.nome}</text>` : ""}</g>`;
+  });
+  g += `<text x="285" y="204" font-family="Patrick Hand" font-size="6" text-anchor="end" fill="#1f2a44">Scala 1:${s}</text>`;
+  $("tavola").innerHTML = g;
+  aggiornaSel();
+}
+function aggiornaSel() {
+  const o = oggetti.find(x => x.id === sel);
+  $("sel-box").hidden = !o; if (!o) return;
+  $("sel-nome").textContent = o.nome; $("sel-l").value = o.l; $("sel-w").value = o.w;
+  $("sel-carta").textContent = `Sul foglio: ${fmt(o.l / scala())} × ${fmt(o.w / scala())} cm (${o.l} : ${scala()} e ${o.w} : ${scala()})`;
+}
+$("palette").innerHTML = ARREDI.map((a, i) => `<button data-i="${i}">+ ${a[0]}</button>`).join("");
+$("palette").querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
+  const [nome, l, w, c] = ARREDI[+b.dataset.i];
+  const o = { id: prossimoId++, nome, l, w, c, x: 20 + (oggetti.length % 6) * 20, y: 20 + (oggetti.length % 6) * 20, rot: false };
+  oggetti.push(o); sel = o.id; disegnaPianta();
+}));
+["aula-l", "aula-w", "scala"].forEach(id => $(id).addEventListener("input", disegnaPianta));
+$("sel-l").addEventListener("input", () => { const o = oggetti.find(x => x.id === sel); if (o) { o.l = Math.max(5, +$("sel-l").value || 5); disegnaPianta(); } });
+$("sel-w").addEventListener("input", () => { const o = oggetti.find(x => x.id === sel); if (o) { o.w = Math.max(5, +$("sel-w").value || 5); disegnaPianta(); } });
+$("sel-ruota").addEventListener("click", () => { const o = oggetti.find(x => x.id === sel); if (o) { o.rot = !o.rot; disegnaPianta(); } });
+$("sel-del").addEventListener("click", () => { oggetti = oggetti.filter(x => x.id !== sel); sel = null; disegnaPianta(); });
+
+/* Trascinamento */
+let drag = null;
+function punto(e) { const p = $("tavola").createSVGPoint(); p.x = e.clientX; p.y = e.clientY; return p.matrixTransform($("tavola").getScreenCTM().inverse()); }
+$("tavola").addEventListener("pointerdown", e => {
+  const g = e.target.closest(".oggetto"); if (!g) { sel = null; disegnaPianta(); return; }
+  const o = oggetti.find(x => x.id === +g.dataset.id); sel = o.id;
+  const p = punto(e); drag = { o, dx: p.x - (M + cm2mm(o.x)), dy: p.y - (M + cm2mm(o.y)) };
+  $("tavola").setPointerCapture(e.pointerId); disegnaPianta();
+});
+$("tavola").addEventListener("pointermove", e => {
+  if (!drag) return; const p = punto(e), a = aula(), o = drag.o;
+  const wl = o.rot ? o.w : o.l, wh = o.rot ? o.l : o.w;
+  let x = (p.x - drag.dx - M) * scala() / 10, y = (p.y - drag.dy - M) * scala() / 10;
+  x = Math.round(Math.max(0, Math.min(a.l - wl, x)) / 5) * 5; y = Math.round(Math.max(0, Math.min(a.w - wh, y)) / 5) * 5;
+  o.x = x; o.y = y; disegnaPianta();
+});
+$("tavola").addEventListener("pointerup", () => drag = null);
+
+function setTab(t) {
+  $("tab-es").setAttribute("aria-selected", t === "es"); $("tab-pi").setAttribute("aria-selected", t === "pi");
+  $("sez-es").hidden = t !== "es"; $("sez-pi").hidden = t !== "pi"; if (t === "pi") disegnaPianta();
+}
+$("tab-es").addEventListener("click", () => setTab("es")); $("tab-pi").addEventListener("click", () => setTab("pi"));
+nuova();
+</script>
+<script src="a11y.js"></script>
+</body>
+</html>

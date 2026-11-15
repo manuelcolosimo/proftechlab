@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cassetta del docente</title>
+<link rel="stylesheet" href="ptl.css">
+<style>
+html, body { height: 100%; }
+body { display: grid; grid-template-rows: auto 1fr; min-height: 0; }
+nav.menu { background: var(--board); border-bottom: 6px solid var(--wood); display: flex; gap: 6px; padding: 8px 10px; overflow-x: auto; }
+nav.menu a { font: 400 20px var(--font-hand); color: var(--chalk); text-decoration: none; padding: 4px 12px; border-radius: 8px; white-space: nowrap; border: 2px solid transparent; }
+nav.menu a[aria-current="page"] { background: var(--chalk); color: var(--ink); }
+nav.menu a:focus-visible { outline: 3px solid var(--giallo); }
+main { overflow: auto; padding: 18px; display: grid; }
+.tool { display: grid; gap: 18px; align-content: start; justify-items: center; text-align: center; width: 100%; max-width: 1200px; margin: 0 auto; }
+.tool h2 { margin: 0; font-family: var(--font-chalk); font-size: clamp(34px, 5vw, 56px); line-height: 1; }
+
+/* Timer lezione */
+.lez { display: grid; grid-template-columns: minmax(260px, 1.2fr) 1fr; gap: 24px; width: 100%; align-items: center; text-align: left; }
+.anello { position: relative; width: min(46vh, 100%); aspect-ratio: 1; margin: 0 auto; }
+.anello svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.anello .centro { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; gap: 4px; }
+.fase-nome { font-family: var(--font-chalk); font-weight: 700; font-size: clamp(34px, 5vw, 60px); line-height: 1; }
+.tempo { font-family: var(--font-hand); font-size: clamp(48px, 8vw, 104px); line-height: 1; font-variant-numeric: tabular-nums; }
+.fasi-lista { display: grid; gap: 8px; }
+.fase-riga { display: grid; grid-template-columns: 22px 1fr 84px 34px; gap: 8px; align-items: center; background: var(--label); border: 2px solid var(--ink); border-radius: 10px; padding: 6px 8px; }
+.fase-riga.corrente { background: var(--giallo); }
+.fase-riga.passata { opacity: .5; }
+.fase-riga .pallino { width: 18px; height: 18px; border-radius: 50%; }
+.fase-riga input[type="text"] { width: 100%; font-size: 20px; }
+.fase-riga input[type="number"] { width: 84px; font-size: 20px; }
+.fase-riga button { border: 0; background: none; font-size: 24px; cursor: pointer; color: var(--ko); }
+.totale { font-family: var(--font-hand); font-size: 22px; }
+.totale.diverso { color: var(--ko); }
+
+/* Timer rapido */
+.grande { font-family: var(--font-hand); font-size: clamp(90px, 22vw, 260px); line-height: 1; font-variant-numeric: tabular-nums; }
+.grande.ultimi { color: var(--ko); }
+.barra { width: min(900px, 100%); height: 26px; border: 3px solid var(--ink); border-radius: 99px; overflow: hidden; background: #fff; }
+.barra div { height: 100%; background: var(--tec); transition: width 1s linear; }
+
+/* Voce */
+.voci { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; width: 100%; }
+.voce-btn { border: 3px solid var(--ink); border-radius: 16px; padding: 12px; cursor: pointer; font: 400 22px var(--font-hand); background: var(--label); display: grid; gap: 4px; justify-items: center; }
+.voce-btn[aria-pressed="true"] { outline: 5px solid var(--ink); outline-offset: 3px; }
+.voce-display { width: 100%; border-radius: 24px; border: 4px solid var(--ink); padding: 24px; display: grid; justify-items: center; gap: 8px; color: #fff; }
+.voce-display .num { font-family: var(--font-chalk); font-size: clamp(90px, 16vw, 200px); line-height: .9; }
+.voce-display .txt { font-family: var(--font-chalk); font-size: clamp(40px, 7vw, 90px); line-height: 1; }
+.voce-display .desc { font-family: var(--font-hand); font-size: clamp(22px, 3vw, 34px); }
+
+/* Estrai */
+.estratto { font-family: var(--font-chalk); font-size: clamp(140px, 30vw, 340px); line-height: .9; min-height: 1em; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; max-width: 900px; }
+.chip { width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--ink); background: var(--label); font: 400 20px var(--font-hand); cursor: pointer; }
+.chip.assente { background: #ddd; text-decoration: line-through; opacity: .6; }
+.chip.uscito { background: var(--giallo); }
+
+/* Gruppi */
+.gruppi { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; width: 100%; }
+.gruppo { border: 3px solid var(--ink); border-radius: 14px; background: var(--label); padding: 12px; text-align: left; }
+.gruppo h3 { margin: 0 0 6px; font-family: var(--font-chalk); font-size: 38px; line-height: 1; }
+.gruppo ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; font-family: var(--font-hand); font-size: 24px; }
+.gruppo li span { color: var(--muted); font-size: 18px; }
+
+/* Consegna */
+.lavagnetta { width: 100%; background: var(--board); color: var(--chalk); border: 12px solid var(--wood); border-radius: 6px; padding: 24px 32px; text-align: left; min-height: 50vh; }
+.lavagnetta h3 { margin: 0 0 14px; font-family: var(--font-chalk); font-size: clamp(44px, 6vw, 80px); line-height: 1; }
+.lavagnetta ol { margin: 0; padding-left: 1.2em; font-family: var(--font-chalk); font-size: clamp(30px, 4vw, 54px); line-height: 1.25; }
+.lavagnetta .mat { margin-top: 16px; font-family: var(--font-hand); font-size: clamp(22px, 2.6vw, 34px); color: var(--giallo); }
+textarea { width: 100%; min-height: 150px; font: 400 21px var(--font-hand); border: 2px solid var(--ink); border-radius: 10px; padding: 10px; }
+.editor { width: 100%; display: grid; gap: 8px; text-align: left; }
+
+/* Dadi */
+.dadi { display: flex; gap: 24px; flex-wrap: wrap; justify-content: center; }
+.dado { width: clamp(120px, 20vw, 220px); aspect-ratio: 1; background: #fff; border: 5px solid var(--ink); border-radius: 22%; display: grid; grid-template: repeat(3, 1fr) / repeat(3, 1fr); padding: 12%; box-shadow: 6px 8px 0 rgba(31, 42, 68, .2); }
+.dado i { width: 70%; aspect-ratio: 1; border-radius: 50%; background: var(--ink); place-self: center; visibility: hidden; }
+.dado i.on { visibility: visible; }
+.dado.gira { animation: gira .5s ease-out; }
+@keyframes gira { 0% { transform: rotate(0) scale(.8); } 60% { transform: rotate(300deg) scale(1.08); } 100% { transform: rotate(360deg) scale(1); } }
+.voti { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; width: 100%; }
+.voto { border: 3px solid var(--ink); border-radius: 14px; background: var(--label); padding: 10px; display: grid; gap: 8px; justify-items: center; }
+.voto input { width: 100%; text-align: center; font-size: 24px; }
+.voto .n { font-family: var(--font-chalk); font-size: 70px; line-height: 1; }
+.voto .bar { width: 100%; height: 16px; border-radius: 99px; background: #e8eef5; overflow: hidden; }
+.voto .bar div { height: 100%; transition: width .3s; }
+.somma { font-family: var(--font-hand); font-size: 34px; }
+
+@media (max-width: 760px) {
+  .lez { grid-template-columns: 1fr; }
+  .voci { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+<nav class="menu" aria-label="Strumenti">
+  <a href="#timer-lezione">⏱ Timer lezione</a>
+  <a href="#timer">⏳ Timer</a>
+  <a href="#voce">🔊 Livello di voce</a>
+  <a href="#estrai">🎯 Estrai un numero</a>
+  <a href="#gruppi">👥 Crea gruppi</a>
+  <a href="#consegna">📝 Consegna</a>
+  <a href="#dadi">🎲 Dadi</a>
+  <a href="#cronometro">⏱️ Cronometro</a>
+  <a href="#voti">✋ Conta voti</a>
+</nav>
+<main>
+
+<!-- TIMER LEZIONE -->
+<section class="tool" id="t-timer-lezione" hidden>
+  <div class="lez">
+    <div>
+      <div class="anello">
+        <svg viewBox="0 0 200 200" aria-hidden="true">
+          <circle cx="100" cy="100" r="88" fill="#fff" stroke="#d7e3ef" stroke-width="18"/>
+          <g id="lez-archi"></g>
+          <circle id="lez-prog" cx="100" cy="100" r="88" fill="none" stroke="#1f2a44" stroke-width="5" stroke-dasharray="0 999" stroke-linecap="round"/>
+        </svg>
+        <div class="centro">
+          <div class="fase-nome" id="lez-fase">Pronti?</div>
+          <div class="tempo" id="lez-tempo">51:00</div>
+          <div class="nota" id="lez-dopo"></div>
+        </div>
+      </div>
+      <div class="row" style="justify-content:center;margin-top:12px">
+        <button class="btn primary" id="lez-start">▶ Avvia</button>
+        <button class="btn" id="lez-salta">Fase successiva ⏭</button>
+        <button class="btn" id="lez-reset">↺ Ricomincia</button>
+      </div>
+    </div>
+    <div class="fasi-lista">
+      <div class="row" style="justify-content:space-between"><b class="totale" id="lez-tot"></b><button class="btn" id="lez-add">+ Fase</button></div>
+      <div id="lez-fasi" class="fasi-lista"></div>
+      <label class="row nota"><input type="checkbox" id="lez-suono" checked> Suono al cambio di fase</label>
+    </div>
+  </div>
+</section>
+
+<!-- TIMER RAPIDO -->
+<section class="tool" id="t-timer" hidden>
+  <div class="grande" id="tr-tempo">05:00</div>
+  <div class="barra"><div id="tr-barra" style="width:100%"></div></div>
+  <div class="row" style="justify-content:center">
+    <button class="btn" data-min="1">1 min</button><button class="btn" data-min="3">3 min</button><button class="btn" data-min="5">5 min</button><button class="btn" data-min="10">10 min</button><button class="btn" data-min="15">15 min</button>
+    <label class="row"><input type="number" id="tr-custom" min="1" max="120" value="7" aria-label="Minuti"> min <button class="btn" id="tr-set">Imposta</button></label>
+  </div>
+  <div class="row" style="justify-content:center">
+    <button class="btn primary" id="tr-start">▶ Avvia</button>
+    <button class="btn" id="tr-reset">↺ Azzera</button>
+  </div>
+</section>
+
+<!-- VOCE -->
+<section class="tool" id="t-voce" hidden>
+  <div class="voce-display" id="voce-display"></div>
+  <div class="voci" id="voci"></div>
+</section>
+
+<!-- ESTRAI -->
+<section class="tool" id="t-estrai" hidden>
+  <h2>Chi tocca?</h2>
+  <div class="estratto" id="es-num">?</div>
+  <div id="es-nome" style="font:700 clamp(36px,6vw,72px) var(--font-chalk);min-height:1em;line-height:1"></div>
+  <div class="row" style="justify-content:center">
+    <button class="btn primary" id="es-go">🎯 Estrai</button>
+    <button class="btn" id="es-reset">↺ Rimetti tutti</button>
+    <label class="row">Studenti: <input type="number" id="es-n" min="2" max="40" value="24"></label>
+  </div>
+  <p class="nota">Si usano i numeri del registro; se hai scritto i nomi in «Crea gruppi», sotto il numero compare il nome. Tocca un numero per segnarlo assente. Ogni numero esce una volta sola.</p>
+  <div class="chips" id="es-chips"></div>
+</section>
+
+<!-- GRUPPI -->
+<section class="tool" id="t-gruppi" hidden>
+  <h2>Gruppi di lavoro</h2>
+  <div class="row" style="justify-content:center">
+    <label class="row">Studenti nel registro: <input type="number" id="gr-n" min="2" max="40" value="24"></label>
+    <label class="row">Assenti: <input type="text" id="gr-ass" placeholder="es. 4, 17" style="width:140px"></label>
+    <label class="row"><select id="gr-modo" aria-label="Come dividere"><option value="k">Studenti per isola</option><option value="g">Numero di isole</option></select> <input type="number" id="gr-k" min="2" max="10" value="4" aria-label="Quantità"></label>
+    <label class="row"><input type="checkbox" id="gr-ruoli" checked> Ruoli</label>
+    <button class="btn primary" id="gr-go">👥 Crea gruppi</button>
+  </div>
+  <div class="row" style="justify-content:center"><button class="btn" id="nomi-apri">✏️ Scrivi i nomi della classe</button><span class="nota" id="nomi-stato"></span></div>
+  <div class="card" id="nomi-box" hidden style="width:100%;display:grid;gap:8px;text-align:left">
+    <b style="font-family:var(--font-hand);font-size:24px;font-weight:400">Nomi della classe (al posto dei numeri)</b>
+    <p class="nota" style="margin:0">Scrivi un nome accanto a ogni numero del registro, oppure incollali tutti in ordine qui sotto. Bastano nome o soprannome. I nomi restano solo su questo dispositivo e valgono anche per «Estrai un numero».</p>
+    <textarea id="nomi-incolla" placeholder="Incolla qui l'elenco, un nome per riga, nell'ordine del registro" style="min-height:70px"></textarea>
+    <div class="row"><button class="btn" id="nomi-incolla-ok">Riempi dall'elenco</button><button class="btn" id="nomi-cancella" style="color:var(--ko)">Cancella tutti i nomi</button></div>
+    <div id="nomi-griglia" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:6px"></div>
+    <div class="row"><button class="btn primary" id="nomi-chiudi">✔ Fatto</button></div>
+  </div>
+  <p class="nota">Gli studenti avanzati vanno nei gruppi esistenti. Nella pianta puoi <b>trascinare le isole e la cattedra</b> per metterle come nella tua aula (la LIM resta in alto come riferimento).</p>
+  <div class="tabs" style="width:100%" role="tablist">
+    <button class="tab" id="gr-tab-pianta" aria-selected="true">🗺️ Pianta dell'aula</button>
+    <button class="tab" id="gr-tab-elenco" aria-selected="false">📋 Elenco</button>
+  </div>
+  <div id="gr-pianta-box" style="width:100%;display:grid;gap:10px">
+    <svg id="gr-pianta" viewBox="0 0 1000 720" style="width:100%;max-height:68vh;background:#fff;border:3px solid var(--ink);border-radius:12px;touch-action:none" role="img" aria-label="Pianta dell'aula con le isole dei gruppi"></svg>
+    <div class="row" style="justify-content:center">
+      <button class="btn" id="gr-riordina">↺ Riordina le isole</button>
+      <button class="btn giallo" id="gr-png">📷 Salva immagine</button>
+      <button class="btn" id="gr-copia">📋 Copia elenco</button>
+    </div>
+    <p class="nota" style="text-align:center;margin:0">Se hai scritto i nomi, l'immagine e l'elenco li contengono: condividili solo nei canali della scuola.</p>
+    <p class="feedback" id="gr-msg" aria-live="polite" style="text-align:center"></p>
+  </div>
+  <div class="gruppi" id="gr-out" hidden></div>
+</section>
+
+<div id="gr-modal" hidden style="position:fixed;inset:0;background:rgba(0,0,0,.6);display:grid;place-items:center;z-index:50;padding:16px">
+  <div class="card" style="max-width:900px;width:100%;display:grid;gap:10px;justify-items:center">
+    <b style="font-family:var(--font-hand);font-size:24px">Tieni premuto sull'immagine per salvarla o condividerla</b>
+    <img id="gr-img" alt="Pianta dei gruppi" style="max-width:100%;max-height:70vh;border:2px solid var(--ink);border-radius:8px">
+    <button class="btn" id="gr-chiudi">Chiudi</button>
+  </div>
+</div>
+
+<!-- CONSEGNA -->
+<section class="tool" id="t-consegna" hidden>
+  <div class="lavagnetta" id="cs-view"></div>
+  <div class="row"><button class="btn" id="cs-edit">✏️ Modifica la consegna</button></div>
+  <div class="editor" id="cs-editor" hidden>
+    <label>Titolo<br><input type="text" id="cs-titolo" style="width:100%"></label>
+    <label>Passaggi (uno per riga)<br><textarea id="cs-passi"></textarea></label>
+    <label>Materiali<br><input type="text" id="cs-mat" style="width:100%"></label>
+    <div class="row"><button class="btn primary" id="cs-ok">Mostra alla lavagna</button></div>
+  </div>
+</section>
+
+<!-- DADI -->
+<section class="tool" id="t-dadi" hidden>
+  <div class="dadi" id="dadi"></div>
+  <div class="somma" id="dadi-somma"></div>
+  <div class="row" style="justify-content:center">
+    <button class="btn primary" id="dadi-go">🎲 Lancia</button>
+    <label class="row">Dadi: <select id="dadi-n"><option>1</option><option selected>2</option><option>3</option></select></label>
+  </div>
+</section>
+<!-- CRONOMETRO -->
+<section class="tool" id="t-cronometro" hidden>
+  <div class="grande" id="cr-tempo">00:00,0</div>
+  <div class="row" style="justify-content:center">
+    <button class="btn primary" id="cr-start">▶ Avvia</button>
+    <button class="btn" id="cr-giro">🏁 Giro</button>
+    <button class="btn" id="cr-reset">↺ Azzera</button>
+  </div>
+  <ol class="chips" id="cr-giri" style="display:grid;gap:4px;font-family:var(--font-hand);font-size:24px;list-style:none;padding:0"></ol>
+</section>
+
+<!-- CONTA VOTI -->
+<section class="tool" id="t-voti" hidden>
+  <h2>Votiamo!</h2>
+  <div class="row" style="justify-content:center">
+    <label class="row">Domanda: <input type="text" id="vt-dom" style="width:min(520px,70vw)" placeholder="Es. Quale progetto realizziamo?"></label>
+    <label class="row">Opzioni: <select id="vt-n"><option>2</option><option>3</option><option selected>4</option><option>5</option></select></label>
+    <button class="btn" id="vt-reset">↺ Azzera</button>
+  </div>
+  <div class="voti" id="vt-box"></div>
+  <p class="nota">Tocca + quando uno studente alza la mano. Le barre si aggiornano subito.</p>
+</section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2, "0");
+const mmss = s => pad(Math.floor(s / 60)) + ":" + pad(Math.floor(s % 60));
+const store = {
+  get(k, d) { try { const v = localStorage.getItem("ptl-strumenti-" + k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem("ptl-strumenti-" + k, JSON.stringify(v)); } catch (e) {} }
+};
+let audioCtx = null;
+function beep(n = 2) {
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    for (let i = 0; i < n; i++) {
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.frequency.value = 880; o.connect(g); g.connect(audioCtx.destination);
+      const t = audioCtx.currentTime + i * 0.35;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.3, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
+      o.start(t); o.stop(t + 0.3);
+    }
+  } catch (e) {}
+}
+
+/* ---------- Navigazione ---------- */
+const TOOLS = ["timer-lezione", "timer", "voce", "estrai", "gruppi", "consegna", "dadi", "cronometro", "voti"];
+function route() {
+  let id = location.hash.slice(1); if (!TOOLS.includes(id)) id = "timer-lezione";
+  TOOLS.forEach(t => $("t-" + t).hidden = t !== id);
+  document.querySelectorAll("nav.menu a").forEach(a => { if (a.getAttribute("href") === "#" + id) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
+}
+window.addEventListener("hashchange", route);
+
+/* ---------- Timer lezione ---------- */
+const COLORI = ["#2f6fd6", "#ef8a1f", "#2e9b5f", "#d64545", "#8e5bd0", "#1f9bb0", "#b8860b"];
+const FASI_DEFAULT = [
+  { nome: "Accoglienza", min: 5 }, { nome: "Spiegazione", min: 10 }, { nome: "Attività", min: 25 },
+  { nome: "Condivisione", min: 8 }, { nome: "Riordino", min: 3 }
+];
+let fasi = store.get("fasi", FASI_DEFAULT);
+let lez = { attivo: false, trascorso: 0, ultimo: null, timer: null, faseIdx: -1 };
+const totSec = () => fasi.reduce((s, f) => s + Math.max(0, +f.min || 0) * 60, 0);
+
+function disegnaFasi() {
+  const box = $("lez-fasi"); box.innerHTML = "";
+  fasi.forEach((f, i) => {
+    const r = document.createElement("div"); r.className = "fase-riga"; r.id = "fr-" + i;
+    r.innerHTML = `<span class="pallino" style="background:${COLORI[i % COLORI.length]}"></span>
+      <input type="text" id="fn-${i}" value="${f.nome.replace(/"/g, "&quot;")}" aria-label="Nome fase ${i + 1}">
+      <label class="row" style="gap:4px"><input type="number" id="fm-${i}" min="1" max="120" value="${f.min}" aria-label="Minuti fase ${i + 1}"></label>
+      <button title="Elimina fase" aria-label="Elimina fase ${i + 1}">✕</button>`;
+    r.querySelector("input[type=text]").addEventListener("input", e => { fasi[i].nome = e.target.value; salvaFasi(false); });
+    r.querySelector("input[type=number]").addEventListener("input", e => { fasi[i].min = Math.max(1, Math.min(120, +e.target.value || 1)); salvaFasi(false); });
+    r.querySelector("button").addEventListener("click", () => { if (fasi.length > 1) { fasi.splice(i, 1); salvaFasi(true); } });
+    box.appendChild(r);
+  });
+  aggiornaLez();
+}
+function salvaFasi(ridisegna) { store.set("fasi", fasi); if (ridisegna) disegnaFasi(); else aggiornaLez(); }
+function disegnaArchi() {
+  const C = 2 * Math.PI * 88, tot = totSec() || 1; let acc = 0; let html = "";
+  fasi.forEach((f, i) => {
+    const len = (f.min * 60 / tot) * C;
+    html += `<circle cx="100" cy="100" r="88" fill="none" stroke="${COLORI[i % COLORI.length]}" stroke-width="18" stroke-dasharray="${Math.max(0, len - 2)} ${C}" stroke-dashoffset="${-acc}"/>`;
+    acc += len;
+  });
+  $("lez-archi").innerHTML = html;
+}
+function faseCorrente(t) {
+  let acc = 0;
+  for (let i = 0; i < fasi.length; i++) { const d = fasi[i].min * 60; if (t < acc + d) return { i, resto: acc + d - t }; acc += d; }
+  return { i: fasi.length, resto: 0 };
+}
+function aggiornaLez() {
+  const tot = totSec();
+  $("lez-tot").textContent = `Totale: ${Math.round(tot / 60)} minuti` + (Math.round(tot / 60) !== 51 ? " (il modulo è di 51)" : "");
+  $("lez-tot").classList.toggle("diverso", Math.round(tot / 60) !== 51);
+  disegnaArchi();
+  const { i, resto } = faseCorrente(lez.trascorso);
+  if (lez.faseIdx !== -1 && i !== lez.faseIdx && lez.attivo && $("lez-suono").checked) beep(i >= fasi.length ? 3 : 2);
+  if (lez.attivo || lez.trascorso > 0) lez.faseIdx = i;
+  const C = 2 * Math.PI * 88;
+  $("lez-prog").setAttribute("stroke-dasharray", `${Math.min(1, lez.trascorso / (tot || 1)) * C} ${C}`);
+  if (i >= fasi.length) {
+    $("lez-fase").textContent = "Fine!"; $("lez-tempo").textContent = "00:00"; $("lez-dopo").textContent = "Buon intervallo";
+    fermaLez();
+  } else if (!lez.attivo && lez.trascorso === 0) {
+    $("lez-fase").textContent = "Pronti?"; $("lez-tempo").textContent = mmss(tot); $("lez-dopo").textContent = "Si parte con: " + fasi[0].nome;
+  } else {
+    $("lez-fase").textContent = fasi[i].nome; $("lez-fase").style.color = COLORI[i % COLORI.length];
+    $("lez-tempo").textContent = mmss(Math.ceil(resto));
+    $("lez-dopo").textContent = fasi[i + 1] ? "Poi: " + fasi[i + 1].nome : "Ultima fase";
+  }
+  document.querySelectorAll(".fase-riga").forEach((r, k) => { r.classList.toggle("corrente", (lez.attivo || lez.trascorso > 0) && k === i); r.classList.toggle("passata", k < i && (lez.attivo || lez.trascorso > 0)); });
+}
+function tickLez() { const now = performance.now(); lez.trascorso += (now - lez.ultimo) / 1000; lez.ultimo = now; aggiornaLez(); }
+function fermaLez() { lez.attivo = false; clearInterval(lez.timer); $("lez-start").textContent = "▶ Avvia"; }
+$("lez-start").addEventListener("click", () => {
+  if (lez.attivo) { tickLez(); fermaLez(); return; }
+  if (faseCorrente(lez.trascorso).i >= fasi.length) lez.trascorso = 0;
+  beep(0); lez.attivo = true; lez.ultimo = performance.now(); if (lez.faseIdx === -1) lez.faseIdx = 0;
+  lez.timer = setInterval(tickLez, 250); $("lez-start").textContent = "⏸ Pausa"; aggiornaLez();
+});
+$("lez-salta").addEventListener("click", () => {
+  const { i } = faseCorrente(lez.trascorso); if (i >= fasi.length) return;
+  lez.trascorso = fasi.slice(0, i + 1).reduce((s, f) => s + f.min * 60, 0) + 0.01; if (lez.faseIdx === -1) lez.faseIdx = i; aggiornaLez();
+});
+$("lez-reset").addEventListener("click", () => { fermaLez(); lez.trascorso = 0; lez.faseIdx = -1; $("lez-fase").style.color = ""; aggiornaLez(); });
+$("lez-add").addEventListener("click", () => { fasi.push({ nome: "Nuova fase", min: 5 }); salvaFasi(true); });
+
+/* ---------- Timer rapido ---------- */
+let tr = { durata: 300, resto: 300, attivo: false, ultimo: 0, timer: null };
+function aggTr() {
+  $("tr-tempo").textContent = mmss(Math.ceil(tr.resto));
+  $("tr-tempo").classList.toggle("ultimi", tr.resto <= 10 && tr.resto > 0);
+  $("tr-barra").style.width = (tr.resto / tr.durata * 100) + "%";
+  $("tr-barra").style.background = tr.resto / tr.durata < 0.2 ? "var(--ko)" : tr.resto / tr.durata < 0.5 ? "var(--giallo)" : "var(--tec)";
+}
+function impostaTr(min) { clearInterval(tr.timer); tr = { durata: min * 60, resto: min * 60, attivo: false, timer: null }; $("tr-start").textContent = "▶ Avvia"; aggTr(); }
+document.querySelectorAll("[data-min]").forEach(b => b.addEventListener("click", () => impostaTr(+b.dataset.min)));
+$("tr-set").addEventListener("click", () => impostaTr(Math.max(1, Math.min(120, +$("tr-custom").value || 1))));
+$("tr-start").addEventListener("click", () => {
+  if (tr.attivo) { clearInterval(tr.timer); tr.attivo = false; $("tr-start").textContent = "▶ Riprendi"; return; }
+  if (tr.resto <= 0) tr.resto = tr.durata;
+  beep(0); tr.attivo = true; tr.ultimo = performance.now(); $("tr-start").textContent = "⏸ Pausa";
+  tr.timer = setInterval(() => {
+    const now = performance.now(); tr.resto -= (now - tr.ultimo) / 1000; tr.ultimo = now;
+    if (tr.resto <= 0) { tr.resto = 0; clearInterval(tr.timer); tr.attivo = false; $("tr-start").textContent = "▶ Avvia"; beep(3); $("tr-tempo").textContent = "Tempo!"; $("tr-barra").style.width = "0%"; return; }
+    aggTr();
+  }, 200);
+});
+$("tr-reset").addEventListener("click", () => impostaTr(tr.durata / 60));
+
+/* ---------- Livello di voce ---------- */
+const VOCI = [
+  { n: 0, txt: "Silenzio", desc: "Lavoro da solo, in silenzio", col: "#d64545", ico: "🤫" },
+  { n: 1, txt: "Sussurro", desc: "Parlo piano con il compagno vicino", col: "#ef8a1f", ico: "🗣️" },
+  { n: 2, txt: "Voce di gruppo", desc: "Mi sente solo il mio gruppo", col: "#2f6fd6", ico: "👥" },
+  { n: 3, txt: "Voce per la classe", desc: "Parlo a tutta la classe, uno alla volta", col: "#2e9b5f", ico: "🙋" }
+];
+let voce = store.get("voce", 0);
+function disegnaVoce() {
+  const v = VOCI[voce];
+  $("voce-display").style.background = v.col;
+  $("voce-display").innerHTML = `<div class="num">${v.ico} ${v.n}</div><div class="txt">${v.txt}</div><div class="desc">${v.desc}</div>`;
+  $("voci").innerHTML = VOCI.map((x, i) => `<button class="voce-btn" data-i="${i}" aria-pressed="${i === voce}" style="border-color:${x.col}"><span style="font-size:34px">${x.ico}</span><b style="color:${x.col}">${x.n}</b>${x.txt}</button>`).join("");
+  $("voci").querySelectorAll("button").forEach(b => b.addEventListener("click", () => { voce = +b.dataset.i; store.set("voce", voce); disegnaVoce(); }));
+}
+
+/* ---------- Estrai ---------- */
+let es = { n: store.get("n", 24), assenti: new Set(), usciti: [] };
+function disegnaEs() {
+  $("es-n").value = es.n;
+  $("es-chips").innerHTML = "";
+  for (let i = 1; i <= es.n; i++) {
+    const b = document.createElement("button"); b.className = "chip"; b.textContent = i; if (nomeDi(i)) b.title = nomeDi(i);
+    b.setAttribute("aria-label", `Numero ${i}${nomeDi(i) ? " " + nomeDi(i) : ""}` + (es.assenti.has(i) ? ", assente" : ""));
+    if (es.assenti.has(i)) b.classList.add("assente"); if (es.usciti.includes(i)) b.classList.add("uscito");
+    b.addEventListener("click", () => { es.assenti.has(i) ? es.assenti.delete(i) : es.assenti.add(i); disegnaEs(); });
+    $("es-chips").appendChild(b);
+  }
+}
+$("es-n").addEventListener("change", () => { es.n = Math.max(2, Math.min(40, +$("es-n").value || 24)); store.set("n", es.n); $("gr-n").value = es.n; es.assenti.clear(); es.usciti = []; $("es-num").textContent = "?"; $("es-nome").textContent = ""; disegnaEs(); });
+$("es-go").addEventListener("click", () => {
+  const pool = []; for (let i = 1; i <= es.n; i++) if (!es.assenti.has(i) && !es.usciti.includes(i)) pool.push(i);
+  if (!pool.length) { $("es-num").textContent = "✓"; $("es-nome").textContent = "Tutti estratti"; return; }
+  const scelto = pool[Math.floor(Math.random() * pool.length)];
+  let k = 0; $("es-go").disabled = true;
+  const anim = setInterval(() => {
+    $("es-num").textContent = pool[Math.floor(Math.random() * pool.length)];
+    if (++k > 14) { clearInterval(anim); $("es-num").textContent = scelto; $("es-nome").textContent = nomeDi(scelto); es.usciti.push(scelto); $("es-go").disabled = false; disegnaEs(); }
+  }, 70);
+});
+$("es-reset").addEventListener("click", () => { es.usciti = []; $("es-num").textContent = "?"; $("es-nome").textContent = ""; disegnaEs(); });
+
+/* ---------- Nomi della classe (facoltativi, solo su questo dispositivo) ---------- */
+let NOMI = store.get("nomi", {});
+const nomeDi = n => (NOMI[n] || "").trim();
+const etichetta = n => nomeDi(n) || "N° " + n;
+function disegnaNomi() {
+  const n = Math.max(2, Math.min(40, +$("gr-n").value || 24));
+  $("nomi-griglia").innerHTML = Array.from({ length: n }, (_, i) => i + 1).map(i => `<label class="row" style="gap:6px"><b style="width:28px;text-align:right">${i}</b><input type="text" data-n="${i}" value="${(NOMI[i] || "").replace(/"/g, "&quot;")}" maxlength="24" placeholder="Nome" style="flex:1;min-width:0;font-size:18px"></label>`).join("");
+  $("nomi-griglia").querySelectorAll("input").forEach(inp => inp.addEventListener("input", () => { const k = inp.dataset.n; if (inp.value.trim()) NOMI[k] = inp.value.trim(); else delete NOMI[k]; store.set("nomi", NOMI); aggiornaNomiStato(); }));
+  aggiornaNomiStato();
+}
+function aggiornaNomiStato() { const c = Object.keys(NOMI).length; $("nomi-stato").textContent = c ? `${c} nomi inseriti` : "si usano i numeri del registro"; }
+$("nomi-apri").addEventListener("click", () => { $("nomi-box").hidden = !$("nomi-box").hidden; if (!$("nomi-box").hidden) disegnaNomi(); });
+$("nomi-chiudi").addEventListener("click", () => { $("nomi-box").hidden = true; disegnaGruppi(); disegnaEs(); });
+$("nomi-incolla-ok").addEventListener("click", () => {
+  const righe = $("nomi-incolla").value.split("\n").map(x => x.replace(/^\s*\d+[.)\-\s]*/, "").trim()).filter(Boolean);
+  righe.slice(0, 40).forEach((nm, i) => NOMI[i + 1] = nm.slice(0, 24));
+  if (righe.length > +$("gr-n").value) $("gr-n").value = Math.min(40, righe.length);
+  store.set("nomi", NOMI); $("nomi-incolla").value = ""; disegnaNomi();
+});
+let confNomi = false;
+$("nomi-cancella").addEventListener("click", () => { if (!confNomi) { confNomi = true; $("nomi-cancella").textContent = "Tocca ancora per confermare"; setTimeout(() => { confNomi = false; $("nomi-cancella").textContent = "Cancella tutti i nomi"; }, 3000); return; } NOMI = {}; store.set("nomi", NOMI); confNomi = false; $("nomi-cancella").textContent = "Cancella tutti i nomi"; disegnaNomi(); });
+
+/* ---------- Gruppi ---------- */
+const RUOLI = ["Portavoce", "Custode del tempo", "Responsabile materiali", "Segretario", "Controllore della voce", "Ricercatore"];
+const BANCO_W = 84, BANCO_H = 56;
+let gr = store.get("gruppi", null);
+$("gr-n").value = (gr && gr.n) || es.n;
+function parseAssenti(t) { return new Set(String(t).split(/[^0-9]+/).filter(Boolean).map(Number)); }
+function dimIsola(m) { const cols = m <= 6 ? 2 : 3, rows = Math.ceil(m / cols); return { cols, rows, w: cols * BANCO_W + 20, h: rows * BANCO_H + 44 }; }
+function disponiIsole() {
+  const ng = gr.gruppi.length, cols = ng <= 2 ? 2 : ng <= 6 ? 3 : 4, rows = Math.ceil(ng / cols);
+  const x0 = 40, y0 = 160, W = 920, H = 540;
+  gr.pos = gr.gruppi.map((g, i) => {
+    const d = dimIsola(g.length), c = i % cols, r = Math.floor(i / cols);
+    return { x: Math.round(x0 + (c + .5) * W / cols - d.w / 2), y: Math.round(y0 + (r + .5) * H / rows - d.h / 2) };
+  });
+}
+function svgAula() {
+  const esc = t => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  let h = `<rect x="0" y="0" width="1000" height="720" fill="#ffffff"/><rect x="20" y="20" width="960" height="680" fill="#fbfaf5" stroke="#1f2a44" stroke-width="5"/>
+  <rect x="370" y="24" width="260" height="20" rx="3" fill="#1f2a44"/><text x="500" y="70" font-family="Arial, sans-serif" font-size="22" font-weight="bold" text-anchor="middle" fill="#1f2a44">LIM</text>
+
+`;
+  const ct = (gr && gr.catt) || { x: 420, y: 84 };
+  h += `<g class="cattedra" style="cursor:grab"><rect x="${ct.x}" y="${ct.y}" width="160" height="56" rx="6" fill="#c08552" stroke="#1f2a44" stroke-width="2"/><text x="${ct.x + 80}" y="${ct.y + 34}" font-family="Arial, sans-serif" font-size="18" text-anchor="middle" fill="#1f2a44">Cattedra</text></g>`;
+  if (!gr) return h + `<text x="500" y="400" font-family="Arial, sans-serif" font-size="30" text-anchor="middle" fill="#5b6478">Premi «Crea gruppi» per vedere le isole</text>`;
+  gr.gruppi.forEach((g, i) => {
+    const d = dimIsola(g.length), p = gr.pos[i], col = COLORI[i % COLORI.length];
+    h += `<g class="isola" data-i="${i}" style="cursor:grab"><rect x="${p.x}" y="${p.y}" width="${d.w}" height="${d.h}" rx="14" fill="${col}" fill-opacity=".15" stroke="${col}" stroke-width="4"/>
+      <text x="${p.x + d.w / 2}" y="${p.y + 28}" font-family="Arial, sans-serif" font-size="22" font-weight="bold" text-anchor="middle" fill="${col}">Gruppo ${i + 1}</text>`;
+    g.forEach((n, j) => {
+      const bx = p.x + 10 + (j % d.cols) * BANCO_W, by = p.y + 38 + Math.floor(j / d.cols) * BANCO_H;
+      h += `<rect x="${bx + 2}" y="${by + 2}" width="${BANCO_W - 4}" height="${BANCO_H - 4}" rx="5" fill="#f5d76e" stroke="#1f2a44" stroke-width="2"/>
+        <text x="${bx + BANCO_W / 2}" y="${by + (gr.ruoli ? 26 : 34)}" font-family="Arial, sans-serif" font-size="${(() => { const t = etichetta(n); return t.length > 9 ? 12 : t.length > 6 ? 15 : gr.ruoli ? 19 : 22; })()}" font-weight="bold" text-anchor="middle" fill="#1f2a44">${esc(etichetta(n).length > 12 ? etichetta(n).slice(0, 11) + "…" : etichetta(n))}</text>` +
+        (gr.ruoli ? `<text x="${bx + BANCO_W / 2}" y="${by + 44}" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#1f2a44">${esc(RUOLI[j % RUOLI.length].split(" ")[0])}</text>` : "");
+    });
+    h += `</g>`;
+  });
+  const oggi = new Date().toLocaleDateString("it-IT");
+  return h + `<text x="960" y="690" font-family="Arial, sans-serif" font-size="15" text-anchor="end" fill="#5b6478">Gruppi del ${oggi} · Prof Tech Lab</text>`;
+}
+function disegnaGruppi() {
+  $("gr-pianta").innerHTML = svgAula();
+  if (!gr) { $("gr-out").innerHTML = ""; return; }
+  $("gr-out").innerHTML = gr.gruppi.map((g, i) => `<div class="gruppo" style="border-color:${COLORI[i % COLORI.length]}"><h3 style="color:${COLORI[i % COLORI.length]}">Gruppo ${i + 1}</h3><ul>${g.map((x, j) => `<li>${etichetta(x).replace(/</g, "&lt;")}${gr.ruoli ? ` <span>· ${RUOLI[j % RUOLI.length]}</span>` : ""}</li>`).join("")}</ul></div>`).join("");
+}
+$("gr-go").addEventListener("click", () => {
+  const n = Math.max(2, Math.min(40, +$("gr-n").value || 24)), modo = $("gr-modo").value, q = Math.max(1, Math.min(modo === "g" ? 12 : 10, +$("gr-k").value || 4));
+  const ass = parseAssenti($("gr-ass").value);
+  const nums = Array.from({ length: n }, (_, i) => i + 1).filter(x => !ass.has(x));
+  if (nums.length < 2) { $("gr-msg").textContent = "Servono almeno 2 studenti presenti."; return; }
+  for (let i = nums.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [nums[i], nums[j]] = [nums[j], nums[i]]; }
+  const ng = modo === "g" ? Math.min(q, nums.length) : Math.max(1, Math.floor(nums.length / Math.max(2, q)));
+  if (Math.ceil(nums.length / ng) > 9) { $("gr-msg").textContent = "Isole troppo grandi: aumenta il numero di isole (al massimo 9 banchi per isola)."; $("gr-msg").className = "feedback ko"; return; }
+  const gruppi = Array.from({ length: ng }, () => []);
+  nums.forEach((x, i) => gruppi[i % ng].push(x));
+  gruppi.forEach(g => g.sort((a, b) => a - b));
+  const vecchie = gr && gr.pos && gr.gruppi.length === ng ? gr.pos : null;
+  gr = { n, gruppi, ruoli: $("gr-ruoli").checked, pos: vecchie, catt: gr && gr.catt ? gr.catt : { x: 420, y: 84 } };
+  if (!gr.pos) disponiIsole();
+  store.set("gruppi", gr); $("gr-msg").textContent = ""; disegnaGruppi();
+});
+$("gr-riordina").addEventListener("click", () => { if (!gr) return; disponiIsole(); store.set("gruppi", gr); disegnaGruppi(); });
+/* Trascinamento delle isole */
+let grDrag = null;
+const svgPt = e => { const s = $("gr-pianta"), p = s.createSVGPoint(); p.x = e.clientX; p.y = e.clientY; return p.matrixTransform(s.getScreenCTM().inverse()); };
+$("gr-pianta").addEventListener("pointerdown", e => {
+  if (!gr) return;
+  const c = e.target.closest(".cattedra");
+  if (c) { const p = svgPt(e); gr.catt = gr.catt || { x: 420, y: 84 }; grDrag = { catt: true, dx: p.x - gr.catt.x, dy: p.y - gr.catt.y }; $("gr-pianta").setPointerCapture(e.pointerId); return; }
+  const g = e.target.closest(".isola"); if (!g) return;
+  const i = +g.dataset.i, p = svgPt(e); grDrag = { i, dx: p.x - gr.pos[i].x, dy: p.y - gr.pos[i].y };
+  $("gr-pianta").setPointerCapture(e.pointerId);
+});
+$("gr-pianta").addEventListener("pointermove", e => {
+  if (!grDrag) return;
+  if (grDrag.catt) { const p = svgPt(e); gr.catt = { x: Math.round(Math.max(24, Math.min(816, p.x - grDrag.dx)) / 5) * 5, y: Math.round(Math.max(50, Math.min(640, p.y - grDrag.dy)) / 5) * 5 }; disegnaGruppi(); return; }
+  const p = svgPt(e), d = dimIsola(gr.gruppi[grDrag.i].length);
+  gr.pos[grDrag.i] = { x: Math.round(Math.max(24, Math.min(976 - d.w, p.x - grDrag.dx)) / 5) * 5, y: Math.round(Math.max(56, Math.min(696 - d.h, p.y - grDrag.dy)) / 5) * 5 };
+  disegnaGruppi();
+});
+$("gr-pianta").addEventListener("pointerup", () => { if (grDrag) { grDrag = null; store.set("gruppi", gr); } });
+/* Schede pianta / elenco */
+function grTab(t) { $("gr-tab-pianta").setAttribute("aria-selected", t === "p"); $("gr-tab-elenco").setAttribute("aria-selected", t === "e"); $("gr-pianta-box").hidden = t !== "p"; $("gr-out").hidden = t !== "e"; }
+$("gr-tab-pianta").addEventListener("click", () => grTab("p")); $("gr-tab-elenco").addEventListener("click", () => grTab("e"));
+/* Salvataggio */
+function testoGruppi() { return gr.gruppi.map((g, i) => `Gruppo ${i + 1}: ` + g.map((x, j) => etichetta(x) + (gr.ruoli ? ` (${RUOLI[j % RUOLI.length]})` : "")).join(", ")).join("\n"); }
+$("gr-copia").addEventListener("click", async () => {
+  if (!gr) return;
+  try { await navigator.clipboard.writeText(testoGruppi()); $("gr-msg").textContent = "Elenco copiato: puoi incollarlo in un messaggio."; $("gr-msg").className = "feedback ok"; }
+  catch (e) { grTab("e"); $("gr-msg").textContent = "Copia non disponibile qui: l'elenco è nella scheda Elenco."; $("gr-msg").className = "feedback ko"; }
+});
+async function salvaFile(nome, blob) {
+  try { if (window.parent !== window && typeof window.parent.ptlSalva === "function") { const r = await window.parent.ptlSalva(nome, blob); if (r) return r; } }
+  catch (e) { if (e && e.code === "declined") return "declined"; }
+  return null;
+}
+function pngDaSvg() {
+  return new Promise((res, rej) => {
+    const xml = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 720" width="2000" height="1440">${svgAula()}</svg>`;
+    const img = new Image();
+    img.onload = () => { const c = document.createElement("canvas"); c.width = 2000; c.height = 1440; const x = c.getContext("2d"); x.fillStyle = "#fff"; x.fillRect(0, 0, 2000, 1440); x.drawImage(img, 0, 0, 2000, 1440); c.toBlob(b => b ? res({ blob: b, url: c.toDataURL("image/png") }) : rej(), "image/png"); };
+    img.onerror = rej;
+    img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(xml);
+  });
+}
+$("gr-png").addEventListener("click", async () => {
+  if (!gr) { $("gr-msg").textContent = "Prima crea i gruppi."; $("gr-msg").className = "feedback ko"; return; }
+  let out; try { out = await pngDaSvg(); } catch (e) { $("gr-msg").textContent = "Non sono riuscito a creare l'immagine."; $("gr-msg").className = "feedback ko"; return; }
+  const nome = "gruppi-" + new Date().toISOString().slice(0, 10) + ".png";
+  const r = await salvaFile(nome, out.blob);
+  if (r === "saved") { $("gr-msg").textContent = "Immagine salvata."; $("gr-msg").className = "feedback ok"; return; }
+  if (r === "declined") { $("gr-msg").textContent = "Salvataggio annullato."; $("gr-msg").className = "feedback"; return; }
+  $("gr-img").src = out.url; $("gr-modal").hidden = false;
+});
+$("gr-chiudi").addEventListener("click", () => $("gr-modal").hidden = true);
+disegnaGruppi();
+
+/* ---------- Consegna ---------- */
+let cs = store.get("consegna", { titolo: "Oggi in laboratorio", passi: "Prendi il materiale del tuo gruppo\nLeggi la scheda insieme\nCostruisci il prototipo\nScatta una foto e riordina", mat: "Scheda, mattoncini, tablet" });
+function disegnaCs() {
+  const passi = cs.passi.split("\n").map(s => s.trim()).filter(Boolean);
+  $("cs-view").innerHTML = `<h3></h3><ol></ol>${cs.mat ? '<div class="mat"></div>' : ""}`;
+  $("cs-view").querySelector("h3").textContent = cs.titolo;
+  const ol = $("cs-view").querySelector("ol"); passi.forEach(p => { const li = document.createElement("li"); li.textContent = p; ol.appendChild(li); });
+  if (cs.mat) $("cs-view").querySelector(".mat").textContent = "Materiali: " + cs.mat;
+}
+$("cs-edit").addEventListener("click", () => { $("cs-titolo").value = cs.titolo; $("cs-passi").value = cs.passi; $("cs-mat").value = cs.mat; $("cs-editor").hidden = false; $("cs-edit").hidden = true; });
+$("cs-ok").addEventListener("click", () => { cs = { titolo: $("cs-titolo").value, passi: $("cs-passi").value, mat: $("cs-mat").value }; store.set("consegna", cs); $("cs-editor").hidden = true; $("cs-edit").hidden = false; disegnaCs(); });
+
+/* ---------- Dadi ---------- */
+const PUNTI = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
+function disegnaDadi(valori, anima) {
+  $("dadi").innerHTML = valori.map(v => `<div class="dado${anima ? " gira" : ""}" role="img" aria-label="Dado: ${v}">${Array.from({ length: 9 }, (_, i) => `<i class="${PUNTI[v].includes(i) ? "on" : ""}"></i>`).join("")}</div>`).join("");
+  $("dadi-somma").textContent = valori.length > 1 ? "Totale: " + valori.reduce((a, b) => a + b, 0) : "";
+}
+$("dadi-go").addEventListener("click", () => disegnaDadi(Array.from({ length: +$("dadi-n").value }, () => 1 + Math.floor(Math.random() * 6)), true));
+$("dadi-n").addEventListener("change", () => disegnaDadi(Array.from({ length: +$("dadi-n").value }, () => 6), false));
+
+/* ---------- Cronometro ---------- */
+let cr = { t: 0, attivo: false, ultimo: 0, timer: null, giri: [] };
+const crFmt = t => pad(Math.floor(t / 60)) + ":" + pad(Math.floor(t % 60)) + "," + Math.floor((t * 10) % 10);
+function aggCr() { $("cr-tempo").textContent = crFmt(cr.t); $("cr-giri").innerHTML = cr.giri.map((g, i) => `<li>Giro ${i + 1}: ${crFmt(g)}</li>`).join(""); }
+$("cr-start").addEventListener("click", () => {
+  if (cr.attivo) { clearInterval(cr.timer); cr.attivo = false; $("cr-start").textContent = "▶ Riprendi"; return; }
+  cr.attivo = true; cr.ultimo = performance.now(); $("cr-start").textContent = "⏸ Pausa";
+  cr.timer = setInterval(() => { const n = performance.now(); cr.t += (n - cr.ultimo) / 1000; cr.ultimo = n; aggCr(); }, 100);
+});
+$("cr-giro").addEventListener("click", () => { if (cr.t > 0) { cr.giri.push(cr.t); aggCr(); } });
+$("cr-reset").addEventListener("click", () => { clearInterval(cr.timer); cr = { t: 0, attivo: false, ultimo: 0, timer: null, giri: [] }; $("cr-start").textContent = "▶ Avvia"; aggCr(); });
+
+/* ---------- Conta voti ---------- */
+let vt = store.get("voti", { dom: "", opz: ["A", "B", "C", "D"], conti: [0, 0, 0, 0] });
+function disegnaVt() {
+  $("vt-dom").value = vt.dom; $("vt-n").value = vt.opz.length;
+  const tot = vt.conti.reduce((a, b) => a + b, 0) || 1, max = Math.max(...vt.conti);
+  $("vt-box").innerHTML = vt.opz.map((o, i) => `<div class="voto" style="border-color:${COLORI[i]}"><input type="text" data-i="${i}" value="${o.replace(/"/g, "&quot;")}" aria-label="Opzione ${i + 1}"><span class="n" style="color:${COLORI[i]}">${vt.conti[i]}${vt.conti[i] === max && max > 0 ? " 🏆" : ""}</span><div class="bar"><div style="width:${vt.conti[i] / tot * 100}%;background:${COLORI[i]}"></div></div><div class="row"><button class="btn" data-m="${i}" aria-label="Togli un voto">−</button><button class="btn primary" data-p="${i}" style="background:${COLORI[i]}" aria-label="Aggiungi un voto">+</button></div></div>`).join("");
+  $("vt-box").querySelectorAll("input").forEach(x => x.addEventListener("change", () => { vt.opz[+x.dataset.i] = x.value; store.set("voti", vt); }));
+  $("vt-box").querySelectorAll("[data-p]").forEach(b => b.addEventListener("click", () => { vt.conti[+b.dataset.p]++; store.set("voti", vt); disegnaVt(); }));
+  $("vt-box").querySelectorAll("[data-m]").forEach(b => b.addEventListener("click", () => { const i = +b.dataset.m; vt.conti[i] = Math.max(0, vt.conti[i] - 1); store.set("voti", vt); disegnaVt(); }));
+}
+$("vt-dom").addEventListener("change", () => { vt.dom = $("vt-dom").value; store.set("voti", vt); });
+$("vt-n").addEventListener("change", () => { const n = +$("vt-n").value; const L = "ABCDE"; while (vt.opz.length < n) { vt.opz.push(L[vt.opz.length]); vt.conti.push(0); } vt.opz.length = n; vt.conti.length = n; store.set("voti", vt); disegnaVt(); });
+$("vt-reset").addEventListener("click", () => { vt.conti = vt.conti.map(() => 0); store.set("voti", vt); disegnaVt(); });
+
+disegnaFasi(); aggTr(); aggCr(); disegnaVt(); disegnaVoce(); disegnaEs(); disegnaCs(); disegnaDadi([6, 6], false); route();
+</script>
+<script src="a11y.js"></script>
+</body>
+</html>

@@ -176,10 +176,12 @@ textarea { width: 100%; min-height: 150px; font: 400 21px var(--font-hand); bord
   <div class="row" style="justify-content:center">
     <label class="row">Studenti nel registro: <input type="number" id="gr-n" min="2" max="40" value="24"></label>
     <label class="row">Assenti: <input type="text" id="gr-ass" placeholder="es. 4, 17" style="width:140px"></label>
-    <label class="row"><select id="gr-modo" aria-label="Come dividere"><option value="k">Studenti per isola</option><option value="g">Numero di isole</option></select> <input type="number" id="gr-k" min="2" max="10" value="4" aria-label="Quantità"></label>
+    <label class="row">Isole: <input type="number" id="gr-isole" min="1" max="12" value="6" style="width:70px"></label>
+    <label class="row">Posti per isola: <input type="number" id="gr-k" min="2" max="9" value="4" style="width:70px"></label>
     <label class="row"><input type="checkbox" id="gr-ruoli" checked> Ruoli</label>
     <button class="btn primary" id="gr-go">👥 Crea gruppi</button>
   </div>
+  <p class="nota" id="gr-hint" style="text-align:center;margin:0"></p>
   <div class="row" style="justify-content:center"><button class="btn" id="nomi-apri">✏️ Scrivi i nomi della classe</button><span class="nota" id="nomi-stato"></span></div>
   <div class="card" id="nomi-box" hidden style="width:100%;display:grid;gap:8px;text-align:left">
     <b style="font-family:var(--font-hand);font-size:24px;font-weight:400">Nomi della classe (al posto dei numeri)</b>
@@ -189,7 +191,7 @@ textarea { width: 100%; min-height: 150px; font: 400 21px var(--font-hand); bord
     <div id="nomi-griglia" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:6px"></div>
     <div class="row"><button class="btn primary" id="nomi-chiudi">✔ Fatto</button></div>
   </div>
-  <p class="nota">Gli studenti avanzati vanno nei gruppi esistenti. Nella pianta puoi <b>trascinare le isole e la cattedra</b> per metterle come nella tua aula (la LIM resta in alto come riferimento).</p>
+  <p class="nota">Nella pianta: <b>trascina</b> un'isola o la cattedra per spostarla come nella tua aula · <b>tocca il nome del gruppo</b> per girare l'isola · <b>tocca due posti</b> per scambiare due studenti (anche tra isole diverse, o verso un posto libero).</p>
   <div class="tabs" style="width:100%" role="tablist">
     <button class="tab" id="gr-tab-pianta" aria-selected="true">🗺️ Pianta dell'aula</button>
     <button class="tab" id="gr-tab-elenco" aria-selected="false">📋 Elenco</button>
@@ -461,33 +463,55 @@ const BANCO_W = 84, BANCO_H = 56;
 let gr = store.get("gruppi", null);
 $("gr-n").value = (gr && gr.n) || es.n;
 function parseAssenti(t) { return new Set(String(t).split(/[^0-9]+/).filter(Boolean).map(Number)); }
-function dimIsola(m) { const cols = m <= 6 ? 2 : 3, rows = Math.ceil(m / cols); return { cols, rows, w: cols * BANCO_W + 20, h: rows * BANCO_H + 44 }; }
+/* Forme dell'isola: a blocco, in fila orizzontale, in colonna (tocca il titolo per cambiarla) */
+const formeIsola = m => [...new Set(m <= 6 ? [2, m, 1] : [3, Math.ceil(m / 3)])];
+function dimIsola(m, rot) { const f = formeIsola(m), cols = f[(+rot || 0) % f.length], rows = Math.ceil(m / cols); return { cols, rows, w: Math.max(cols * BANCO_W + 20, 150), h: rows * BANCO_H + 44 }; }
+/* Compatibilità con i gruppi salvati prima: posti espliciti (null = banco libero) */
+if (gr && !gr.k) { gr.k = Math.max(...gr.gruppi.map(g => g.length)); gr.gruppi = gr.gruppi.map(g => g.concat(Array(gr.k - g.length).fill(null))); gr.rot = gr.gruppi.map(() => 0); }
+const occupati = g => g.filter(x => x !== null);
+function presenti() { const n = Math.max(2, Math.min(40, +$("gr-n").value || 24)), ass = parseAssenti($("gr-ass").value); return Array.from({ length: n }, (_, i) => i + 1).filter(x => !ass.has(x)); }
+function aggiornaHint() {
+  const p = presenti().length, ng = Math.max(1, Math.min(12, +$("gr-isole").value || 1)), k = Math.max(2, Math.min(9, +$("gr-k").value || 4)), posti = ng * k;
+  const h = $("gr-hint");
+  if (posti < p) { h.style.color = "var(--ko)"; h.textContent = `${p} presenti, ma ${ng} isole da ${k} posti fanno solo ${posti} posti: ne mancano ${p - posti}. Aggiungi isole o posti per isola.`; return false; }
+  const grandi = p % ng, piccola = Math.floor(p / ng);
+  h.style.color = ""; h.textContent = `${p} presenti → ${ng} isole da ${k} posti (${posti} in tutto): ` + (grandi ? `${grandi} gruppi da ${piccola + 1} e ${ng - grandi} da ${piccola}` : `${ng} gruppi da ${piccola}`) + (posti > p ? ` · ${posti - p} posti liberi` : "");
+  return true;
+}
+["gr-n", "gr-ass", "gr-isole", "gr-k"].forEach(id => $(id).addEventListener("input", aggiornaHint));
+$("gr-k").addEventListener("change", () => { if (+$("gr-isole").value * +$("gr-k").value < presenti().length) { $("gr-isole").value = Math.min(12, Math.ceil(presenti().length / Math.max(2, +$("gr-k").value || 4))); aggiornaHint(); } });
+if (gr) { $("gr-isole").value = gr.gruppi.length; $("gr-k").value = gr.k; }
+aggiornaHint();
 function disponiIsole() {
   const ng = gr.gruppi.length, cols = ng <= 2 ? 2 : ng <= 6 ? 3 : 4, rows = Math.ceil(ng / cols);
   const x0 = 40, y0 = 160, W = 920, H = 540;
   gr.pos = gr.gruppi.map((g, i) => {
-    const d = dimIsola(g.length), c = i % cols, r = Math.floor(i / cols);
+    const d = dimIsola(gr.k, gr.rot && gr.rot[i]), c = i % cols, r = Math.floor(i / cols);
     return { x: Math.round(x0 + (c + .5) * W / cols - d.w / 2), y: Math.round(y0 + (r + .5) * H / rows - d.h / 2) };
   });
 }
-function svgAula() {
+function tieniIsola(i) { const d = dimIsola(gr.k, gr.rot[i]), p = gr.pos[i]; p.x = Math.max(24, Math.min(976 - d.w, p.x)); p.y = Math.max(56, Math.min(696 - d.h, p.y)); }
+let grSel = null; // banco selezionato per lo scambio: [isola, posto]
+function svgAula(perImmagine) {
   const esc = t => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;");
   let h = `<rect x="0" y="0" width="1000" height="720" fill="#ffffff"/><rect x="20" y="20" width="960" height="680" fill="#fbfaf5" stroke="#1f2a44" stroke-width="5"/>
-  <rect x="370" y="24" width="260" height="20" rx="3" fill="#1f2a44"/><text x="500" y="70" font-family="Arial, sans-serif" font-size="22" font-weight="bold" text-anchor="middle" fill="#1f2a44">LIM</text>
-
-`;
+  <rect x="370" y="24" width="260" height="20" rx="3" fill="#1f2a44"/><text x="500" y="70" font-family="Arial, sans-serif" font-size="22" font-weight="bold" text-anchor="middle" fill="#1f2a44">LIM</text>`;
   const ct = (gr && gr.catt) || { x: 420, y: 84 };
   h += `<g class="cattedra" style="cursor:grab"><rect x="${ct.x}" y="${ct.y}" width="160" height="56" rx="6" fill="#c08552" stroke="#1f2a44" stroke-width="2"/><text x="${ct.x + 80}" y="${ct.y + 34}" font-family="Arial, sans-serif" font-size="18" text-anchor="middle" fill="#1f2a44">Cattedra</text></g>`;
   if (!gr) return h + `<text x="500" y="400" font-family="Arial, sans-serif" font-size="30" text-anchor="middle" fill="#5b6478">Premi «Crea gruppi» per vedere le isole</text>`;
   gr.gruppi.forEach((g, i) => {
-    const d = dimIsola(g.length), p = gr.pos[i], col = COLORI[i % COLORI.length];
+    const d = dimIsola(gr.k, gr.rot[i]), p = gr.pos[i], col = COLORI[i % COLORI.length];
     h += `<g class="isola" data-i="${i}" style="cursor:grab"><rect x="${p.x}" y="${p.y}" width="${d.w}" height="${d.h}" rx="14" fill="${col}" fill-opacity=".15" stroke="${col}" stroke-width="4"/>
-      <text x="${p.x + d.w / 2}" y="${p.y + 28}" font-family="Arial, sans-serif" font-size="22" font-weight="bold" text-anchor="middle" fill="${col}">Gruppo ${i + 1}</text>`;
+      <g class="titolo-isola" data-i="${i}" style="cursor:pointer"><rect x="${p.x + 6}" y="${p.y + 6}" width="${d.w - 12}" height="30" fill="transparent"/><text x="${p.x + d.w / 2}" y="${p.y + 28}" font-family="Arial, sans-serif" font-size="${d.w < 150 ? 18 : 22}" font-weight="bold" text-anchor="middle" fill="${col}">Gruppo ${i + 1}${perImmagine ? "" : " ↻"}</text></g>`;
+    let ruolo = 0;
     g.forEach((n, j) => {
-      const bx = p.x + 10 + (j % d.cols) * BANCO_W, by = p.y + 38 + Math.floor(j / d.cols) * BANCO_H;
-      h += `<rect x="${bx + 2}" y="${by + 2}" width="${BANCO_W - 4}" height="${BANCO_H - 4}" rx="5" fill="#f5d76e" stroke="#1f2a44" stroke-width="2"/>
-        <text x="${bx + BANCO_W / 2}" y="${by + (gr.ruoli ? 26 : 34)}" font-family="Arial, sans-serif" font-size="${(() => { const t = etichetta(n); return t.length > 9 ? 12 : t.length > 6 ? 15 : gr.ruoli ? 19 : 22; })()}" font-weight="bold" text-anchor="middle" fill="#1f2a44">${esc(etichetta(n).length > 12 ? etichetta(n).slice(0, 11) + "…" : etichetta(n))}</text>` +
-        (gr.ruoli ? `<text x="${bx + BANCO_W / 2}" y="${by + 44}" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#1f2a44">${esc(RUOLI[j % RUOLI.length].split(" ")[0])}</text>` : "");
+      const bx = p.x + (d.w - d.cols * BANCO_W) / 2 + (j % d.cols) * BANCO_W, by = p.y + 38 + Math.floor(j / d.cols) * BANCO_H;
+      const sel = grSel && grSel[0] === i && grSel[1] === j;
+      if (n === null) { h += `<g class="banco" data-i="${i}" data-j="${j}"><rect x="${bx + 2}" y="${by + 2}" width="${BANCO_W - 4}" height="${BANCO_H - 4}" rx="5" fill="#fff" stroke="${sel ? "#e07b1a" : "#8a93a6"}" stroke-width="${sel ? 5 : 2}" stroke-dasharray="6 4"/><text x="${bx + BANCO_W / 2}" y="${by + 34}" font-family="Arial, sans-serif" font-size="13" text-anchor="middle" fill="#8a93a6">libero</text></g>`; return; }
+      const t = etichetta(n), r = RUOLI[ruolo++ % RUOLI.length];
+      h += `<g class="banco" data-i="${i}" data-j="${j}"><rect x="${bx + 2}" y="${by + 2}" width="${BANCO_W - 4}" height="${BANCO_H - 4}" rx="5" fill="#f5d76e" stroke="${sel ? "#e07b1a" : "#1f2a44"}" stroke-width="${sel ? 5 : 2}"/>
+        <text x="${bx + BANCO_W / 2}" y="${by + (gr.ruoli ? 26 : 34)}" font-family="Arial, sans-serif" font-size="${t.length > 9 ? 12 : t.length > 6 ? 15 : gr.ruoli ? 19 : 22}" font-weight="bold" text-anchor="middle" fill="#1f2a44">${esc(t.length > 12 ? t.slice(0, 11) + "…" : t)}</text>` +
+        (gr.ruoli ? `<text x="${bx + BANCO_W / 2}" y="${by + 44}" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#1f2a44">${esc(r.split(" ")[0])}</text>` : "") + `</g>`;
     });
     h += `</g>`;
   });
@@ -497,49 +521,66 @@ function svgAula() {
 function disegnaGruppi() {
   $("gr-pianta").innerHTML = svgAula();
   if (!gr) { $("gr-out").innerHTML = ""; return; }
-  $("gr-out").innerHTML = gr.gruppi.map((g, i) => `<div class="gruppo" style="border-color:${COLORI[i % COLORI.length]}"><h3 style="color:${COLORI[i % COLORI.length]}">Gruppo ${i + 1}</h3><ul>${g.map((x, j) => `<li>${etichetta(x).replace(/</g, "&lt;")}${gr.ruoli ? ` <span>· ${RUOLI[j % RUOLI.length]}</span>` : ""}</li>`).join("")}</ul></div>`).join("");
+  $("gr-out").innerHTML = gr.gruppi.map((g, i) => `<div class="gruppo" style="border-color:${COLORI[i % COLORI.length]}"><h3 style="color:${COLORI[i % COLORI.length]}">Gruppo ${i + 1}</h3><ul>${occupati(g).map((x, j) => `<li>${etichetta(x).replace(/</g, "&lt;")}${gr.ruoli ? ` <span>· ${RUOLI[j % RUOLI.length]}</span>` : ""}</li>`).join("")}</ul></div>`).join("");
 }
 $("gr-go").addEventListener("click", () => {
-  const n = Math.max(2, Math.min(40, +$("gr-n").value || 24)), modo = $("gr-modo").value, q = Math.max(1, Math.min(modo === "g" ? 12 : 10, +$("gr-k").value || 4));
-  const ass = parseAssenti($("gr-ass").value);
-  const nums = Array.from({ length: n }, (_, i) => i + 1).filter(x => !ass.has(x));
-  if (nums.length < 2) { $("gr-msg").textContent = "Servono almeno 2 studenti presenti."; return; }
+  const n = Math.max(2, Math.min(40, +$("gr-n").value || 24));
+  const ng = Math.max(1, Math.min(12, +$("gr-isole").value || 1)), k = Math.max(2, Math.min(9, +$("gr-k").value || 4));
+  const nums = presenti();
+  if (nums.length < 2) { $("gr-msg").textContent = "Servono almeno 2 studenti presenti."; $("gr-msg").className = "feedback ko"; return; }
+  if (!aggiornaHint()) { $("gr-msg").textContent = "Non ci sono abbastanza posti: aumenta le isole o i posti per isola."; $("gr-msg").className = "feedback ko"; return; }
   for (let i = nums.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [nums[i], nums[j]] = [nums[j], nums[i]]; }
-  const ng = modo === "g" ? Math.min(q, nums.length) : Math.max(1, Math.floor(nums.length / Math.max(2, q)));
-  if (Math.ceil(nums.length / ng) > 9) { $("gr-msg").textContent = "Isole troppo grandi: aumenta il numero di isole (al massimo 9 banchi per isola)."; $("gr-msg").className = "feedback ko"; return; }
   const gruppi = Array.from({ length: ng }, () => []);
   nums.forEach((x, i) => gruppi[i % ng].push(x));
-  gruppi.forEach(g => g.sort((a, b) => a - b));
-  const vecchie = gr && gr.pos && gr.gruppi.length === ng ? gr.pos : null;
-  gr = { n, gruppi, ruoli: $("gr-ruoli").checked, pos: vecchie, catt: gr && gr.catt ? gr.catt : { x: 420, y: 84 } };
+  gruppi.forEach(g => { g.sort((a, b) => a - b); while (g.length < k) g.push(null); });
+  const stessa = gr && gr.pos && gr.gruppi.length === ng && gr.k === k;
+  gr = { n, k, gruppi, ruoli: $("gr-ruoli").checked, pos: stessa ? gr.pos : null, rot: stessa && gr.rot ? gr.rot : gruppi.map(() => 0), catt: gr && gr.catt ? gr.catt : { x: 420, y: 84 } };
   if (!gr.pos) disponiIsole();
-  store.set("gruppi", gr); $("gr-msg").textContent = ""; disegnaGruppi();
+  grSel = null; store.set("gruppi", gr); $("gr-msg").textContent = ""; disegnaGruppi();
 });
 $("gr-riordina").addEventListener("click", () => { if (!gr) return; disponiIsole(); store.set("gruppi", gr); disegnaGruppi(); });
-/* Trascinamento delle isole */
+/* Pianta: trascina isole e cattedra, tocca il titolo per girare, tocca due banchi per scambiarli */
 let grDrag = null;
 const svgPt = e => { const s = $("gr-pianta"), p = s.createSVGPoint(); p.x = e.clientX; p.y = e.clientY; return p.matrixTransform(s.getScreenCTM().inverse()); };
 $("gr-pianta").addEventListener("pointerdown", e => {
   if (!gr) return;
-  const c = e.target.closest(".cattedra");
-  if (c) { const p = svgPt(e); gr.catt = gr.catt || { x: 420, y: 84 }; grDrag = { catt: true, dx: p.x - gr.catt.x, dy: p.y - gr.catt.y }; $("gr-pianta").setPointerCapture(e.pointerId); return; }
+  const p = svgPt(e), c = e.target.closest(".cattedra");
+  if (c) { gr.catt = gr.catt || { x: 420, y: 84 }; grDrag = { catt: true, dx: p.x - gr.catt.x, dy: p.y - gr.catt.y, x0: e.clientX, y0: e.clientY }; $("gr-pianta").setPointerCapture(e.pointerId); return; }
   const g = e.target.closest(".isola"); if (!g) return;
-  const i = +g.dataset.i, p = svgPt(e); grDrag = { i, dx: p.x - gr.pos[i].x, dy: p.y - gr.pos[i].y };
+  const i = +g.dataset.i, b = e.target.closest(".banco"), t = e.target.closest(".titolo-isola");
+  grDrag = { i, dx: p.x - gr.pos[i].x, dy: p.y - gr.pos[i].y, x0: e.clientX, y0: e.clientY, mosso: false, banco: b ? [+b.dataset.i, +b.dataset.j] : null, titolo: !!t };
   $("gr-pianta").setPointerCapture(e.pointerId);
 });
 $("gr-pianta").addEventListener("pointermove", e => {
   if (!grDrag) return;
-  if (grDrag.catt) { const p = svgPt(e); gr.catt = { x: Math.round(Math.max(24, Math.min(816, p.x - grDrag.dx)) / 5) * 5, y: Math.round(Math.max(50, Math.min(640, p.y - grDrag.dy)) / 5) * 5 }; disegnaGruppi(); return; }
-  const p = svgPt(e), d = dimIsola(gr.gruppi[grDrag.i].length);
-  gr.pos[grDrag.i] = { x: Math.round(Math.max(24, Math.min(976 - d.w, p.x - grDrag.dx)) / 5) * 5, y: Math.round(Math.max(56, Math.min(696 - d.h, p.y - grDrag.dy)) / 5) * 5 };
+  if (!grDrag.mosso && Math.hypot(e.clientX - grDrag.x0, e.clientY - grDrag.y0) < 6) return;
+  grDrag.mosso = true;
+  const p = svgPt(e);
+  if (grDrag.catt) { gr.catt = { x: Math.round(Math.max(24, Math.min(816, p.x - grDrag.dx)) / 5) * 5, y: Math.round(Math.max(50, Math.min(640, p.y - grDrag.dy)) / 5) * 5 }; disegnaGruppi(); return; }
+  gr.pos[grDrag.i] = { x: Math.round((p.x - grDrag.dx) / 5) * 5, y: Math.round((p.y - grDrag.dy) / 5) * 5 }; tieniIsola(grDrag.i);
   disegnaGruppi();
 });
-$("gr-pianta").addEventListener("pointerup", () => { if (grDrag) { grDrag = null; store.set("gruppi", gr); } });
+$("gr-pianta").addEventListener("pointerup", () => {
+  if (!grDrag) return;
+  const d = grDrag; grDrag = null;
+  if (!d.mosso && d.titolo) {
+    const v = dimIsola(gr.k, gr.rot[d.i]), cx = gr.pos[d.i].x + v.w / 2, cy = gr.pos[d.i].y + v.h / 2;
+    gr.rot[d.i] = ((+gr.rot[d.i] || 0) + 1) % formeIsola(gr.k).length;
+    const n = dimIsola(gr.k, gr.rot[d.i]); gr.pos[d.i] = { x: Math.round(cx - n.w / 2), y: Math.round(cy - n.h / 2) }; tieniIsola(d.i); grSel = null;
+  }
+  else if (!d.mosso && d.banco) {
+    if (!grSel) grSel = d.banco;
+    else if (grSel[0] === d.banco[0] && grSel[1] === d.banco[1]) grSel = null;
+    else { const [a, b] = [grSel, d.banco], tmp = gr.gruppi[a[0]][a[1]]; gr.gruppi[a[0]][a[1]] = gr.gruppi[b[0]][b[1]]; gr.gruppi[b[0]][b[1]] = tmp; grSel = null; }
+  }
+  store.set("gruppi", gr); disegnaGruppi();
+});
+$("gr-pianta").addEventListener("pointercancel", () => { grDrag = null; });
 /* Schede pianta / elenco */
 function grTab(t) { $("gr-tab-pianta").setAttribute("aria-selected", t === "p"); $("gr-tab-elenco").setAttribute("aria-selected", t === "e"); $("gr-pianta-box").hidden = t !== "p"; $("gr-out").hidden = t !== "e"; }
 $("gr-tab-pianta").addEventListener("click", () => grTab("p")); $("gr-tab-elenco").addEventListener("click", () => grTab("e"));
 /* Salvataggio */
-function testoGruppi() { return gr.gruppi.map((g, i) => `Gruppo ${i + 1}: ` + g.map((x, j) => etichetta(x) + (gr.ruoli ? ` (${RUOLI[j % RUOLI.length]})` : "")).join(", ")).join("\n"); }
+function testoGruppi() { return gr.gruppi.map((g, i) => `Gruppo ${i + 1}: ` + occupati(g).map((x, j) => etichetta(x) + (gr.ruoli ? ` (${RUOLI[j % RUOLI.length]})` : "")).join(", ")).join("\n"); }
 $("gr-copia").addEventListener("click", async () => {
   if (!gr) return;
   try { await navigator.clipboard.writeText(testoGruppi()); $("gr-msg").textContent = "Elenco copiato: puoi incollarlo in un messaggio."; $("gr-msg").className = "feedback ok"; }
@@ -552,7 +593,7 @@ async function salvaFile(nome, blob) {
 }
 function pngDaSvg() {
   return new Promise((res, rej) => {
-    const xml = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 720" width="2000" height="1440">${svgAula()}</svg>`;
+    const sel0 = grSel; grSel = null; const xml = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 720" width="2000" height="1440">${svgAula(true)}</svg>`; grSel = sel0;
     const img = new Image();
     img.onload = () => { const c = document.createElement("canvas"); c.width = 2000; c.height = 1440; const x = c.getContext("2d"); x.fillStyle = "#fff"; x.fillRect(0, 0, 2000, 1440); x.drawImage(img, 0, 0, 2000, 1440); c.toBlob(b => b ? res({ blob: b, url: c.toDataURL("image/png") }) : rej(), "image/png"); };
     img.onerror = rej;

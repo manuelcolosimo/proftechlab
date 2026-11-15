@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>La linea del tempo dell'arte</title>
+<link rel="stylesheet" href="ptl.css">
+<style>
+:root { --accent: #0e7490; }
+.linea { position: relative; display: grid; gap: 14px; padding-left: 34px; }
+.linea::before { content: ""; position: absolute; left: 13px; top: 6px; bottom: 6px; width: 6px; border-radius: 3px; background: linear-gradient(#a16207, #7c3aed, #0e7490, #dc2626); }
+.periodo { position: relative; background: var(--label); border: 2px solid var(--ink); border-left: 10px solid var(--c); border-radius: 12px; padding: 10px 14px; cursor: pointer; text-align: left; font: inherit; color: inherit; display: grid; gap: 4px; }
+.periodo::before { content: ""; position: absolute; left: -34px; top: 16px; width: 20px; height: 20px; border-radius: 50%; background: var(--c); border: 3px solid #fff; box-shadow: 0 0 0 2px var(--ink); }
+.periodo h3 { margin: 0; font: 400 28px/1.1 var(--font-hand); }
+.periodo .quando { font: 700 16px var(--font-body); color: var(--c); }
+.periodo .dett { display: none; gap: 6px; }
+.periodo.aperto .dett { display: grid; }
+.periodo ul { margin: 0; padding-left: 1.2em; }
+.periodo .es { font-size: 16px; color: var(--muted); }
+.carte { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+.carta { position: relative; background: var(--label); border: 3px solid var(--ink); border-top: 12px solid var(--c); border-radius: 12px; padding: 12px; font: 400 23px var(--font-hand); cursor: pointer; text-align: center; min-height: 90px; }
+.carta .num { position: absolute; top: -26px; right: -10px; width: 40px; height: 40px; border-radius: 50%; background: var(--giallo); border: 2px solid var(--ink); display: grid; place-items: center; font: 700 20px var(--font-body); }
+.carta.giusta { background: #d7f2e1; } .carta.sbagliata { background: #fbe0e0; }
+.carta small { display: block; font: 600 14px var(--font-body); color: var(--muted); }
+.domanda { background: #fff; border: 3px solid var(--ink); border-radius: 14px; padding: 16px; display: grid; gap: 12px; }
+.domanda .testo { font: 400 28px/1.2 var(--font-hand); }
+.opzioni { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.opzioni button { font: 400 22px var(--font-hand); border: 3px solid var(--ink); border-radius: 12px; background: var(--label); padding: 8px; cursor: pointer; }
+.opzioni button.giusta { background: #c9f0d8; border-color: var(--ok); } .opzioni button.sbagliata { background: #f8d0d0; border-color: var(--ko); }
+</style>
+</head>
+<body>
+<header class="app-bar"><h1>La linea del tempo dell'arte</h1><span class="sub">Dalla preistoria a oggi</span></header>
+<div class="container">
+  <div class="tabs" role="tablist">
+    <button class="tab" id="t-esplora" aria-selected="true">🗺️ Esplora</button>
+    <button class="tab" id="t-ordina" aria-selected="false">🔢 Metti in ordine</button>
+    <button class="tab" id="t-stile" aria-selected="false">🕵️ Che stile è?</button>
+  </div>
+  <section id="s-esplora" style="display:grid;gap:12px"><p class="consegna">Tocca un periodo per scoprire le sue caratteristiche e le opere più famose.</p><div class="linea" id="linea"></div></section>
+  <section id="s-ordina" hidden style="display:grid;gap:12px">
+    <p class="consegna">Tocca i periodi <b>dal più antico al più recente</b>. Tocca di nuovo un periodo per togliere il numero.</p>
+    <div class="carte" id="ord-carte" style="margin-top:14px"></div>
+    <div class="row"><button class="btn primary" id="ord-ok">Controlla</button><button class="btn" id="ord-nuovo">🔀 Altri periodi</button><span class="nota" id="ord-punti"></span></div>
+    <p class="feedback" id="ord-fb"></p>
+  </section>
+  <section id="s-stile" hidden style="display:grid;gap:12px">
+    <div class="row" style="justify-content:space-between"><span class="nota" id="st-n"></span><span class="nota" id="st-punti"></span></div>
+    <div class="domanda"><span class="nota" id="st-tipo"></span><div class="testo" id="st-testo"></div><div class="opzioni" id="st-opz"></div><p class="feedback" id="st-fb"></p><button class="btn primary" id="st-avanti" hidden style="justify-self:start">Avanti ➜</button></div>
+  </section>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const mescola = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const P = [
+  { n: "Arte preistorica", q: "circa 40.000 – 3000 a.C.", c: "#a16207", car: ["Pitture nelle grotte con animali e scene di caccia", "Colori naturali: terre, carbone, ocra", "Statuette femminili (le «Veneri») e grandi monumenti di pietra"], es: ["Grotte di Lascaux, Francia (circa 17.000 anni fa)", "Grotta di Altamira, Spagna", "Venere di Willendorf, Austria", "Stonehenge, Inghilterra"] },
+  { n: "Arte egizia", q: "circa 3100 – 30 a.C.", c: "#ca8a04", car: ["Figure con testa e gambe di profilo, busto e occhio di fronte", "Le persone importanti sono disegnate più grandi", "Arte legata alla vita dopo la morte: tombe e piramidi"], es: ["Piramidi di Giza (circa 2600–2500 a.C.)", "Busto di Nefertiti (circa 1345 a.C.)", "Maschera d'oro di Tutankhamon"] },
+  { n: "Arte greca", q: "circa 800 – 31 a.C.", c: "#2563eb", car: ["Ricerca della bellezza ideale e delle proporzioni perfette", "Templi con gli ordini dorico, ionico e corinzio", "Statue che sembrano muoversi e respirare"], es: ["Partenone, Atene (447–432 a.C.)", "Discobolo di Mirone (circa 450 a.C., noto da copie romane)", "Bronzi di Riace (V secolo a.C.)"] },
+  { n: "Arte romana", q: "circa II sec. a.C. – V sec. d.C.", c: "#b91c1c", car: ["Grandi opere pubbliche: strade, acquedotti, anfiteatri", "Uso dell'arco, della volta, della cupola e del calcestruzzo", "Ritratti realistici, mosaici e affreschi"], es: ["Colosseo, Roma (inaugurato nell'80 d.C.)", "Pantheon, Roma (II secolo d.C.)", "Colonna Traiana (113 d.C.)", "Affreschi di Pompei"] },
+  { n: "Arte paleocristiana e bizantina", q: "IV – XV secolo", c: "#d4a017", car: ["Mosaici scintillanti con il fondo d'oro", "Figure frontali, solenni, poco realistiche", "Luce e materiali preziosi per rappresentare il sacro"], es: ["Mosaici di San Vitale, Ravenna (VI secolo)", "Mausoleo di Galla Placidia, Ravenna (V secolo)", "Santa Sofia, Costantinopoli (537)"] },
+  { n: "Arte romanica", q: "XI – XII secolo", c: "#78716c", car: ["Chiese con muri spessi e poche finestre", "Archi a tutto sesto (a semicerchio)", "Sculture sulle facciate che raccontano storie della Bibbia"], es: ["Duomo di Modena, con le sculture di Wiligelmo (dal 1099)", "Basilica di Sant'Ambrogio, Milano", "Piazza dei Miracoli, Pisa"] },
+  { n: "Arte gotica", q: "XII – XIV secolo", c: "#4338ca", car: ["Archi a sesto acuto: le chiese si slanciano verso l'alto", "Grandi vetrate colorate che riempiono di luce", "In pittura figure più umane ed espressive (Giotto)"], es: ["Cattedrale di Notre-Dame, Parigi (dal 1163)", "Duomo di Milano (dal 1386)", "Giotto, Cappella degli Scrovegni, Padova (1303–1305)"] },
+  { n: "Rinascimento", q: "XV – XVI secolo", c: "#059669", car: ["Prospettiva geometrica: lo spazio sembra vero", "Ritorno ai modelli greci e romani", "L'uomo al centro: anatomia e proporzioni studiate dal vero"], es: ["Brunelleschi, Cupola di Santa Maria del Fiore (1420–1436)", "Leonardo, La Gioconda (inizio XVI secolo)", "Michelangelo, David (1501–1504)", "Raffaello, La Scuola di Atene (1509–1511)", "Botticelli, Nascita di Venere (circa 1485)"] },
+  { n: "Barocco", q: "XVII secolo", c: "#7e22ce", car: ["Movimento, teatralità e meraviglia", "Forti contrasti di luce e ombra", "Linee curve e decorazioni ricchissime"], es: ["Caravaggio, Vocazione di San Matteo (1599–1600)", "Bernini, Apollo e Dafne (1622–1625)", "Bernini, Colonnato di San Pietro (1656–1667)"] },
+  { n: "Neoclassicismo", q: "circa 1750 – 1830", c: "#94a3b8", car: ["Ritorno all'arte greca e romana", "Equilibrio, calma, linee pulite", "Colori sobri e forme perfette"], es: ["Antonio Canova, Amore e Psiche (1787–1793)", "Jacques-Louis David, Il giuramento degli Orazi (1784)"] },
+  { n: "Romanticismo", q: "circa 1800 – 1850", c: "#be185d", car: ["Le emozioni e i sentimenti al centro", "Natura grandiosa e potente", "Storia, patria e libertà"], es: ["Caspar David Friedrich, Viandante sul mare di nebbia (circa 1818)", "Eugène Delacroix, La Libertà che guida il popolo (1830)", "Francesco Hayez, Il bacio (1859)"] },
+  { n: "Impressionismo", q: "circa 1860 – 1890", c: "#0ea5e9", car: ["Si dipinge all'aria aperta (en plein air)", "La luce e i suoi cambiamenti sono la vera protagonista", "Pennellate rapide e visibili, colori chiari"], es: ["Claude Monet, Impressione, levar del sole (1872)", "Pierre-Auguste Renoir, Ballo al Moulin de la Galette (1876)", "Edgar Degas, le ballerine"] },
+  { n: "Postimpressionismo", q: "circa 1885 – 1905", c: "#f59e0b", car: ["Colori forti ed espressivi", "Forme semplificate e solide", "Nuove tecniche, come il puntinismo"], es: ["Vincent van Gogh, Notte stellata (1889)", "Georges Seurat, Una domenica pomeriggio all'isola della Grande Jatte (1884–1886)", "Paul Cézanne, la montagna Sainte-Victoire"] },
+  { n: "Avanguardie del Novecento", q: "circa 1905 – 1945", c: "#dc2626", car: ["Rottura con la tradizione e con la pittura «come una foto»", "Cubismo: un oggetto visto da più punti di vista insieme; Futurismo: velocità e movimento", "Astrattismo: niente soggetti riconoscibili; Surrealismo: il mondo dei sogni"], es: ["Pablo Picasso, Les Demoiselles d'Avignon (1907)", "Umberto Boccioni, Forme uniche della continuità nello spazio (1913)", "Vasilij Kandinskij, i primi quadri astratti (circa 1910)", "Salvador Dalí, La persistenza della memoria (1931)"] },
+  { n: "Arte contemporanea", q: "dal 1945 a oggi", c: "#16a34a", car: ["Pop Art: oggetti di tutti i giorni, pubblicità e fumetti", "Nuovi materiali e tecnologie: installazioni, video, performance", "L'idea conta quanto l'opera; arte anche nelle strade"], es: ["Andy Warhol, Marilyn (1962)", "Roy Lichtenstein, quadri come vignette di fumetti", "Street art e installazioni nei musei di oggi"] }
+];
+/* ---- Esplora ---- */
+$("linea").innerHTML = P.map((p, i) => `<button class="periodo" style="--c:${p.c}" data-i="${i}" aria-expanded="false"><span class="quando">${esc(p.q)}</span><h3>${esc(p.n)}</h3><div class="dett"><ul>${p.car.map(c => `<li>${esc(c)}</li>`).join("")}</ul><span class="es"><b>Opere da conoscere:</b> ${p.es.map(esc).join(" · ")}</span></div></button>`).join("");
+$("linea").querySelectorAll(".periodo").forEach(b => b.addEventListener("click", () => { const a = b.classList.toggle("aperto"); b.setAttribute("aria-expanded", a); }));
+/* ---- Metti in ordine ---- */
+let ord = null, ordOk = 0, ordTot = 0;
+function nuovoOrdine() {
+  const scelti = mescola(P.map((_, i) => i)).slice(0, 6);
+  ord = { carte: mescola(scelti), scelta: [], fatto: false }; disegnaOrdine(); $("ord-fb").textContent = "";
+}
+function disegnaOrdine() {
+  const giusto = ord.carte.slice().sort((a, b) => a - b);
+  $("ord-carte").innerHTML = ord.carte.map(i => { const k = ord.scelta.indexOf(i), stato = ord.fatto ? (giusto.indexOf(i) === k ? " giusta" : " sbagliata") : "";
+    return `<button class="carta${stato}" style="--c:${P[i].c}" data-i="${i}">${k >= 0 ? `<span class="num">${k + 1}</span>` : ""}${esc(P[i].n)}${ord.fatto ? `<small>${esc(P[i].q)}</small>` : ""}</button>`; }).join("");
+  $("ord-carte").querySelectorAll(".carta").forEach(b => b.addEventListener("click", () => { if (ord.fatto) return; const i = +b.dataset.i, k = ord.scelta.indexOf(i); if (k >= 0) ord.scelta.splice(k, 1); else ord.scelta.push(i); disegnaOrdine(); }));
+}
+$("ord-ok").addEventListener("click", () => {
+  if (ord.fatto) return;
+  if (ord.scelta.length < ord.carte.length) { $("ord-fb").className = "feedback ko"; $("ord-fb").textContent = "Numera tutti i periodi prima di controllare."; return; }
+  ord.fatto = true; ordTot++;
+  const giusto = ord.carte.slice().sort((a, b) => a - b), ok = ord.scelta.every((x, k) => x === giusto[k]); if (ok) ordOk++;
+  $("ord-fb").className = "feedback " + (ok ? "ok" : "ko"); $("ord-fb").textContent = ok ? "✔ Ordine perfetto!" : "Qualcosa è fuori posto: le carte rosse. Sotto ogni nome ora vedi il periodo.";
+  $("ord-punti").textContent = `Sequenze giuste: ${ordOk} su ${ordTot}`; disegnaOrdine();
+});
+$("ord-nuovo").addEventListener("click", nuovoOrdine);
+/* ---- Che stile è? ---- */
+let st = null;
+function nuovaSerie() {
+  const dom = [];
+  P.forEach((p, i) => { p.es.forEach(e => dom.push({ i, tipo: "Di quale periodo è quest'opera?", t: e })); p.car.forEach(c => dom.push({ i, tipo: "Di quale periodo è questa caratteristica?", t: c })); });
+  st = { dom: mescola(dom).slice(0, 10), k: 0, ok: 0 }; domanda();
+}
+function domanda() {
+  if (st.k >= st.dom.length) { $("st-tipo").textContent = ""; $("st-testo").innerHTML = `Hai risposto bene a <b>${st.ok} domande su ${st.dom.length}</b>!`; $("st-opz").innerHTML = ""; $("st-fb").textContent = ""; $("st-avanti").hidden = false; $("st-avanti").textContent = "↺ Nuova serie"; return; }
+  const d = st.dom[st.k], vicini = mescola([d.i - 2, d.i - 1, d.i + 1, d.i + 2, d.i + 3, d.i - 3].filter(x => x >= 0 && x < P.length)).slice(0, 3), ops = mescola([d.i, ...vicini]);
+  $("st-n").textContent = `Domanda ${st.k + 1} di ${st.dom.length}`; $("st-punti").textContent = `Giuste: ${st.ok}`;
+  $("st-tipo").textContent = d.tipo; $("st-testo").textContent = d.t.replace(/^(Leonardo|Michelangelo|Raffaello|Brunelleschi|Botticelli|Giotto|Caravaggio|Bernini), /, m => m);
+  $("st-fb").textContent = ""; $("st-avanti").hidden = true; $("st-avanti").textContent = "Avanti ➜";
+  $("st-opz").innerHTML = ops.map(i => `<button data-i="${i}">${esc(P[i].n)}</button>`).join("");
+  $("st-opz").querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
+    $("st-opz").querySelectorAll("button").forEach(x => { x.disabled = true; if (+x.dataset.i === d.i) x.classList.add("giusta"); });
+    const ok = +b.dataset.i === d.i; if (ok) st.ok++; else b.classList.add("sbagliata");
+    $("st-fb").className = "feedback " + (ok ? "ok" : "ko"); $("st-fb").textContent = (ok ? "✔ Giusto! " : "✘ ") + `${P[d.i].n}: ${P[d.i].q}.`;
+    $("st-punti").textContent = `Giuste: ${st.ok}`; $("st-avanti").hidden = false;
+  }));
+}
+$("st-avanti").addEventListener("click", () => { if (st.k >= st.dom.length) nuovaSerie(); else { st.k++; domanda(); } });
+/* ---- Schede ---- */
+const TAB = ["esplora", "ordina", "stile"];
+TAB.forEach(t => $("t-" + t).addEventListener("click", () => { TAB.forEach(x => { $("t-" + x).setAttribute("aria-selected", x === t); $("s-" + x).hidden = x !== t; }); if (t === "ordina" && !ord) nuovoOrdine(); if (t === "stile" && !st) nuovaSerie(); }));
+</script>
+<script src="a11y.js"></script>
+</body>
+</html>

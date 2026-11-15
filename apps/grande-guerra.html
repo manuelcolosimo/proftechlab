@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Prima guerra mondiale 1914–1918 · Mappa interattiva</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Oswald:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f2ece0; --ink:#2a2420; --muted:#6b6258; --line:#d8cfbf; --card:#fffdf8;
+  --E:#1d4f9a; --C:#b5361b; --sea:#cfe1ea;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{font-family:"Atkinson Hyperlegible",system-ui,sans-serif;color:var(--ink);background:var(--paper);min-height:100vh}
+header{display:flex;align-items:center;gap:16px;padding:10px 18px;border-bottom:1px solid var(--line);background:#efe7d8}
+header h1{font-family:Oswald,sans-serif;font-weight:600;font-size:22px;letter-spacing:.02em;margin:0;line-height:1.1}
+header h1 span{font-weight:400;color:var(--muted)}
+header .sp{flex:1}
+button{font:inherit;cursor:pointer}
+.hbtn{border:1px solid #c9bfae;background:#fffaf0;border-radius:8px;padding:6px 12px;font-size:14px;color:var(--ink)}
+.hbtn:hover{background:#fff}
+.hbtn[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+/* Disposizione: mappa → linea del tempo → scheda dell'evento al centro */
+main{display:flex;flex-direction:column}
+main.nopanel #panel{display:none}
+#mapwrap{position:relative;height:60vh;height:60dvh;min-height:340px;overflow:hidden;background:var(--sea);border-bottom:1px solid var(--line)}
+#map{display:block;width:100%;height:100%;touch-action:none}
+#loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--muted);background:var(--sea)}
+#datebadge{position:absolute;left:14px;top:12px;background:rgba(255,253,248,.92);border:1px solid var(--line);border-radius:10px;padding:6px 12px;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+#datebadge .y{font-family:Oswald,sans-serif;font-size:30px;font-weight:600;line-height:1}
+#datebadge .l{font-size:13px;color:var(--muted)}
+#legendBox{position:absolute;left:14px;bottom:14px;background:rgba(255,253,248,.95);border:1px solid var(--line);border-radius:10px;padding:8px 11px;font-size:12.5px;max-height:calc(100% - 110px);overflow:auto;box-shadow:0 2px 10px rgba(0,0,0,.1);max-width:270px}
+#legendBox[hidden]{display:none}
+#legendBox h3{margin:0 0 6px;font-family:Oswald,sans-serif;font-weight:500;font-size:15px}
+.lg{display:flex;align-items:center;gap:8px;margin:2px 0;line-height:1.2}
+.lg svg{flex:none}
+.zoomctl{position:absolute;right:12px;top:12px;display:flex;flex-direction:column;gap:6px}
+.zoomctl button{width:38px;height:38px;border-radius:8px;border:1px solid #c9bfae;background:#fffaf0;font-size:20px;line-height:1}
+#panel{background:var(--card);padding:18px 24px 28px;width:min(900px,100%);margin:16px auto 28px;border:1px solid var(--line);border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+.tag{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#fff;border-radius:999px;padding:3px 10px}
+.count{float:right;font-size:13px;color:var(--muted);margin-top:3px}
+.when{font-family:Oswald,sans-serif;font-size:17px;color:var(--muted);margin:12px 0 2px}
+#panel h2{font-family:Oswald,sans-serif;font-weight:600;font-size:27px;line-height:1.12;margin:0 0 12px}
+#panel p.txt{font-size:17px;line-height:1.55;margin:0 0 14px}
+.box{border-radius:10px;padding:10px 12px;margin:10px 0;font-size:16px;line-height:1.45}
+.box b{display:block;font-family:Oswald,sans-serif;font-weight:500;font-size:13px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px}
+.box.r{background:#fbf1d9;border-left:5px solid #d9a521}
+.box.q{background:#e8f0f6;border-left:5px solid #2b7bb0}
+.navbtns{display:flex;gap:8px;margin-top:16px}
+.navbtns button{flex:1;padding:10px;border-radius:10px;border:1px solid #c9bfae;background:#fffaf0;font-size:16px;font-weight:700}
+.navbtns button:hover{background:#fff}
+footer{border-bottom:1px solid var(--line);background:#efe7d8;padding:8px 18px 10px;position:sticky;top:0;z-index:5}
+.frow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid #c9bfae;background:#fffaf0;border-radius:999px;padding:4px 11px;font-size:13px;display:flex;align-items:center;gap:6px}
+.chip i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.chip[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.ctl{display:flex;gap:6px;margin-left:auto}
+.ctl button{border:1px solid #c9bfae;background:#fffaf0;border-radius:8px;padding:6px 12px;font-size:15px;font-weight:700}
+.ctl button.play[aria-pressed="true"]{background:var(--C);color:#fff;border-color:var(--C)}
+#track{position:relative;height:46px;margin:8px 6px 0}
+#track .base{position:absolute;left:0;right:0;top:16px;height:4px;background:#cfc4b2;border-radius:2px}
+#track .yr{position:absolute;top:24px;margin-left:4px;font-family:Oswald,sans-serif;font-size:14px;color:var(--muted)}
+#track .yt{position:absolute;top:10px;width:1px;height:16px;background:#b3a893}
+#track .dot{position:absolute;top:9px;width:18px;height:18px;margin-left:-9px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3);cursor:pointer;padding:0;transition:transform .15s}
+#track .dot:hover{transform:scale(1.25)}
+#track .dot.dim{opacity:.22}
+#track .dot.cur{transform:scale(1.45);box-shadow:0 0 0 3px var(--ink)}
+#track .dot:focus-visible{outline:3px solid #f0b400}
+/* svg */
+.cty{transition:fill .7s, stroke .7s, opacity .6s;stroke-width:.6px;vector-effect:non-scaling-stroke;stroke-linejoin:round}
+.ovl{transition:fill .7s, stroke .7s, opacity .6s;stroke-width:.6px;vector-effect:non-scaling-stroke;stroke-linejoin:round}
+.occ,.front,.blk{transition:opacity .6s}
+.lbl{font-family:Oswald,sans-serif;font-weight:500;letter-spacing:.08em;fill:#2a2420;fill-opacity:.78;paint-order:stroke;stroke:rgba(255,253,248,.75);stroke-width:3px;stroke-linejoin:round;pointer-events:none}
+.sea{font-family:"Atkinson Hyperlegible",sans-serif;font-style:italic;fill:#4d7a92;pointer-events:none;letter-spacing:.05em}
+.city{font-size:12px;fill:#1f1a16;paint-order:stroke;stroke:#fffdf8;stroke-width:3px;stroke-linejoin:round;pointer-events:none}
+.mk{font-size:14px;font-weight:700;fill:#1f1a16;paint-order:stroke;stroke:#fffdf8;stroke-width:4px;stroke-linejoin:round;pointer-events:none}
+.alabel{font-size:13px;font-weight:700;font-style:italic;paint-order:stroke;stroke:#fffdf8;stroke-width:4px;stroke-linejoin:round;pointer-events:none}
+.arrow .ln{fill:none;stroke-linecap:round;stroke-linejoin:round}
+.anim .ln.draw{stroke-dasharray:1;stroke-dashoffset:1;animation:draw 1.2s ease-out forwards}
+.anim .hd,.anim .alabel{opacity:0;animation:fade .4s ease-out 1s forwards}
+.anim .ln.ret,.anim .halo.ret{opacity:0;animation:fade .8s ease-out .3s forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+@keyframes fade{to{opacity:1}}
+.pulse{fill:none;stroke-width:2;opacity:0;animation:pulse 1.6s ease-out 2 forwards}
+@keyframes pulse{from{r:6;opacity:.9}to{r:30;opacity:0}}
+@media (max-width:900px){
+  #mapwrap{height:52vh}
+  #panel{margin:10px auto 20px;border-radius:10px}
+  header h1{font-size:18px}
+  .ctl{margin-left:0}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>La Prima guerra mondiale <span>1914–1918 · mappa degli eventi</span></h1>
+  <div class="sp"></div>
+  <button class="hbtn" id="btnLegend" aria-pressed="true">Legenda</button>
+  <button class="hbtn" id="btnPanel" aria-pressed="true">Scheda evento</button>
+</header>
+<main id="main">
+  <section id="mapwrap">
+    <svg id="map" aria-label="Mappa dell'Europa e del Medio Oriente durante la Prima guerra mondiale"></svg>
+    <div id="loading">Caricamento della mappa…</div>
+    <div id="datebadge"><div class="y"></div><div class="l"></div></div>
+    <div class="zoomctl"><button id="zin" title="Ingrandisci">+</button><button id="zout" title="Riduci">−</button><button id="zreset" title="Torna alla vista dell'evento" style="font-size:15px">⟲</button></div>
+    <div id="legendBox"></div>
+  </section>
+  <footer>
+  <div class="frow">
+    <div class="chips" id="chips"></div>
+    <div class="ctl">
+      <button id="prev" title="Evento precedente (←)">◀</button>
+      <button id="play" class="play" aria-pressed="false" title="Riproduzione automatica (spazio)">▶ Riproduci</button>
+      <button id="next" title="Evento successivo (→)">▶</button>
+    </div>
+  </div>
+  <div id="track"></div>
+</footer>
+  <aside id="panel" aria-live="polite"></aside>
+</main>
+
+
+<script type="module">
+/* =========================================================
+   DATI STORICI
+   ========================================================= */
+const FRONTS_INFO = {
+  politica:   {n:'Politica e alleanze', c:'#5d5650'},
+  occidentale:{n:'Fronte occidentale', c:'#8c5a3c'},
+  orientale:  {n:'Fronte orientale',   c:'#4f6d94'},
+  italiano:   {n:'Fronte italiano',    c:'#2f8a64'},
+  balcanico:  {n:'Balcani',            c:'#7e5aa2'},
+  ottomano:   {n:'Fronti ottomani',    c:'#b07d2b'},
+  mare:       {n:'Guerra sul mare',    c:'#2b7bb0'}
+};
+
+// Stati del 1914: chi sta con chi, e da quando
+// E = Intesa/Alleati, C = Imperi centrali, N = neutrale, X = uscito dalla guerra
+const TL = {
+  DE:[['1900','C']], AH:[['1900','C']],
+  IT:[['1900','C'],['1914-08-02','N'],['1915-05-24','E']],
+  OT:[['1900','N'],['1914-10-29','C']],
+  BG:[['1900','N'],['1915-10-14','C']],
+  FR:[['1900','E']], UK:[['1900','E']],
+  RU:[['1900','E'],['1917-12-15','X']],
+  RS:[['1900','E']], ME:[['1900','N'],['1914-08-06','E']],
+  BE:[['1900','N'],['1914-08-04','E']],
+  RO:[['1900','N'],['1916-08-27','E'],['1918-05-07','X'],['1918-11-10','E']],
+  GR:[['1900','N'],['1917-06-30','E']],
+  PT:[['1900','N'],['1916-03-09','E']]
+};
+const COL = {
+  E:{FR:'#4a7cc9',BE:'#9cc0ec',UK:'#2d5a9a',RU:'#7fb0e0',RS:'#2f5f9f',ME:'#8fb9e8',IT:'#3fa0bf',PT:'#8cb6e6',RO:'#5a82c8',GR:'#a7c8ee'},
+  C:{DE:'#c8553d',AH:'#ee9a4d',OT:'#d9b23a',BG:'#a8452f',IT:'#f3c28e'},
+  N:{ES:'#d9d2c2',PT:'#cbc4b3',NL:'#cfc8b8',CH:'#e2dccf',DK:'#d3ccbc',NO:'#dcd5c6',SE:'#cdc6b6',LU:'#c9c2b1',AL:'#cdc6b5',
+     PE:'#d6cfbf',AR:'#e0dacd',IT:'#d2cbbb',OT:'#d8d1c1',BG:'#cfc8b8',RO:'#d6cfbf',GR:'#dcd5c6',BE:'#d3ccbc',ME:'#d9d2c2',XX:'#e6e1d6'},
+  X:'#c9bfdc'
+};
+// Paesi di oggi -> Stato del 1914 (|c = colonia o protettorato)
+const N2S = {
+ 'United Kingdom':'UK','Ireland':'UK','Isle of Man':'UK','Jersey':'UK','Guernsey':'UK','France':'FR','Monaco':'FR',
+ 'Spain':'ES','Andorra':'ES','Portugal':'PT','Belgium':'BE','Netherlands':'NL','Luxembourg':'LU','Germany':'DE',
+ 'Switzerland':'CH','Liechtenstein':'CH','Austria':'AH','Czechia':'AH','Slovakia':'AH','Hungary':'AH','Slovenia':'AH',
+ 'Croatia':'AH','Bosnia and Herz.':'AH','Italy':'IT','San Marino':'IT','Vatican':'IT','Malta':'UK|c','Serbia':'RS',
+ 'Kosovo':'RS','Macedonia':'RS','North Macedonia':'RS','Montenegro':'ME','Albania':'AL','Greece':'GR','Bulgaria':'BG',
+ 'Romania':'RO','Moldova':'RU','Ukraine':'RU','Belarus':'RU','Poland':'RU','Lithuania':'RU','Latvia':'RU','Estonia':'RU',
+ 'Finland':'RU','Åland':'RU','Russia':'RU','Georgia':'RU','Armenia':'RU','Azerbaijan':'RU','Kazakhstan':'RU',
+ 'Turkmenistan':'RU','Uzbekistan':'RU','Sweden':'SE','Norway':'NO','Denmark':'DK','Faeroe Is.':'DK','Iceland':'DK',
+ 'Turkey':'OT','Syria':'OT','Lebanon':'OT','Israel':'OT','Palestine':'OT','Jordan':'OT','Iraq':'OT',
+ 'Cyprus':'UK|c','N. Cyprus':'UK|c','Egypt':'UK|c','Kuwait':'UK|c','Libya':'IT|c','Tunisia':'FR|c','Algeria':'FR|c',
+ 'Morocco':'FR|c','W. Sahara':'ES|c','Iran':'PE','Saudi Arabia':'AR'
+};
+const EXTRA = ['Sudan','Chad','Niger','Mali','Mauritania','Eritrea','Yemen','Oman','United Arab Emirates','Qatar','Bahrain','Afghanistan','Pakistan','Ethiopia','S. Sudan','Central African Rep.','Burkina Faso','Nigeria','Cameroon'];
+
+// Correzioni dei confini 1914 rispetto a oggi (lon, lat); vengono ritagliate sulla terraferma
+const OVERLAYS = [
+ {st:'AH', p:[[18.6,50.0],[19.1,50.15],[19.25,50.3],[19.9,50.25],[20.4,50.25],[21.0,50.4],[21.75,50.68],[22.1,50.75],[22.6,50.6],[23.1,50.4],[23.6,50.4],[24.1,50.55],[24.6,50.4],[25.25,50.15],[25.75,49.85],[26.05,49.45],[26.25,49.0],[26.45,48.55],[26.65,48.25],[26.45,48.0],[26.2,47.75],[26.0,47.5],[25.65,47.3],[26.0,46.95],[26.15,46.5],[26.4,46.1],[26.3,45.8],[26.05,45.55],[25.6,45.45],[25.0,45.42],[24.3,45.45],[23.6,45.38],[23.0,45.3],[22.55,45.05],[22.45,44.72],[22.0,44.6],[21.5,44.78],[21.0,44.8],[20.5,44.83],[20.0,44.88],[19.4,44.9],[19.0,45.0],[18.5,46.0],[18.0,48.5],[18.2,49.5]]}, // Galizia, Bucovina, Transilvania, Banato
+ {st:'AH', p:[[10.52,46.53],[10.6,46.25],[10.55,46.0],[10.8,45.8],[11.05,45.73],[11.25,45.75],[11.45,45.92],[11.65,46.0],[11.85,46.1],[12.0,46.3],[12.25,46.55],[12.5,46.65],[13.1,46.6],[13.4,46.55],[13.42,46.3],[13.5,46.05],[13.38,45.9],[13.3,45.75],[13.2,45.6],[14.5,45.0],[15.0,46.0],[14.0,47.2],[12.0,47.2],[10.6,46.9]]}, // Trentino-Alto Adige, Gorizia, Trieste, Istria
+ {st:'DE', p:[[14.0,55.3],[13.8,54.0],[14.2,54.3],[16.0,54.7],[17.5,54.9],[19.0,54.8],[20.3,55.5],[21.06,55.87],[21.4,55.75],[22.0,55.5],[22.6,55.1],[22.8,54.4],[22.7,54.05],[22.0,53.55],[21.4,53.3],[20.6,53.15],[19.75,53.2],[19.3,53.0],[18.85,52.85],[18.7,52.6],[18.2,52.4],[17.85,52.25],[17.95,51.95],[18.1,51.6],[18.25,51.2],[18.65,51.0],[19.05,50.75],[19.2,50.35],[19.1,50.15],[18.6,50.0],[18.3,49.93],[17.9,50.0],[17.6,50.2],[17.0,50.35],[16.3,50.65],[15.0,50.9],[14.6,50.9],[14.4,51.4],[13.9,52.5]]}, // Prussia, Posnania, Slesia
+ {st:'DE', p:[[6.36,49.47],[5.98,49.45],[5.93,49.25],[5.95,49.05],[6.1,48.92],[6.45,48.8],[6.8,48.62],[7.12,48.5],[7.05,48.25],[6.95,48.0],[6.88,47.75],[7.03,47.6],[7.15,47.49],[7.6,47.58],[8.3,47.6],[8.5,48.5],[8.3,49.1],[7.6,49.2],[6.6,49.15]]}, // Alsazia-Lorena
+ {st:'DE', p:[[8.3,55.5],[9.0,55.47],[9.7,55.45],[10.0,55.55],[10.3,55.2],[9.6,54.8],[8.3,54.85]]}, // Schleswig del nord
+ {st:'BG', p:[[24.3,41.6],[24.6,40.92],[25.2,40.9],[25.9,40.82],[26.05,40.9],[26.6,41.6],[25.0,41.75]]}, // Tracia occidentale
+ {st:'RO', p:[[26.4,44.05],[27.0,43.85],[27.6,43.6],[28.0,43.38],[28.8,43.38],[28.8,44.4],[27.3,44.2]]}, // Dobrugia meridionale
+ {st:'RU', p:[[41.55,41.52],[41.75,41.2],[41.9,40.75],[42.2,40.45],[42.55,40.25],[43.1,40.05],[43.7,39.95],[44.3,39.65],[45.0,39.7],[45.0,41.6]]}, // Kars
+ {st:'OT', p:[[34.5,29.5],[36.5,29.4],[38.5,28.0],[39.6,26.0],[40.0,24.0],[38.0,23.0],[35.0,26.0]]} // Hegiaz
+];
+
+// Linee del fronte
+const W15 = [[2.75,51.15],[2.86,51.03],[2.95,50.85],[2.9,50.68],[2.83,50.43],[2.8,50.3],[2.7,50.0],[2.8,49.7],[3.0,49.55],[3.32,49.4],[3.78,49.43],[4.03,49.27],[4.4,49.2],[4.9,49.17],[5.25,49.27],[5.45,49.22],[5.55,49.12],[5.5,49.0],[5.54,48.89],[5.75,48.9],[6.05,48.9]];
+const VOSGES = [[6.05,48.9],[6.25,48.85],[6.6,48.62],[6.9,48.5],[7.0,48.3],[7.0,48.06],[7.15,47.86],[7.1,47.75],[7.15,47.55],[7.15,47.5]];
+const W17 = [[2.75,51.15],[2.86,51.03],[2.95,50.85],[2.9,50.68],[2.83,50.43],[2.85,50.3],[3.0,50.17],[3.15,50.05],[3.3,49.85],[3.37,49.66],[3.42,49.5],[3.78,49.43]].concat(W15.slice(11));
+const W18 = [[2.75,51.15],[2.86,51.03],[2.82,50.8],[2.7,50.72],[2.55,50.65],[2.65,50.45],[2.75,50.3],[2.62,50.1],[2.52,49.88],[2.57,49.65],[2.8,49.5],[3.05,49.3],[3.2,49.12],[3.4,49.05],[3.64,49.07],[3.92,49.2],[4.03,49.27]].concat(W15.slice(12));
+const WARM = [[3.8,51.25],[3.72,51.05],[3.6,50.8],[3.9,50.55],[3.95,50.45],[4.2,50.2],[4.6,49.95],[4.95,49.7],[5.3,49.45],[5.6,49.2],[5.85,49.0],[6.05,48.9]];
+const WCLOSE = [[5.95,49.05],[5.93,49.25],[5.98,49.45],[6.36,49.47],[6.52,49.8],[6.13,50.15],[6.4,50.35],[6.05,50.7],[5.9,50.76],[5.68,50.76],[5.75,51.2],[5.25,51.3],[4.8,51.48],[4.4,51.37],[3.9,51.21],[3.4,51.39],[3.0,51.4],[2.6,51.25]];
+const occW = f => f.concat(WCLOSE.filter(p=>p[0]>=f[0][0]-0.2));
+
+const OLD_AH_RU = [[26.65,48.25],[26.45,48.55],[26.25,49.0],[26.05,49.45],[25.75,49.85],[25.25,50.15],[24.6,50.4],[24.1,50.55],[23.6,50.4],[23.1,50.4],[22.6,50.6],[22.1,50.75],[21.75,50.68],[21.0,50.4],[20.4,50.25],[19.9,50.25],[19.25,50.3]];
+const OLD_DE_RU = [[19.2,50.35],[19.05,50.75],[18.65,51.0],[18.25,51.2],[18.1,51.6],[17.95,51.95],[17.85,52.25],[18.2,52.4],[18.7,52.6],[18.85,52.85],[19.3,53.0],[19.75,53.2],[20.6,53.15],[21.4,53.3],[22.0,53.55],[22.7,54.05],[22.8,54.4],[22.6,55.1],[22.0,55.5],[21.4,55.75],[21.06,55.87]];
+const E14 = [[21.06,55.87],[22.0,55.5],[22.6,55.1],[22.8,54.4],[22.0,53.55],[21.0,53.25],[20.4,53.1],[19.8,52.65],[20.0,52.25],[20.2,51.95],[20.3,51.4],[20.6,50.6],[20.75,50.1],[21.1,49.65],[21.7,49.4],[22.85,49.0],[23.9,48.6],[24.8,48.2],[25.9,48.05],[26.3,47.95]];
+const E15 = [[23.5,57.0],[24.1,56.85],[25.0,56.55],[25.9,56.15],[26.5,55.9],[26.8,55.3],[26.8,54.85],[26.4,54.48],[26.0,53.8],[26.0,53.13],[26.1,52.1],[25.6,51.6],[25.6,51.3],[25.5,50.8],[25.75,50.4],[25.6,50.0],[25.3,49.5],[25.4,49.0],[25.6,48.65],[26.0,48.45],[26.6,48.15]];
+const E16 = E15.slice(0,11).concat([[25.3,51.6],[25.0,51.25],[24.9,50.9],[25.0,50.4],[25.15,50.05],[24.9,49.6],[24.7,49.1],[24.7,48.9],[24.6,48.4],[24.8,47.9],[25.2,47.6]]);
+const RO17 = [[25.2,47.6],[25.6,47.0],[26.1,46.6],[26.4,46.2],[26.6,45.95],[27.23,45.88],[27.2,45.75],[27.6,45.6],[28.0,45.45],[28.8,45.25],[29.7,45.2]];
+const BL18 = [[28.2,59.45],[28.3,57.8],[28.6,56.5],[28.8,55.5],[30.2,54.5],[30.4,53.9],[31.0,52.4],[31.8,52.1],[33.5,52.3],[34.4,51.7],[35.5,51.1],[36.6,50.6],[38.0,50.1],[39.7,49.0],[39.9,47.8],[39.7,47.2]];
+const I15 = [[10.45,46.53],[10.6,46.25],[10.6,46.0],[10.82,45.85],[11.05,45.76],[11.25,45.78],[11.45,45.93],[11.65,46.0],[11.85,46.12],[12.0,46.35],[12.25,46.57],[12.5,46.62],[13.0,46.58],[13.4,46.5],[13.55,46.25],[13.62,46.0],[13.55,45.85],[13.53,45.78]];
+const I17 = [[10.45,46.53],[10.6,46.25],[10.6,46.0],[10.82,45.85],[11.05,45.76],[11.25,45.78],[11.45,45.88],[11.65,45.86],[11.8,45.87],[12.0,45.86],[12.15,45.82],[12.3,45.77],[12.47,45.72],[12.6,45.62],[12.72,45.53]];
+const SAL = [[19.45,40.5],[20.0,40.55],[20.75,41.0],[21.33,41.08],[21.9,41.1],[22.3,41.15],[22.72,41.2],[23.3,41.25],[23.75,40.9],[23.9,40.78]];
+const CAU = [[39.72,41.0],[39.5,40.2],[39.5,39.75],[40.5,39.0],[41.5,38.75],[42.1,38.4],[43.0,38.2],[44.3,37.8]];
+
+const FRONTLINES = [
+ {p:W15.concat(VOSGES.slice(1)), f:'1914-10-15', t:'1917-03-16'},
+ {p:W17.concat(VOSGES.slice(1)), f:'1917-03-16', t:'1918-04-30'},
+ {p:W18.concat(VOSGES.slice(1)), f:'1918-04-30', t:'1918-10-01'},
+ {p:WARM.concat(VOSGES.slice(1)), f:'1918-10-01', t:'1918-11-12'},
+ {p:E14, f:'1914-09-15', t:'1915-06-01'},
+ {p:E15, f:'1915-09-20', t:'1916-06-30'},
+ {p:E16, f:'1916-06-30', t:'1917-12-15'},
+ {p:RO17, f:'1916-12-06', t:'1918-05-07'},
+ {p:BL18, f:'1918-03-03', t:'1918-11-12'},
+ {p:I15, f:'1915-05-24', t:'1917-10-24'},
+ {p:I17, f:'1917-11-10', t:'1918-11-04'},
+ {p:SAL, f:'1915-12-15', t:'1918-09-29'},
+ {p:CAU, f:'1916-02-16', t:'1917-12-15'}
+];
+// Territori occupati (by = chi occupa)
+const OCC = [
+ {by:'C', f:'1914-08-25', t:'1918-11-12', c:['Luxembourg']},
+ {by:'C', f:'1914-10-15', t:'1917-03-16', p:occW(W15)},
+ {by:'C', f:'1917-03-16', t:'1918-04-30', p:occW(W17)},
+ {by:'C', f:'1918-04-30', t:'1918-10-01', p:occW(W18)},
+ {by:'C', f:'1918-10-01', t:'1918-11-12', p:occW(WARM)},
+ {by:'E', f:'1914-09-15', t:'1915-06-01', p:[[20.75,50.1],[21.1,49.65],[21.7,49.4],[22.85,49.0],[23.9,48.6],[24.8,48.2],[25.9,48.05],[26.45,48.0]].concat(OLD_AH_RU.slice(0,15))},
+ {by:'C', f:'1914-12-06', t:'1915-06-01', p:[[19.8,52.65],[20.0,52.25],[20.2,51.95],[20.3,51.4],[20.6,50.6],[20.4,50.25],[19.9,50.25]].concat(OLD_DE_RU.slice(0,10))},
+ {by:'C', f:'1915-09-20', t:'1916-06-30', p:E15.slice(0,15).concat(OLD_AH_RU.slice(6),OLD_DE_RU,[[20.8,56.5],[20.8,57.2],[22.0,57.8]])},
+ {by:'E', f:'1915-09-20', t:'1916-06-30', p:E15.slice(15).concat([[26.65,48.25]],OLD_AH_RU.slice(1,6))},
+ {by:'C', f:'1916-06-30', t:'1918-03-03', p:E16.slice(0,15).concat(OLD_AH_RU.slice(6),OLD_DE_RU,[[20.8,56.5],[20.8,57.2],[22.0,57.8]])},
+ {by:'E', f:'1916-06-30', t:'1917-08-01', p:E16.slice(15).concat([[25.3,47.55],[26.0,47.5],[26.2,47.75],[26.45,48.0],[26.65,48.25]],OLD_AH_RU.slice(1,6))},
+ {by:'C', f:'1918-03-03', t:'1918-11-12', p:BL18.concat([[39.0,46.5],[37.0,45.3],[33.0,44.0],[30.5,45.0],[29.7,45.3],[28.2,45.47],[28.1,46.5],[27.3,47.6]],OLD_AH_RU,OLD_DE_RU,[[20.8,56.5],[20.8,57.2],[22.0,57.8],[23.3,58.4],[21.5,58.6],[21.6,59.3],[23.5,59.6],[28.0,59.7]])},
+ {by:'C', f:'1915-12-01', t:'1918-10-15', c:['Serbia','Kosovo','Macedonia','North Macedonia']},
+ {by:'C', f:'1916-01-20', t:'1918-10-15', c:['Montenegro']},
+ {by:'C', f:'1916-02-01', t:'1918-10-15', p:[[19.2,42.7],[20.1,42.6],[20.6,41.9],[20.6,41.0],[19.3,40.9]]},
+ {by:'C', f:'1916-12-06', t:'1918-11-11', p:[[26.4,46.2],[26.6,45.95],[27.23,45.88],[27.2,45.75],[27.6,45.6],[28.0,45.45],[28.8,45.25],[29.8,45.2],[30.2,44.5],[28.9,43.38],[28.0,43.38],[27.6,43.6],[27.0,43.85],[26.4,44.05],[25.4,43.62],[24.5,43.7],[23.3,43.82],[22.9,44.0],[22.45,44.65],[22.55,45.05],[23.0,45.3],[23.6,45.38],[24.3,45.45],[25.0,45.42],[25.6,45.45],[26.05,45.55],[26.3,45.8]]},
+ {by:'C', f:'1917-11-10', t:'1918-11-04', p:[[11.65,45.86],[11.8,45.87],[12.0,45.86],[12.15,45.82],[12.3,45.77],[12.47,45.72],[12.6,45.62],[12.72,45.53],[13.2,45.6],[13.3,45.75],[13.38,45.9],[13.5,46.05],[13.42,46.3],[13.4,46.55],[12.5,46.65],[12.25,46.55],[12.0,46.3],[11.85,46.1],[11.65,46.0]]},
+ {by:'E', f:'1916-02-16', t:'1917-12-15', p:CAU.concat([[44.8,39.4],[44.3,39.65],[43.7,39.95],[43.1,40.05],[42.55,40.25],[42.2,40.45],[41.9,40.75],[41.75,41.2],[41.55,41.52],[40.5,41.4]])},
+ {by:'E', f:'1914-11-22', t:'1917-03-11', p:[[47.0,30.0],[48.6,29.9],[48.6,31.3],[47.5,31.6],[46.5,31.1]]},
+ {by:'E', f:'1917-03-11', t:'1918-11-12', p:[[42.8,33.6],[43.9,34.4],[45.3,34.6],[46.0,33.6],[47.6,31.6],[48.6,30.4],[48.0,29.9],[46.5,30.2],[44.5,31.8]]},
+ {by:'E', f:'1917-07-06', t:'1918-11-12', p:[[34.9,29.6],[35.6,29.4],[36.4,28.6],[37.5,27.5],[36.2,27.5],[35.0,28.2]]},
+ {by:'E', f:'1917-12-09', t:'1918-09-25', p:[[34.2,31.3],[34.75,32.08],[35.2,31.95],[35.45,31.87],[35.5,31.0],[35.0,29.5],[34.5,29.4]]},
+ {by:'E', f:'1918-09-25', t:'1918-11-12', p:[[34.2,31.3],[35.0,33.1],[35.6,33.9],[36.4,34.5],[37.2,34.0],[37.0,32.5],[36.5,30.5],[35.5,29.3],[34.5,29.4]]}
+];
+const BLOCKADE = {f:'1914-11-03', t:'1918-11-12', lines:[[[-1.3,60.3],[1.5,60.6],[4.9,60.8]],[[1.4,51.15],[1.85,50.95]]]};
+
+const STATE_LABELS = [
+ {t:'IMPERO TEDESCO',p:[11.3,51.3],s:1},{t:'FRANCIA',p:[2.4,46.9],s:1},{t:'REGNO UNITO',p:[-1.9,52.7],s:.85},
+ {t:'AUSTRIA-UNGHERIA',p:[19.6,47.5],s:1},{t:'RUSSO',p:[34,55],s:1.15,ru:true},{t:'ITALIA',p:[13.2,42.6],s:.9},
+ {t:'IMPERO OTTOMANO',p:[34.5,39.1],s:1},{t:'SPAGNA',p:[-3.8,39.8],s:.95},{t:'PORTOGALLO',p:[-8.1,39.4],s:.6,z:1.3},
+ {t:'SERBIA',p:[20.9,43.95],s:.6,z:1.2},{t:'MONTENEGRO',p:[19.25,42.75],s:.5,z:2.2},{t:'ALBANIA',p:[20.1,40.8],s:.5,z:1.8},
+ {t:'GRECIA',p:[22.0,39.3],s:.7},{t:'BULGARIA',p:[25.3,42.75],s:.7},{t:'ROMANIA',p:[25.7,44.85],s:.7},
+ {t:'BELGIO',p:[4.6,50.55],s:.55,z:1.6},{t:'OLANDA',p:[5.7,52.35],s:.55,z:1.6},{t:'SVIZZERA',p:[8.1,46.8],s:.55,z:1.6},
+ {t:'DANIMARCA',p:[9.2,56.15],s:.55,z:1.3},{t:'NORVEGIA',p:[8.6,60.7],s:.7},{t:'SVEZIA',p:[15.2,60.3],s:.7},
+ {t:'PERSIA',p:[49.0,33.5],s:.75},{t:'EGITTO (protett. britannico)',p:[29.6,28.3],s:.55},{t:'LIBIA (Italia)',p:[18.0,28.6],s:.55},
+ {t:'ALGERIA (Francia)',p:[3.0,30.0],s:.55},{t:'TUNISIA (Fr.)',p:[9.4,33.8],s:.5,z:1.5},{t:'MAROCCO',p:[-6.3,32.2],s:.55},
+ {t:'ARABIA',p:[42.5,28.5],s:.6}
+];
+const SEA_LABELS = [
+ {t:'Oceano Atlantico',p:[-9.8,45.5]},{t:'Mare del Nord',p:[3.3,55.9]},{t:'Mar Baltico',p:[19.0,56.0],z:1.2},
+ {t:'Mar Mediterraneo',p:[18.5,34.4]},{t:'Mar Nero',p:[34.3,43.3]},{t:'Mar Adriatico',p:[15.4,43.1],z:1.8},
+ {t:'Mar Egeo',p:[25.0,38.6],z:1.8},{t:'Mar Tirreno',p:[11.5,40.0],z:2}
+];
+const CITIES = [
+ {n:'Parigi',p:[2.35,48.86],r:1},{n:'Londra',p:[-0.13,51.5],r:1},{n:'Berlino',p:[13.4,52.52],r:1},{n:'Vienna',p:[16.37,48.21],r:1},
+ {n:'Roma',p:[12.5,41.9],r:1},{n:'Pietrogrado',p:[30.3,59.94],r:1},{n:'Mosca',p:[37.6,55.75],r:1},{n:'Costantinopoli',p:[28.98,41.01],r:1},
+ {n:'Belgrado',p:[20.46,44.82],r:2},{n:'Budapest',p:[19.04,47.5],r:2},{n:'Varsavia',p:[21.01,52.23],r:2},{n:'Bucarest',p:[26.1,44.43],r:2},
+ {n:'Sofia',p:[23.32,42.7],r:2},{n:'Atene',p:[23.73,37.98],r:2},{n:'Bruxelles',p:[4.35,50.85],r:2},{n:'Madrid',p:[-3.7,40.42],r:2},
+ {n:'Il Cairo',p:[31.24,30.04],r:2},{n:'Baghdad',p:[44.4,33.31],r:2},{n:'Gerusalemme',p:[35.21,31.77],r:3},{n:'Damasco',p:[36.29,33.51],r:3},
+ {n:'Trieste',p:[13.77,45.65],r:3},{n:'Trento',p:[11.12,46.07],r:3},{n:'Venezia',p:[12.33,45.44],r:3},{n:'Milano',p:[9.19,45.46],r:3},
+ {n:'Praga',p:[14.42,50.08],r:3},{n:'Kiev',p:[30.52,50.45],r:3},{n:'Riga',p:[24.1,56.95],r:3},{n:'Salonicco',p:[22.94,40.64],r:3},
+ {n:'Monaco di Baviera',p:[11.58,48.14],r:3},{n:'Amsterdam',p:[4.9,52.37],r:3},{n:'Odessa',p:[30.73,46.48],r:3}
+];
+
+const EVENTS = [
+{d:'1914-06-01', lab:'Primavera 1914', title:"L'Europa divisa in due blocchi", fr:'politica', focus:[-11,33,46,62],
+ text:"All'inizio del 1914 le grandi potenze europee sono legate da due sistemi di alleanze. Da una parte la <b>Triplice Intesa</b>: Francia, Regno Unito e Impero russo. Dall'altra la <b>Triplice Alleanza</b>: Impero tedesco, Austria-Ungheria e Italia. Da anni crescono la corsa agli armamenti, le rivalità per le colonie e i nazionalismi, soprattutto nei Balcani.",
+ rem:"Le alleanze nascono per difendersi, ma possono trasformare una crisi locale in una guerra tra tutte le potenze.",
+ q:"Osserva la mappa: quale grande potenza si trova stretta tra due nemici? Perché poteva essere un problema?"},
+{d:'1914-06-28', lab:'28 giugno 1914', title:"L'attentato di Sarajevo", fr:'balcanico', focus:[12.5,40.3,27.5,48.6],
+ text:"A Sarajevo, in Bosnia (allora parte dell'Austria-Ungheria), lo studente Gavrilo Princip uccide l'arciduca <b>Francesco Ferdinando</b>, erede al trono austro-ungarico, e sua moglie Sofia. Princip fa parte di un gruppo nazionalista che vuole unire gli slavi del sud alla Serbia. Vienna accusa il governo serbo di essere coinvolto.",
+ rem:"L'attentato è la causa scatenante (la «scintilla»), non l'unica causa della guerra.",
+ q:"Qual è la differenza tra causa scatenante e cause profonde di un evento?",
+ mk:[{p:[18.41,43.86],n:'Sarajevo',ty:'event'}]},
+{d:'1914-07-28', sd:'1914-08-05', lab:'28 luglio – 4 agosto 1914', title:'Dalla crisi alla guerra', fr:'politica', focus:[-11,35.5,43,61.5],
+ text:"Il 28 luglio l'Austria-Ungheria dichiara guerra alla Serbia. La Russia, protettrice della Serbia, mobilita l'esercito. La Germania dichiara guerra alla Russia (1° agosto) e alla Francia (3 agosto), poi invade il Belgio neutrale: il 4 agosto entra in guerra il Regno Unito. L'<b>Italia</b>, pur facendo parte della Triplice Alleanza, si dichiara <b>neutrale</b>: l'alleanza era difensiva e l'Austria non l'aveva consultata.",
+ rem:"In una sola settimana, a causa delle alleanze, una guerra locale diventa europea.",
+ q:"Ricostruisci la catena delle dichiarazioni di guerra: chi entra per primo e chi per ultimo?",
+ ar:[{s:'C',p:[[19.7,46.0],[20.2,45.35],[20.42,44.92]]}],
+ mk:[{p:[20.46,44.82],n:'Belgrado bombardata (29 luglio)',ty:'battle'}]},
+{d:'1914-08-04', sd:'1914-08-25', lab:'Agosto 1914', title:'Il piano Schlieffen: attraverso il Belgio', fr:'occidentale', focus:[-1.5,47,10.5,53],
+ text:"Per non combattere contemporaneamente su due fronti, la Germania segue il <b>piano Schlieffen</b>: sconfiggere in poche settimane la Francia passando dal Belgio, aggirare le difese francesi e poi spostare le truppe contro la Russia. La resistenza belga a Liegi e l'arrivo dei britannici a Mons rallentano l'avanzata. Intanto i francesi attaccano in Alsazia e Lorena, ma vengono respinti.",
+ rem:"I tedeschi puntavano su una guerra rapida: vincere a ovest prima che la Russia fosse pronta.",
+ q:"Perché la Germania temeva una guerra su due fronti?",
+ ar:[{s:'C',p:[[6.4,51.0],[5.6,50.7],[4.6,50.6],[3.6,50.2],[2.9,49.5]]},{s:'C',p:[[6.6,50.35],[5.4,50.05],[4.4,49.6],[3.8,49.15]]},{s:'C',p:[[6.7,49.75],[5.7,49.5],[5.0,49.05]]},
+     {s:'E',p:[[6.2,48.6],[6.7,48.75],[7.05,48.85]],t:'Lorena'},{s:'E',p:[[6.85,47.62],[7.15,47.7],[7.33,47.75]],t:'Alsazia'}],
+ mk:[{p:[5.57,50.63],n:'Liegi',ty:'battle'},{p:[3.95,50.45],n:'Mons',ty:'battle',a:'l'}]},
+{d:'1914-08-26', sd:'1914-08-30', lab:'26–30 agosto 1914', title:'Tannenberg: la Russia sconfitta in Prussia orientale', fr:'orientale', focus:[16.5,51,28,56.8],
+ text:"La Russia mobilita più in fretta del previsto e invade la Prussia orientale con due armate. I tedeschi, guidati da <b>Hindenburg</b> e <b>Ludendorff</b>, usano la ferrovia per spostare rapidamente le truppe e circondano l'armata russa del sud a Tannenberg: circa 90.000 soldati russi vengono fatti prigionieri. A settembre anche l'altra armata russa è respinta presso i Laghi Masuri.",
+ rem:"Le ferrovie permettevano di spostare interi eserciti in pochi giorni.",
+ q:"Che vantaggio dava la ferrovia a chi combatteva all'interno del proprio territorio?",
+ ar:[{s:'E',p:[[23.7,54.8],[22.7,54.6],[21.7,54.45]],t:'I armata russa'},{s:'E',p:[[20.9,52.6],[20.6,53.05],[20.35,53.4]],t:'II armata russa'},
+     {s:'C',p:[[21.2,54.35],[20.8,53.95],[20.45,53.68]]},{s:'C',p:[[19.5,53.25],[19.85,53.45]]}],
+ mk:[{p:[20.2,53.55],n:'Tannenberg',ty:'battle',a:'l'},{p:[21.8,53.9],n:'Laghi Masuri (settembre)',ty:'battle'}]},
+{d:'1914-09-03', sd:'1914-12-15', lab:'Agosto – dicembre 1914', title:'I russi conquistano la Galizia', fr:'orientale', focus:[17,47,28.5,53.6],
+ text:"Sul fronte orientale l'Austria-Ungheria subisce gravi sconfitte. I russi conquistano <b>Leopoli</b> (Lemberg) il 3 settembre e assediano la grande fortezza di <b>Przemyśl</b>, che si arrenderà nel marzo 1915. Più a nord, in Polonia, tedeschi e russi si scontrano duramente: dopo la battaglia di Łódź i tedeschi occupano la parte occidentale della Polonia russa.",
+ rem:"L'esercito austro-ungarico, in difficoltà, avrà sempre più bisogno dell'aiuto tedesco.",
+ q:"Guarda il tratteggio blu: quali territori ha perso l'Austria-Ungheria?",
+ ar:[{s:'E',p:[[25.8,50.1],[25.0,49.95],[24.25,49.86]]},{s:'E',p:[[23.6,50.95],[22.9,50.45],[22.35,50.05]]},{s:'E',p:[[26.3,48.75],[25.98,48.35]]}],
+ mk:[{p:[24.03,49.84],n:'Leopoli (3 sett.)',ty:'battle'},{p:[22.77,49.78],n:'Assedio di Przemyśl',ty:'battle',a:'b'},{p:[19.46,51.76],n:'Łódź',ty:'battle',a:'l'}]},
+{d:'1914-10-15', sd:'1914-11-20', lab:'Ottobre – novembre 1914', title:'Corsa al mare e inizio della guerra di trincea', fr:'occidentale', focus:[-0.5,46.8,9.5,51.9],
+ text:"Dopo la Marna i due eserciti cercano di aggirarsi a vicenda verso nord, fino a raggiungere il Mare del Nord («corsa al mare»). Alla fine del 1914 si forma una linea di <b>trincee</b> lunga circa 700 km, dal Belgio alla Svizzera. Per quasi quattro anni il fronte occidentale si sposterà pochissimo.",
+ rem:"Trincee, filo spinato e mitragliatrici rendono difficilissimo attaccare.",
+ q:"Perché nella guerra di trincea era più facile difendersi che attaccare?",
+ ar:[{s:'E',p:[[2.55,49.6],[2.5,50.15],[2.6,50.75]]},{s:'C',p:[[3.45,49.65],[3.25,50.2],[3.1,50.8]]}],
+ mk:[{p:[2.88,50.85],n:'Ypres (1ª battaglia)',ty:'battle'}]},
+{d:'1914-09-05', sd:'1914-09-10', lab:'5–12 settembre 1914', title:'La battaglia della Marna', fr:'occidentale', focus:[-0.5,47.3,7.5,51.2],
+ text:"I tedeschi arrivano a circa 50 km da Parigi. Francesi e britannici contrattaccano lungo il fiume <b>Marna</b>; per portare rinforzi al fronte vengono usati anche centinaia di taxi parigini. I tedeschi devono ritirarsi fino al fiume Aisne. Il piano Schlieffen è fallito: la guerra non sarà breve.",
+ rem:"La Marna segna la fine della «guerra di movimento» sul fronte occidentale.",
+ q:"Che cosa sarebbe potuto succedere se i tedeschi avessero conquistato Parigi?",
+ ar:[{s:'C',p:[[4.3,50.0],[3.5,49.5],[3.15,49.0]]},{s:'E',p:[[2.35,48.88],[2.8,49.05],[3.1,49.18]],t:'da Parigi'},{s:'E',p:[[3.8,48.45],[3.9,48.85]]},
+     {s:'C',r:1,p:[[3.45,49.1],[3.5,49.35],[3.55,49.52]],t:'ritirata tedesca'}],
+ mk:[{p:[3.25,48.95],n:'Marna',ty:'battle',a:'b'}]},
+{d:'1914-10-29', sd:'1915-02-05', lab:'29 ottobre 1914 – febbraio 1915', title:"L'Impero ottomano entra in guerra", fr:'ottomano', focus:[23.5,28,50,46.5],
+ text:"L'<b>Impero ottomano</b> si schiera con la Germania: le sue navi bombardano i porti russi del Mar Nero. Si aprono nuovi fronti: nel <b>Caucaso</b>, dove l'offensiva ottomana fallisce a Sarıkamış (dicembre 1914 – gennaio 1915); in <b>Mesopotamia</b>, dove i britannici sbarcano per proteggere il petrolio e occupano Bassora; e presso il <b>Canale di Suez</b>, attaccato senza successo nel febbraio 1915.",
+ rem:"La guerra diventa mondiale: si combatte anche in Asia, in Africa e sugli oceani.",
+ q:"Perché il Canale di Suez era così importante per il Regno Unito?",
+ ar:[{s:'E',p:[[49.7,29.3],[48.6,29.95],[47.85,30.45]]},{s:'C',p:[[41.3,39.95],[42.0,40.25],[42.48,40.32]]},{s:'C',p:[[34.6,31.0],[33.6,30.8],[32.7,30.62]]}],
+ mk:[{p:[42.57,40.33],n:'Sarıkamış',ty:'battle'},{p:[47.8,30.5],n:'Bassora',ty:'battle',a:'b'},{p:[32.55,30.6],n:'Canale di Suez',ty:'battle',a:'l'},{p:[33.0,44.7],n:'attacchi navali ottomani',ty:'naval',a:'t'}]},
+{d:'1915-04-22', lab:'22 aprile 1915', title:'Ypres: arrivano i gas', fr:'occidentale', focus:[0.8,49.6,5.4,51.6],
+ text:"Nella seconda battaglia di Ypres, in Belgio, l'esercito tedesco usa per la prima volta su larga scala un gas tossico: il <b>cloro</b>, liberato da migliaia di bombole e spinto dal vento verso le trincee nemiche. Presto entrambi gli schieramenti useranno gas sempre più pericolosi, come il fosgene e l'iprite (che prende il nome proprio da Ypres). La maschera antigas diventa parte dell'equipaggiamento di ogni soldato.",
+ rem:"Scienza e industria vengono messe al servizio della guerra: armi chimiche, aerei, mitragliatrici, carri armati.",
+ q:"Il cloro è più pesante dell'aria: perché questo lo rendeva pericoloso per chi stava in trincea?",
+ ar:[{s:'C',p:[[3.25,50.98],[3.05,50.93],[2.92,50.9]],t:'nube di cloro'}],
+ mk:[{p:[2.88,50.85],n:'Ypres',ty:'battle',a:'b'}]},
+{d:'1915-04-25', sd:'1915-08-15', lab:'Aprile 1915 – gennaio 1916', title:'Gallipoli: l’attacco ai Dardanelli', fr:'ottomano', focus:[22.5,38.3,31,42.4],
+ text:"Britannici e francesi vogliono conquistare lo stretto dei <b>Dardanelli</b> per arrivare a Costantinopoli e aprire una via di rifornimento verso la Russia. Dopo il fallimento dell'attacco navale (marzo 1915), il 25 aprile sbarcano sulla penisola di <b>Gallipoli</b>, insieme a soldati australiani e neozelandesi (ANZAC). Gli ottomani, guidati tra gli altri da Mustafa Kemal (il futuro Atatürk), resistono. A gennaio 1916 gli Alleati si ritirano dopo enormi perdite da entrambe le parti.",
+ rem:"Ancora oggi Australia e Nuova Zelanda ricordano i caduti di Gallipoli il 25 aprile (Anzac Day).",
+ q:"Perché controllare uno stretto di mare può essere decisivo in una guerra?",
+ ar:[{s:'E',p:[[25.4,39.75],[25.9,39.95],[26.3,40.08]],t:'attacco navale (marzo)'},{s:'E',p:[[25.3,40.4],[25.8,40.3],[26.25,40.24]]},{s:'E',p:[[25.5,39.55],[26.15,40.02]]},
+     {s:'E',r:1,p:[[26.1,40.15],[25.7,40.05],[25.3,39.98]],t:'evacuazione (genn. 1916)'}],
+ mk:[{p:[26.28,40.24],n:'Anzac Cove',ty:'battle',a:'t'},{p:[26.18,40.05],n:'Capo Helles',ty:'battle',a:'b'}]},
+{d:'1915-05-02', sd:'1915-09-30', lab:'Maggio – settembre 1915', title:'Gorlice-Tarnów e la «grande ritirata» russa', fr:'orientale', focus:[15.5,47,31,58],
+ text:"Tedeschi e austro-ungarici sfondano il fronte russo tra <b>Gorlice e Tarnów</b>. È l'inizio della «grande ritirata» russa: in pochi mesi la Russia perde la Galizia, la Polonia (Varsavia cade il 5 agosto), la Lituania e parte della Lettonia. Milioni di soldati russi vengono uccisi, feriti o fatti prigionieri e moltissimi civili fuggono verso est.",
+ rem:"Nel 1915 il fronte orientale si sposta di centinaia di chilometri, al contrario di quello occidentale.",
+ q:"Confronta i due fronti: perché a est la guerra era molto più «di movimento» che a ovest?",
+ ar:[{s:'C',p:[[21.05,49.72],[22.3,49.8],[23.3,49.84],[23.95,49.85]],t:'Gorlice → Leopoli'},{s:'C',p:[[20.3,53.0],[20.95,52.32]]},{s:'C',p:[[20.15,52.0],[20.9,52.2]]},
+     {s:'C',p:[[22.8,54.7],[24.0,55.6],[25.3,56.4]]},{s:'C',p:[[22.7,51.2],[23.6,52.05],[25.0,52.6]]},
+     {s:'E',r:1,p:[[24.8,52.7],[27.0,53.3],[29.6,53.9]],t:'ritirata russa e profughi'}],
+ mk:[{p:[21.1,49.66],n:'Gorlice',ty:'battle',a:'b'},{p:[21.01,52.23],n:'Varsavia (5 ago.)',ty:'battle',a:'l'},{p:[23.7,52.1],n:'Brest-Litovsk',ty:'battle',a:'b'}]},
+{d:'1915-05-07', lab:'7 maggio 1915', title:'Il Lusitania e la guerra sottomarina', fr:'mare', focus:[-13,47.5,7,59.5],
+ text:"Il transatlantico britannico <b>Lusitania</b> viene silurato da un sottomarino tedesco (U-Boot) al largo dell'Irlanda: muoiono quasi 1.200 persone, tra cui 128 cittadini statunitensi. La Germania usa i sottomarini per colpire le navi dirette in Gran Bretagna, che a sua volta blocca con la flotta i rifornimenti verso la Germania (linea tratteggiata blu). L'affondamento indigna l'opinione pubblica americana.",
+ rem:"Il controllo dei mari serve a far arrivare, o a bloccare, cibo, materie prime e armi.",
+ q:"Perché la guerra sottomarina poteva spingere gli Stati Uniti a entrare in guerra?",
+ mk:[{p:[-8.55,51.25],n:'Lusitania affondato',ty:'naval',a:'b'},{p:[-7.9,50.6],n:'',ty:'sub'}]},
+{d:'1915-05-24', sd:'1915-07-15', lab:'24 maggio 1915', title:"L'Italia entra in guerra", fr:'italiano', focus:[6,40.3,18.8,48],
+ text:"Dopo mesi di scontro tra neutralisti e interventisti, l'Italia firma in segreto il <b>Patto di Londra</b> (26 aprile 1915): in caso di vittoria otterrà Trentino, Alto Adige, Trieste, l'Istria e parte della Dalmazia. Il <b>24 maggio 1915</b> dichiara guerra all'Austria-Ungheria. Il fronte corre sulle Alpi e lungo il fiume <b>Isonzo</b>, dove il generale Cadorna lancerà undici offensive con pochi guadagni e moltissimi caduti.",
+ rem:"L'Italia cambia schieramento: dalla Triplice Alleanza passa con l'Intesa.",
+ q:"Quali territori voleva ottenere l'Italia? Trovali sulla mappa.",
+ ar:[{s:'E',p:[[12.4,45.85],[13.0,45.95],[13.5,46.0]],t:"verso l'Isonzo"}],
+ mk:[{p:[13.62,46.05],n:"Battaglie dell'Isonzo",ty:'battle'},{p:[13.6,45.83],n:'Carso',ty:'battle',a:'b'}]},
+{d:'1915-10-07', sd:'1916-01-25', lab:'Ottobre 1915 – gennaio 1916', title:'La Bulgaria in guerra, la Serbia invasa', fr:'balcanico', focus:[13,38.5,29.5,47],
+ text:"Nell'ottobre 1915 la <b>Bulgaria</b> entra in guerra con gli Imperi centrali. Attaccata da nord da tedeschi e austro-ungarici e da est dai bulgari, la <b>Serbia</b> viene occupata. L'esercito serbo, insieme a molti civili, si ritira in pieno inverno attraverso le montagne dell'Albania; i sopravvissuti vengono portati dalle navi alleate, anche italiane, sull'isola di Corfù. Intanto francesi e britannici sbarcano a <b>Salonicco</b>, in Grecia, aprendo un nuovo fronte.",
+ rem:"Chi fugge dalla guerra diventa profugo: la Grande guerra colpisce anche milioni di civili.",
+ q:"Seguendo le frecce tratteggiate, descrivi il percorso della ritirata serba.",
+ ar:[{s:'C',p:[[19.8,45.45],[20.4,44.85],[20.9,43.8]]},{s:'C',p:[[23.3,43.2],[22.3,43.25],[21.65,43.0]],t:'Bulgaria'},{s:'C',p:[[23.1,42.0],[22.25,41.7]]},
+     {s:'E',r:1,p:[[21.2,42.9],[20.4,42.5],[19.6,41.95],[19.45,41.32]],t:'ritirata serba'},{s:'E',r:1,p:[[19.35,41.2],[19.3,40.5],[19.85,39.65]],t:'verso Corfù'},
+     {s:'E',p:[[24.6,39.5],[23.7,40.15],[23.0,40.58]],t:'sbarco a Salonicco'}],
+ mk:[{p:[20.46,44.82],n:'Belgrado (ott. 1915)',ty:'battle'},{p:[19.92,39.62],n:'Corfù',ty:'event',a:'l'}]},
+{d:'1916-02-21', sd:'1916-03-01', lab:'21 febbraio – 18 dicembre 1916', title:'Verdun', fr:'occidentale', focus:[2.5,47.8,8,50.6],
+ text:"La Germania attacca <b>Verdun</b>, città-fortezza simbolo per la Francia, con l'obiettivo di logorare l'esercito francese. La battaglia dura dieci mesi; i francesi resistono anche grazie alla «Voie Sacrée», la strada da cui passavano ogni giorno migliaia di camion con uomini e rifornimenti. Alla fine il fronte torna quasi dov'era all'inizio: i morti, tra francesi e tedeschi, sono circa 300.000.",
+ rem:"Verdun è il simbolo della «guerra di logoramento».",
+ q:"Che cosa significa «logorare» il nemico? Questa strategia funzionò?",
+ ar:[{s:'C',p:[[5.7,49.5],[5.5,49.3],[5.4,49.2]]},{s:'E',p:[[5.16,48.77],[5.28,48.98],[5.36,49.1]],t:'Voie Sacrée'}],
+ mk:[{p:[5.38,49.16],n:'Verdun',ty:'battle'}]},
+{d:'1916-05-15', sd:'1916-08-10', lab:'Maggio – agosto 1916', title:'La Strafexpedition e la presa di Gorizia', fr:'italiano', focus:[9.8,44.9,15.2,47.1],
+ text:"Nel maggio 1916 l'Austria-Ungheria lancia dal Trentino la <b>Strafexpedition</b> («spedizione punitiva») contro l'Italia, considerata traditrice dell'alleanza. L'attacco sugli Altipiani di Asiago viene fermato. Ad agosto, nella sesta battaglia dell'Isonzo, l'esercito italiano conquista <b>Gorizia</b>: è uno dei pochi successi dopo mesi di combattimenti sul Carso.",
+ rem:"Sul fronte italiano si combatte in montagna: freddo, valanghe e rifornimenti difficilissimi.",
+ q:"Quali difficoltà in più comporta combattere in alta montagna?",
+ ar:[{s:'C',p:[[11.15,46.1],[11.35,45.92],[11.5,45.82]],t:'Strafexpedition'},{s:'E',p:[[13.35,45.95],[13.58,45.94]]}],
+ mk:[{p:[11.5,45.87],n:'Asiago',ty:'battle',a:'l'},{p:[13.62,45.94],n:'Gorizia (9 ago.)',ty:'battle'}]},
+{d:'1916-05-31', sd:'1916-06-01', lab:'31 maggio – 1 giugno 1916', title:'Jutland: la grande battaglia navale', fr:'mare', focus:[-6,50,16,62],
+ text:"Nel Mare del Nord, al largo della penisola dello <b>Jutland</b> (Danimarca), si scontrano la flotta britannica e quella tedesca: è la più grande battaglia navale della guerra, con circa 250 navi. I britannici perdono più navi e marinai, ma dopo lo scontro la flotta tedesca resta quasi sempre nei porti. Il blocco navale britannico continua e in Germania cominciano a mancare cibo e materie prime.",
+ rem:"Una battaglia si può «vincere» sul campo e perdere dal punto di vista strategico.",
+ q:"Chi ha vinto davvero a Jutland? Motiva la risposta.",
+ ar:[{s:'E',p:[[-3.0,58.85],[1.5,58.1],[5.3,57.0]],t:'flotta britannica'},{s:'C',p:[[8.1,53.7],[7.6,55.3],[6.4,56.55]],t:'flotta tedesca'}],
+ mk:[{p:[5.9,56.8],n:'Jutland',ty:'naval',a:'t'},{p:[-3.1,58.9],n:'Scapa Flow',ty:'event',a:'l'},{p:[8.12,53.52],n:'Wilhelmshaven',ty:'event',a:'b'}]},
+{d:'1916-06-04', sd:'1916-09-20', lab:'Giugno – settembre 1916', title:"L'offensiva Brusilov", fr:'orientale', focus:[19.5,46.4,30.5,53.3],
+ text:"Il generale russo <b>Brusilov</b> attacca l'Austria-Ungheria su un fronte molto ampio, con attacchi a sorpresa in molti punti contemporaneamente. È una delle offensive di maggior successo della guerra: i russi avanzano in Volinia e in Bucovina e catturano centinaia di migliaia di prigionieri. Ma le perdite russe sono enormi e l'Austria-Ungheria si salva solo grazie all'aiuto tedesco.",
+ rem:"Dopo questa offensiva l'esercito russo è esausto: la crisi della Russia si avvicina.",
+ q:"Perché attaccare in molti punti contemporaneamente può mettere in difficoltà il nemico?",
+ ar:[{s:'E',p:[[26.3,50.7],[25.6,50.75],[25.1,50.85]],t:'Luck'},{s:'E',p:[[26.6,48.6],[26.0,48.3],[25.4,48.0]],t:'Bucovina'},{s:'E',p:[[25.85,49.45],[25.1,49.2]]}],
+ mk:[{p:[25.33,50.75],n:'Luck',ty:'battle',a:'t'},{p:[25.94,48.29],n:'Černivci',ty:'battle',a:'b'}]},
+{d:'1916-07-01', lab:'1 luglio – 18 novembre 1916', title:'La battaglia della Somme', fr:'occidentale', focus:[0.2,48.9,5.4,51.1],
+ text:"Britannici e francesi attaccano sul fiume <b>Somme</b>, anche per alleggerire la pressione su Verdun. Il primo giorno l'esercito britannico subisce circa 57.000 perdite (tra morti, feriti e dispersi), di cui quasi 20.000 morti: il giorno più tragico della sua storia. Il 15 settembre compaiono per la prima volta i <b>carri armati</b>. Dopo quasi cinque mesi gli Alleati hanno avanzato di una decina di chilometri.",
+ rem:"I carri armati nascono per superare trincee, crateri e filo spinato.",
+ q:"Quali problemi tecnici doveva risolvere un carro armato per attraversare la «terra di nessuno»?",
+ ar:[{s:'E',p:[[2.45,49.93],[2.65,49.98],[2.88,50.02]]}],
+ mk:[{p:[2.7,49.95],n:'Somme',ty:'battle',a:'b'},{p:[2.85,50.08],n:'Flers: primi carri armati',ty:'event'}]},
+{d:'1916-08-27', sd:'1917-01-15', lab:'Agosto – dicembre 1916', title:'La Romania entra in guerra e viene sconfitta', fr:'balcanico', focus:[19.5,42.5,31,49],
+ text:"Incoraggiata dai successi di Brusilov, la <b>Romania</b> entra in guerra con l'Intesa e invade la Transilvania, abitata da molti romeni ma appartenente all'Ungheria. La controffensiva di tedeschi, austro-ungarici, bulgari e ottomani è rapidissima: il 6 dicembre 1916 cade <b>Bucarest</b>. Il governo romeno si rifugia in Moldavia, a nord-est. La Germania si impadronisce del grano e del petrolio romeni.",
+ rem:"In una guerra lunga, le risorse (cibo, petrolio, carbone) sono decisive.",
+ q:"Perché il petrolio era diventato così importante nella guerra moderna?",
+ ar:[{s:'E',p:[[25.6,45.45],[25.0,46.0],[24.45,46.4]],t:'in Transilvania'},{s:'E',p:[[26.45,46.15],[25.85,46.5]]},
+     {s:'C',p:[[23.0,45.6],[24.2,45.2],[25.5,44.8],[25.95,44.52]]},{s:'C',p:[[25.4,43.62],[25.85,44.15],[26.02,44.38]],t:'dal Danubio'},{s:'C',p:[[27.8,43.6],[28.3,44.2],[28.4,44.9]],t:'Dobrugia'}],
+ mk:[{p:[26.1,44.43],n:'Bucarest (6 dic.)',ty:'battle',a:'b'}]},
+{d:'1917-03-15', sd:'1917-03-16', lab:'Marzo 1917', title:'Russia: cade lo zar', fr:'orientale', focus:[14,41.5,46,62],
+ text:"In Russia la guerra ha portato fame, prezzi altissimi e milioni di morti. A <b>Pietrogrado</b> scoppiano scioperi e rivolte, e i soldati si uniscono ai manifestanti: è la <b>Rivoluzione di febbraio</b> (secondo il calendario russo dell'epoca; per noi è marzo). Lo zar Nicola II abdica e nasce un governo provvisorio, che però decide di continuare la guerra. Intanto, a ovest, i tedeschi si ritirano su una linea fortificata più corta e più facile da difendere: la linea Hindenburg.",
+ rem:"La guerra mette in crisi anche il «fronte interno»: fame e scontento possono far cadere un governo.",
+ q:"Perché si parla di «Rivoluzione di febbraio» se per il nostro calendario avvenne a marzo?",
+ mk:[{p:[30.3,59.94],n:'Pietrogrado: rivoluzione',ty:'event',a:'l'}]},
+{d:'1917-04-06', lab:'6 aprile 1917', title:'Gli Stati Uniti entrano in guerra', fr:'mare', focus:[-13,42.5,16,59.5],
+ text:"Dal febbraio 1917 la Germania riprende la guerra sottomarina «illimitata»: gli U-Boot attaccano senza preavviso anche le navi dei paesi neutrali. Viene inoltre scoperto il <b>telegramma Zimmermann</b>, con cui la Germania proponeva al Messico un'alleanza contro gli Stati Uniti. Il 6 aprile 1917 gli <b>USA</b> dichiarano guerra alla Germania. Le truppe americane arriveranno in Francia soprattutto nel 1918: oltre due milioni di soldati entro la fine della guerra.",
+ rem:"Gli USA portano all'Intesa soldati, navi, denaro e la loro enorme industria.",
+ q:"Quali sono le due ragioni principali dell'intervento americano?",
+ ar:[{s:'E',p:[[-12.5,46.6],[-8.0,47.5],[-4.7,48.33]],t:'truppe USA'}],
+ mk:[{p:[-4.49,48.39],n:'Brest: sbarco degli americani',ty:'event',a:'b'},{p:[-9.5,50.6],n:'',ty:'sub'},{p:[-6.3,48.7],n:'',ty:'sub'},{p:[-10.5,54.0],n:'',ty:'sub'},{p:[-3.0,49.9],n:'',ty:'sub'},{p:[1.5,57.5],n:'',ty:'sub'}]},
+{d:'1917-03-11', sd:'1917-12-10', lab:'1917', title:'Medio Oriente: Baghdad, Aqaba, Gerusalemme', fr:'ottomano', focus:[28.5,27.5,49.8,38.5],
+ text:"In Mesopotamia i britannici, dopo la dura sconfitta di Kut (aprile 1916), conquistano <b>Baghdad</b> l'11 marzo 1917. In Arabia, dal 1916, le tribù arabe guidate dallo sceriffo della Mecca Hussein si ribellano agli ottomani, con l'aiuto dell'ufficiale britannico T. E. Lawrence («Lawrence d'Arabia»): nel luglio 1917 conquistano il porto di <b>Aqaba</b>. Da sud avanza l'esercito britannico del generale Allenby: <b>Gerusalemme</b> si arrende il 9 dicembre 1917.",
+ rem:"Le promesse fatte agli arabi e gli accordi segreti tra Regno Unito e Francia (Sykes-Picot, 1916) pesano ancora oggi sulla storia del Medio Oriente.",
+ q:"Perché i britannici sostenevano la rivolta araba?",
+ ar:[{s:'E',p:[[47.8,30.6],[46.6,31.4],[45.8,32.4],[44.6,33.2]],t:'Bassora → Baghdad'},{s:'E',p:[[32.4,30.8],[33.8,31.1],[34.5,31.45],[35.1,31.75]],t:'Allenby'},
+     {s:'E',p:[[37.4,27.5],[36.3,28.4],[35.1,29.45]],t:'rivolta araba'}],
+ mk:[{p:[45.82,32.5],n:'Kut',ty:'battle'},{p:[44.4,33.31],n:'Baghdad (11 mar.)',ty:'battle',a:'t'},{p:[35.0,29.53],n:'Aqaba (6 lug.)',ty:'battle',a:'l'},
+     {p:[34.6,31.35],n:'Gaza e Beersheba',ty:'battle',a:'l'},{p:[35.21,31.77],n:'Gerusalemme (9 dic.)',ty:'event'}]},
+{d:'1917-10-24', sd:'1917-11-12', lab:'24 ottobre – 12 novembre 1917', title:'Caporetto', fr:'italiano', focus:[10.3,44.9,14.9,47],
+ text:"Il 24 ottobre 1917 austro-ungarici e tedeschi sfondano il fronte italiano a <b>Caporetto</b> (oggi Kobarid, in Slovenia), con nuove tattiche: bombardamenti brevi anche con i gas e piccoli reparti d'assalto che si infiltrano nelle valli. L'esercito italiano si ritira in disordine; quasi 300.000 soldati vengono fatti prigionieri e centinaia di migliaia di civili fuggono. Il nuovo fronte si ferma sul fiume <b>Piave</b> e sul <b>Monte Grappa</b>. Cadorna viene sostituito dal generale Diaz.",
+ rem:"«Caporetto» è diventato in italiano sinonimo di sconfitta disastrosa.",
+ q:"Perché un grande fiume come il Piave poteva essere una buona linea di difesa?",
+ ar:[{s:'C',p:[[13.58,46.25],[13.25,46.12],[12.8,45.97],[12.38,45.86]]},{s:'C',p:[[13.55,45.98],[13.1,45.85],[12.62,45.73]]}],
+ mk:[{p:[13.58,46.25],n:'Caporetto',ty:'battle'},{p:[11.8,45.87],n:'Monte Grappa',ty:'battle',a:'l'},{p:[12.45,45.72],n:'Piave',ty:'battle',a:'b'}]},
+{d:'1917-11-07', sd:'1918-03-04', lab:'Novembre 1917 – marzo 1918', title:'La Russia esce dalla guerra', fr:'orientale', focus:[14,41.5,46,62],
+ text:"Con la <b>Rivoluzione d'ottobre</b> (7 novembre 1917 per il nostro calendario) i bolscevichi di Lenin prendono il potere: avevano promesso «pace, terra e pane». A dicembre firmano un armistizio e il 3 marzo 1918 la <b>pace di Brest-Litovsk</b>: la Russia rinuncia a Polonia, Paesi baltici, Finlandia e Ucraina, che passano sotto il controllo tedesco o diventano indipendenti. La Germania può spostare molte divisioni sul fronte occidentale.",
+ rem:"Finito il fronte orientale, la Germania tenta l'ultima grande offensiva a ovest.",
+ q:"Perché i bolscevichi accettarono di cedere così tanti territori pur di avere la pace?",
+ mk:[{p:[30.3,59.94],n:"Rivoluzione d'ottobre",ty:'event',a:'l'},{p:[23.7,52.1],n:'Pace di Brest-Litovsk',ty:'sign',a:'b'}]},
+{d:'1918-03-21', sd:'1918-07-15', lab:'Marzo – luglio 1918', title:'Le offensive di primavera tedesche', fr:'occidentale', focus:[-0.5,47.8,7.3,51.6],
+ text:"Prima che arrivino in massa gli americani, la Germania lancia una serie di grandi offensive, usando le truppe arrivate dal fronte russo e reparti d'assalto. I tedeschi avanzano di decine di chilometri, come non succedeva dal 1914, e arrivano di nuovo sulla <b>Marna</b>, a meno di 100 km da Parigi. Ma non riescono a sfondare e perdono moltissimi soldati esperti. A luglio, nella seconda battaglia della Marna, gli Alleati contrattaccano.",
+ rem:"È l'ultima occasione della Germania per vincere la guerra.",
+ q:"Perché la Germania aveva tanta fretta di attaccare nella primavera del 1918?",
+ ar:[{s:'C',p:[[3.35,49.85],[2.95,49.82],[2.58,49.85]],t:'operazione Michael'},{s:'C',p:[[3.05,50.65],[2.72,50.66]]},{s:'C',p:[[3.6,49.45],[3.5,49.22],[3.45,49.1]]},
+     {s:'E',p:[[2.85,49.22],[3.25,49.28]],t:'contrattacco (18 luglio)'}],
+ mk:[{p:[3.6,49.06],n:'2ª battaglia della Marna',ty:'battle',a:'b'}]},
+{d:'1918-06-15', sd:'1918-06-22', lab:'15–22 giugno 1918', title:'La battaglia del Solstizio sul Piave', fr:'italiano', focus:[10.5,44.9,14.3,46.7],
+ text:"L'Austria-Ungheria tenta l'ultima grande offensiva contro l'Italia, attaccando sul <b>Piave</b>, sul Montello e sul Monte Grappa. Gli austro-ungarici riescono ad attraversare il fiume in alcuni punti, ma l'esercito italiano, riorganizzato dopo Caporetto, li respinge. Il fallimento dell'offensiva mostra che l'esercito asburgico è ormai allo stremo.",
+ rem:"Dopo il Solstizio l'iniziativa passa all'esercito italiano.",
+ q:"Perché questa battaglia è chiamata «del Solstizio»?",
+ ar:[{s:'C',p:[[12.35,45.88],[12.18,45.82]]},{s:'C',p:[[12.62,45.74],[12.45,45.66]]},{s:'E',p:[[12.0,45.75],[12.2,45.8]],t:'contrattacco italiano'}],
+ mk:[{p:[12.15,45.82],n:'Montello',ty:'battle',a:'t'},{p:[12.5,45.68],n:'Piave',ty:'battle',a:'b'},{p:[11.8,45.87],n:'Monte Grappa',ty:'battle',a:'l'}]},
+{d:'1918-08-08', sd:'1918-11-10', lab:'8 agosto – novembre 1918', title:"L'offensiva dei Cento giorni", fr:'occidentale', focus:[-0.5,47.8,7.8,51.8],
+ text:"L'8 agosto, ad <b>Amiens</b>, britannici, francesi, canadesi e australiani attaccano con centinaia di carri armati e aerei: il generale tedesco Ludendorff la chiamerà «la giornata nera dell'esercito tedesco». Da quel momento gli Alleati, con l'aiuto di oltre un milione di soldati americani, avanzano continuamente e superano la linea Hindenburg. Alla fine di settembre i comandanti tedeschi ammettono che la guerra è perduta.",
+ rem:"Carri armati, aerei, artiglieria e fanteria coordinati insieme: nasce la guerra moderna.",
+ q:"Quali novità tecnologiche vedi nelle battaglie del 1918 rispetto a quelle del 1914?",
+ ar:[{s:'E',p:[[2.5,49.86],[3.2,49.95],[3.8,50.2]]},{s:'E',p:[[2.8,50.6],[3.3,50.7],[3.75,50.9]]},{s:'E',p:[[5.05,49.15],[5.1,49.45],[5.0,49.68]],t:'americani'},{s:'E',p:[[5.55,48.88],[5.85,48.98]]}],
+ mk:[{p:[2.45,49.88],n:'Amiens (8 ago.)',ty:'battle',a:'l'},{p:[5.0,49.25],n:'Mosa-Argonne',ty:'battle',a:'l'},{p:[5.6,48.9],n:'Saint-Mihiel',ty:'battle',a:'b'}]},
+{d:'1918-09-15', sd:'1918-10-31', lab:'Settembre – ottobre 1918', title:'Crollano gli alleati della Germania', fr:'balcanico', focus:[13,29,44,47],
+ text:"Dal fronte di Salonicco gli Alleati sfondano le linee bulgare: la <b>Bulgaria</b> firma l'armistizio il 29 settembre. In Palestina il generale Allenby vince a Megiddo e il 1° ottobre arabi e britannici entrano a <b>Damasco</b>. Il 30 ottobre anche l'<b>Impero ottomano</b> firma l'armistizio, a Mudros. L'Austria-Ungheria intanto si sta disgregando: cechi, slovacchi, polacchi e slavi del sud proclamano la propria indipendenza.",
+ rem:"Uno dopo l'altro, gli Imperi centrali chiedono la pace.",
+ q:"Perché la resa della Bulgaria fu un colpo gravissimo per Germania e Austria-Ungheria?",
+ ar:[{s:'E',p:[[21.9,41.15],[21.8,41.8],[22.0,42.6]],t:'sfondamento'},{s:'E',p:[[34.9,32.4],[35.5,32.8],[36.25,33.45]],t:'verso Damasco'}],
+ mk:[{p:[23.32,42.7],n:'Armistizio bulgaro (29 set.)',ty:'sign'},{p:[35.18,32.58],n:'Megiddo',ty:'battle',a:'l'},{p:[25.25,39.85],n:'Armistizio di Mudros (30 ott.)',ty:'sign',a:'l'},{p:[36.29,33.51],n:'Damasco (1 ott.)',ty:'event'}]},
+{d:'1918-10-24', sd:'1918-11-04', lab:'24 ottobre – 4 novembre 1918', title:'Vittorio Veneto: la fine della guerra in Italia', fr:'italiano', focus:[9.8,44.8,15.4,47.1],
+ text:"Esattamente un anno dopo Caporetto, l'esercito italiano attacca sul Monte Grappa e sul Piave. Dopo giorni di duri combattimenti, il 30 ottobre conquista <b>Vittorio Veneto</b> e l'esercito austro-ungarico, ormai in dissoluzione, si ritira. Il 3 novembre le truppe italiane entrano a <b>Trento</b> e a <b>Trieste</b>, e a <b>Villa Giusti</b>, vicino a Padova, viene firmato l'armistizio, in vigore dal 4 novembre 1918.",
+ rem:"Il 4 novembre in Italia è la Giornata dell'Unità nazionale e delle Forze armate.",
+ q:"Perché l'Italia ricorda proprio il 4 novembre?",
+ ar:[{s:'E',p:[[12.1,45.8],[12.3,46.0],[12.35,46.3]]},{s:'E',p:[[11.8,45.92],[11.4,46.05],[11.18,46.07]],t:'verso Trento'},{s:'E',p:[[12.5,45.42],[13.2,45.5],[13.7,45.62]],t:'Trieste (3 nov.)'}],
+ mk:[{p:[12.3,45.99],n:'Vittorio Veneto (30 ott.)',ty:'battle'},{p:[11.82,45.37],n:'Villa Giusti (3 nov.)',ty:'sign',a:'b'}]},
+{d:'1918-11-11', lab:'11 novembre 1918', title:"L'armistizio di Compiègne", fr:'politica', focus:[-7,41,32,59],
+ text:"In Germania scoppiano rivolte e scioperi; il 9 novembre l'imperatore Guglielmo II abdica e nasce una repubblica. L'<b>11 novembre 1918</b>, alle 5 del mattino, in un vagone ferroviario nella foresta di <b>Compiègne</b>, i delegati tedeschi firmano l'armistizio: alle 11 le armi tacciono su tutto il fronte occidentale. La guerra è costata la vita a circa 10 milioni di soldati e a milioni di civili.",
+ rem:"L'11 novembre è ancora oggi, in molti paesi, il giorno del ricordo dei caduti.",
+ q:"Perché la data e l'ora dell'armistizio («l'undicesima ora dell'undicesimo giorno dell'undicesimo mese») sono diventate un simbolo?",
+ mk:[{p:[2.83,49.42],n:'Compiègne (11 nov.)',ty:'sign',a:'l'},{p:[13.4,52.52],n:'Berlino: nasce la repubblica (9 nov.)',ty:'event'}]},
+{d:'1919-06-28', sd:'1918-11-12', lab:'1919–1920', title:'Dopo la guerra: la fine di quattro imperi', fr:'politica', focus:[-11,32,47,62], final:true,
+ text:"Alla Conferenza di pace di Parigi i vincitori ridisegnano la carta d'Europa. Con il <b>Trattato di Versailles</b> (28 giugno 1919) la Germania perde territori e colonie, deve ridurre l'esercito e pagare enormi riparazioni di guerra. Scompaiono <b>quattro imperi</b> (evidenziati sulla mappa): tedesco, austro-ungarico, russo e ottomano. Nascono nuovi Stati come Polonia, Cecoslovacchia, Jugoslavia, Austria, Ungheria, Finlandia e i Paesi baltici. L'Italia ottiene Trentino, Alto Adige, Trieste e l'Istria, ma non la Dalmazia: molti parlano di «vittoria mutilata».",
+ rem:"Molti problemi lasciati aperti dalla pace porteranno, vent'anni dopo, alla Seconda guerra mondiale.",
+ q:"Confronta questa mappa (confini del 1914) con un atlante di oggi: quali Stati non esistevano?",
+ mk:[{p:[2.13,48.8],n:'Versailles (28 giu. 1919)',ty:'sign',a:'l'}]}
+];
+EVENTS.sort((a,b)=>a.d.localeCompare(b.d));
+
+/* =========================================================
+   UTILITÀ
+   ========================================================= */
+const NS='http://www.w3.org/2000/svg';
+const $=s=>document.querySelector(s);
+function el(tag,attrs,parent){const e=document.createElementNS(NS,tag);if(attrs)for(const k in attrs)e.setAttribute(k,attrs[k]);if(parent)parent.appendChild(e);return e;}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function statusOf(st,date){const tl=TL[st];if(!tl)return 'N';let s=tl[0][1];for(const [d,v] of tl){if(date>=d)s=v;}return s;}
+function lighten(hex,a){const n=parseInt(hex.slice(1),16);let r=n>>16,g=n>>8&255,b=n&255;r=Math.round(r+(255-r)*a);g=Math.round(g+(255-g)*a);b=Math.round(b+(255-b)*a);return '#'+((1<<24)|(r<<16)|(g<<8)|b).toString(16).slice(1);}
+function fillFor(key,date){const [st,col]=key.split('|');const s=statusOf(st,date);let c;
+  if(s==='X')c=COL.X;else if(s==='E')c=COL.E[st]||'#7fa6d8';else if(s==='C')c=COL.C[st]||'#e0905a';else c=COL.N[st]||COL.N.XX;
+  return col?lighten(c,.55):c;}
+const active=(o,date)=>date>=o.f&&date<o.t;
+const MONTHS=['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
+
+/* =========================================================
+   MAPPA
+   ========================================================= */
+const svg=$('#map');
+let proj, CW=1000, CH=700, view={x:0,y:0,k:1}, k0=1, cur=0, animId=null, currentState=null, userZoom=false;
+const REGION=[-12,27.5,50.5,62.3];
+function bboxSamples(b){const pts=[];for(let i=0;i<=8;i++){const t=i/8;pts.push([b[0]+(b[2]-b[0])*t,b[1]],[b[0]+(b[2]-b[0])*t,b[3]],[b[0],b[1]+(b[3]-b[1])*t],[b[2],b[1]+(b[3]-b[1])*t]);}return pts;}
+const P=ll=>proj(ll);
+function polyD(pts,close=true){let d='';pts.forEach((ll,i)=>{const p=P(ll);d+=(i?'L':'M')+p[0].toFixed(2)+','+p[1].toFixed(2);});return d+(close?'Z':'');}
+
+let PULSE=false;
+let gBase,gCountries,gOverlays,gOcc,gFronts,gBlk,gOver,gArrows,countryEls=[],ovlEls=[],occEls=[],frontEls=[],blkEls=[],cPathByName={};
+
+async function main(){
+  let d3,topo,world;
+  try{
+    [d3,topo,world]=await Promise.all([
+      import('https://cdn.jsdelivr.net/npm/d3-geo@3.1.1/+esm'),
+      import('https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/+esm'),
+      import('https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-50m.json/+esm').then(m=>m.default)
+    ]);
+  }catch(e){
+    $('#loading').innerHTML='<div style="max-width:420px;text-align:center;padding:20px">Non è stato possibile scaricare la cartina.<br>Controlla la connessione a internet e ricarica la pagina.<br><small>Le schede degli eventi funzionano comunque qui sotto.</small></div>';
+    buildUI(); show(0,true); return;
+  }
+  proj=d3.geoConicConformal().parallels([38,58]).rotate([-19,0]);
+  proj.fitWidth(CW,{type:'MultiPoint',coordinates:bboxSamples(REGION)});
+  const pathGen=d3.geoPath(proj);
+  const bb=pathGen.bounds({type:'MultiPoint',coordinates:bboxSamples(REGION)});
+  CH=bb[1][1]-bb[0][1];
+  proj.translate([proj.translate()[0]-bb[0][0],proj.translate()[1]-bb[0][1]]);
+
+  const defs=el('defs',null,svg);
+  const land=topo.feature(world,world.objects.land);
+  const landD=pathGen(land);
+  const cp=el('clipPath',{id:'landclip'},defs);el('path',{d:landD},cp);
+  for(const [id,col,bg] of [['hatchC','#9e2f16','rgba(181,54,27,.12)'],['hatchE','#163f80','rgba(29,79,154,.12)']]){
+    const pt=el('pattern',{id,patternUnits:'userSpaceOnUse',width:6,height:6,patternTransform:'rotate(45)'},defs);
+    el('rect',{width:6,height:6,fill:bg},pt);el('line',{x1:1.5,y1:0,x2:1.5,y2:6,stroke:col,'stroke-width':1.6,'stroke-opacity':.8},pt);
+  }
+  const glow=el('filter',{id:'glow',x:'-20%',y:'-20%',width:'140%',height:'140%'},defs);
+  el('feGaussianBlur',{stdDeviation:2.5,result:'b'},glow);const fm=el('feMerge',null,glow);el('feMergeNode',{in:'b'},fm);el('feMergeNode',{in:'SourceGraphic'},fm);
+
+  gBase=el('g',{id:'base'},svg);
+  gCountries=el('g',null,gBase);
+  const feats=topo.feature(world,world.objects.countries).features.filter(f=>N2S[f.properties.name]||EXTRA.includes(f.properties.name));
+  for(const f of feats){
+    const key=N2S[f.properties.name]||'XX';const d=pathGen(f);if(!d)continue;
+    cPathByName[f.properties.name]=d;
+    const e=el('path',{d,class:'cty'},gCountries);e.dataset.key=key;countryEls.push(e);
+  }
+  gOverlays=el('g',{'clip-path':'url(#landclip)'},gBase);
+  for(const o of OVERLAYS){const e=el('path',{d:polyD(o.p),class:'ovl'},gOverlays);e.dataset.key=o.st;ovlEls.push(e);}
+  // confini attuali solo come traccia leggerissima? No: confini del 1914 = cambi di colore.
+  gOcc=el('g',{'clip-path':'url(#landclip)'},gBase);
+  for(const o of OCC){
+    const d=o.c?o.c.map(n=>cPathByName[n]||'').join(''):polyD(o.p);
+    const e=el('path',{d,class:'occ',fill:`url(#hatch${o.by})`,opacity:0},gOcc);occEls.push({o,e});
+  }
+  el('path',{d:landD,fill:'none',stroke:'#7d7468','stroke-width':0.8,'vector-effect':'non-scaling-stroke','stroke-opacity':.7},gBase);
+  gBlk=el('g',null,gBase);
+  for(const ln of BLOCKADE.lines){const e=el('path',{d:polyD(ln,false),class:'blk',fill:'none',stroke:'#1d4f9a','stroke-width':3,'stroke-dasharray':'2 6','stroke-linecap':'round','vector-effect':'non-scaling-stroke',opacity:0},gBlk);blkEls.push(e);}
+  gFronts=el('g',null,gBase);
+  for(const fr of FRONTLINES){
+    const g=el('g',{class:'front',opacity:0},gFronts);
+    const d=polyD(fr.p,false);
+    el('path',{d,fill:'none',stroke:'#2b1a10','stroke-width':5,'stroke-linejoin':'round','stroke-linecap':'round','vector-effect':'non-scaling-stroke'},g);
+    el('path',{d,fill:'none',stroke:'#f6e7c4','stroke-width':1.6,'stroke-dasharray':'5 5','vector-effect':'non-scaling-stroke'},g);
+    frontEls.push({fr,g});
+  }
+  gOver=el('g',{id:'over'},svg);
+  gArrows=el('g',{id:'arrows'},svg);
+  $('#loading').remove();
+  buildUI();
+  new ResizeObserver(()=>{ if(!currentState)return; if(!userZoom) view=fitView(EVENTS[cur].focus); applyView(); drawArrows(false); }).observe($('#mapwrap'));
+  enablePanZoom();
+  show(0,true);
+}
+
+function size(){const r=svg.getBoundingClientRect();return [Math.max(r.width,50),Math.max(r.height,50)];}
+function fitView(b){
+  const [W,H]=size();let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+  for(const ll of bboxSamples(b)){const p=P(ll);x0=Math.min(x0,p[0]);y0=Math.min(y0,p[1]);x1=Math.max(x1,p[0]);y1=Math.max(y1,p[1]);}
+  const padL=W>700?20:10,pad=24;
+  const k=Math.min((W-pad*2)/(x1-x0),(H-pad*2)/(y1-y0));
+  return {k,x:W/2-k*(x0+x1)/2+padL/2,y:H/2-k*(y0+y1)/2};
+}
+function baseK(){return fitView(REGION).k;}
+function applyView(){
+  gBase.setAttribute('transform',`translate(${view.x},${view.y}) scale(${view.k})`);
+  k0=baseK();const z=view.k/k0;
+  for(const id of ['hatchC','hatchE']){const pt=document.getElementById(id);if(pt)pt.setAttribute('patternTransform',`rotate(45) scale(${(1/view.k*1.25).toFixed(4)})`);}
+  drawOverlay(z);
+}
+const S=ll=>{const p=P(ll);return [p[0]*view.k+view.x,p[1]*view.k+view.y];};
+
+function drawOverlay(z){
+  const ev=EVENTS[cur],date=ev.sd||ev.d;let h='';
+  const [W,H]=size();const inV=p=>p[0]>-80&&p[0]<W+80&&p[1]>-40&&p[1]<H+40;
+  // mari
+  for(const s of SEA_LABELS){if(s.z&&z<s.z)continue;const p=S(s.p);if(!inV(p))continue;
+    h+=`<text class="sea" x="${p[0]}" y="${p[1]}" text-anchor="middle" font-size="${Math.min(18,11+z*1.6).toFixed(1)}">${esc(s.t)}</text>`;}
+  // stati
+  for(const s of STATE_LABELS){if(s.z&&z<s.z)continue;const p=S(s.p);if(!inV(p))continue;
+    let t=s.t;if(s.ru){const st=statusOf('RU',date);t=date>='1917-11-07'?'RUSSIA BOLSCEVICA':'IMPERO RUSSO';}
+    const fs=Math.max(9,Math.min(26,(11+5*Math.sqrt(z))*s.s));
+    h+=`<text class="lbl" x="${p[0]}" y="${p[1]}" text-anchor="middle" font-size="${fs.toFixed(1)}">${esc(t)}</text>`;}
+  // città
+  const mkNames=new Set((ev.mk||[]).map(m=>m.p.join()));
+  for(const c of CITIES){const need=c.r===1?0:c.r===2?1.7:3.2;if(z<need)continue;if(mkNames.has(c.p.join()))continue;const p=S(c.p);if(!inV(p))continue;
+    h+=`<circle cx="${p[0]}" cy="${p[1]}" r="3.2" fill="#1f1a16" stroke="#fffdf8" stroke-width="1.5"/><text class="city" x="${p[0]+6}" y="${p[1]+4}">${esc(c.n)}</text>`;}
+  // indicatori dell'evento
+  for(const m of (ev.mk||[])){const p=S(m.p);h+=markerSVG(m,p);}
+  gOver.innerHTML=h;
+}
+function star(cx,cy,R,r,n=8){let d='';for(let i=0;i<n*2;i++){const a=Math.PI*i/n-Math.PI/2,rr=i%2?r:R;d+=(i?'L':'M')+(cx+Math.cos(a)*rr).toFixed(1)+','+(cy+Math.sin(a)*rr).toFixed(1);}return d+'Z';}
+function markerSVG(m,p){
+  const [x,y]=p;let s='';
+  if(m.ty==='battle')s=(PULSE?`<circle class="pulse" cx="${x}" cy="${y}" r="6" stroke="#c0281a"/>`:'')+`<path d="${star(x,y,11,4.5)}" fill="#d42a17" stroke="#fff" stroke-width="1.6"/>`;
+  else if(m.ty==='naval')s=(PULSE?`<circle class="pulse" cx="${x}" cy="${y}" r="6" stroke="#1d4f9a"/>`:'')+`<circle cx="${x}" cy="${y}" r="8" fill="#1d4f9a" stroke="#fff" stroke-width="2"/><path d="M${x-4},${y+1}q2,3 4,0q2,3 4,0" fill="none" stroke="#fff" stroke-width="1.6"/>`;
+  else if(m.ty==='sign')s=(PULSE?`<circle class="pulse" cx="${x}" cy="${y}" r="6" stroke="#9a7a10"/>`:'')+`<rect x="${x-7}" y="${y-7}" width="14" height="14" rx="3" fill="#d6a91e" stroke="#fff" stroke-width="2"/><path d="M${x-3.5},${y}l2.5,2.5l4.5,-5" fill="none" stroke="#fff" stroke-width="2"/>`;
+  else if(m.ty==='sub')s=`<g transform="translate(${x},${y})"><ellipse rx="11" ry="3.6" fill="#3a3a3a" stroke="#fff" stroke-width="1.2"/><rect x="-2" y="-7.5" width="5" height="5" fill="#3a3a3a" stroke="#fff" stroke-width="1"/></g>`;
+  else s=(PULSE?`<circle class="pulse" cx="${x}" cy="${y}" r="6" stroke="#222"/>`:'')+`<circle cx="${x}" cy="${y}" r="7.5" fill="#fff" stroke="#222" stroke-width="2.5"/><circle cx="${x}" cy="${y}" r="3" fill="#222"/>`;
+  if(m.n){const a=m.a||'r';let tx=x+14,ty=y+5,anc='start';
+    if(a==='l'){tx=x-14;anc='end';}else if(a==='t'){tx=x;ty=y-15;anc='middle';}else if(a==='b'){tx=x;ty=y+26;anc='middle';}
+    s+=`<text class="mk" x="${tx}" y="${ty}" text-anchor="${anc}">${esc(m.n)}</text>`;}
+  return s;
+}
+function smooth(pts){
+  let d=`M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`;
+  if(pts.length===2)return d+`L${pts[1][0].toFixed(1)},${pts[1][1].toFixed(1)}`;
+  for(let i=0;i<pts.length-1;i++){const p0=pts[i-1]||pts[i],p1=pts[i],p2=pts[i+1],p3=pts[i+2]||p2;
+    const c1=[p1[0]+(p2[0]-p0[0])/6,p1[1]+(p2[1]-p0[1])/6],c2=[p2[0]-(p3[0]-p1[0])/6,p2[1]-(p3[1]-p1[1])/6];
+    d+=`C${c1[0].toFixed(1)},${c1[1].toFixed(1)} ${c2[0].toFixed(1)},${c2[1].toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`;}
+  return d;
+}
+function drawArrows(animate){
+  const ev=EVENTS[cur];let h='';
+  const z=view.k/k0, w=Math.max(3.5,Math.min(7,3+z*0.7)), hl=w*3.4;
+  for(const a of (ev.ar||[])){
+    let pts=a.p.map(S);
+    const n=pts.length,end=pts[n-1],prev=pts[n-2];
+    let dx=end[0]-prev[0],dy=end[1]-prev[1];const L=Math.hypot(dx,dy)||1;dx/=L;dy/=L;
+    const segLen=pts.reduce((s,p,i)=>i?s+Math.hypot(p[0]-pts[i-1][0],p[1]-pts[i-1][1]):0,0);
+    if(segLen<hl*1.6)continue;
+    pts=pts.slice();pts[n-1]=[end[0]-dx*hl*.75,end[1]-dy*hl*.75];
+    const col=a.s==='E'?'#1d4f9a':'#b5361b',d=smooth(pts);
+    const bx=end[0]-dx*hl,by=end[1]-dy*hl,px=-dy*hl*.62,py=dx*hl*.62;
+    const ret=a.r?' ret':'';
+    h+=`<g class="arrow">`+
+      `<path class="ln halo ${a.r?'ret':'draw'}" d="${d}" pathLength="1" stroke="#fffdf8" stroke-opacity=".85" stroke-width="${w+4}" fill="none" stroke-linecap="round"/>`+
+      `<path class="ln ${a.r?'ret':'draw'}" d="${d}" pathLength="1" stroke="${col}" stroke-width="${w}" ${a.r?'stroke-dasharray="0.035 0.025"':''}/>`+
+      `<path class="hd" d="M${end[0].toFixed(1)},${end[1].toFixed(1)}L${(bx+px).toFixed(1)},${(by+py).toFixed(1)}L${(bx-px).toFixed(1)},${(by-py).toFixed(1)}Z" fill="${col}" stroke="#fffdf8" stroke-width="1.5"/>`;
+    if(a.t){const mid=a.p[Math.floor((a.p.length-1)/2)],mp=S(mid),mp2=S(a.p[Math.min(a.p.length-1,Math.floor((a.p.length-1)/2)+1)]);
+      const lx=(mp[0]+mp2[0])/2+(-dy)*16,ly=(mp[1]+mp2[1])/2+dx*16;
+      h+=`<text class="alabel" x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" fill="${col}">${esc(a.t)}</text>`;}
+    h+=`</g>`;
+  }
+  gArrows.setAttribute('class',animate?'anim':'');
+  gArrows.innerHTML=h;
+}
+
+function applyState(ev){
+  const date=ev.sd||ev.d;currentState=date;
+  const fin=!!ev.final,EMP=new Set(['DE','AH','RU','OT']);
+  const st=k=>k.split('|')[0];
+  for(const e of countryEls){e.style.fill=e.style.stroke=fillFor(e.dataset.key,date);e.style.opacity=fin&&!EMP.has(st(e.dataset.key))?.35:1;
+    e.setAttribute('filter',fin&&EMP.has(st(e.dataset.key))?'url(#glow)':'');}
+  for(const e of ovlEls){e.style.fill=e.style.stroke=fillFor(e.dataset.key,date);e.style.opacity=fin&&!EMP.has(e.dataset.key)?.35:1;}
+  for(const {o,e} of occEls)e.setAttribute('opacity',active(o,date)?1:0);
+  for(const {fr,g} of frontEls)g.setAttribute('opacity',active(fr,date)?1:0);
+  for(const e of blkEls)e.setAttribute('opacity',active(BLOCKADE,date)?.9:0);
+  const y=$('#datebadge .y'),l=$('#datebadge .l');y.textContent=ev.d.slice(0,4);l.textContent=ev.lab;
+}
+
+/* ---- animazione zoom ---- */
+function animateTo(target,dur=950){
+  cancelAnimationFrame(animId);gArrows.innerHTML='';
+  const [W,H]=size(),a={...view},b=target;
+  const ca=[(W/2-a.x)/a.k,(H/2-a.y)/a.k],cb=[(W/2-b.x)/b.k,(H/2-b.y)/b.k];
+  const t0=performance.now(),ease=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+  const step=now=>{let t=Math.min(1,(now-t0)/dur),e=ease(t);
+    const k=Math.exp(Math.log(a.k)*(1-e)+Math.log(b.k)*e),cx=ca[0]+(cb[0]-ca[0])*e,cy=ca[1]+(cb[1]-ca[1])*e;
+    view={k,x:W/2-cx*k,y:H/2-cy*k};applyView();
+    if(t<1)animId=requestAnimationFrame(step);else{PULSE=true;applyView();PULSE=false;drawArrows(true);}};
+  animId=requestAnimationFrame(step);
+}
+
+/* ---- pan e zoom manuale ---- */
+function enablePanZoom(){
+  let drag=null;
+  svg.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY,vx:view.x,vy:view.y};svg.setPointerCapture(e.pointerId);});
+  svg.addEventListener('pointermove',e=>{if(!drag)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(Math.abs(dx)+Math.abs(dy)<3)return;
+    userZoom=true;view={...view,x:drag.vx+dx,y:drag.vy+dy};applyView();drawArrows(false);});
+  const end=()=>{drag=null;};svg.addEventListener('pointerup',end);svg.addEventListener('pointercancel',end);
+  svg.addEventListener('wheel',e=>{e.preventDefault();const r=svg.getBoundingClientRect();zoomAt(e.clientX-r.left,e.clientY-r.top,Math.exp(-e.deltaY*0.0015));},{passive:false});
+  const zc=f=>{const [W,H]=size();zoomAt(W/2,H/2,f);};
+  $('#zin').onclick=()=>zc(1.4);$('#zout').onclick=()=>zc(1/1.4);
+  $('#zreset').onclick=()=>{userZoom=false;animateTo(fitView(EVENTS[cur].focus),600);};
+}
+function zoomAt(px,py,f){const k=Math.max(baseK()*0.6,Math.min(baseK()*14,view.k*f));const r=k/view.k;
+  userZoom=true;view={k,x:px-(px-view.x)*r,y:py-(py-view.y)*r};applyView();drawArrows(false);}
+
+/* =========================================================
+   INTERFACCIA
+   ========================================================= */
+let filter=null,playTimer=null;
+function visibleIdx(){return EVENTS.map((e,i)=>i).filter(i=>!filter||EVENTS[i].fr===filter);}
+function buildUI(){
+  // filtri
+  const chips=$('#chips');
+  const mk=(key,label,color)=>{const b=document.createElement('button');b.className='chip';b.setAttribute('aria-pressed',key===filter?'true':'false');
+    b.innerHTML=(color?`<i style="background:${color}"></i>`:'')+esc(label);b.onclick=()=>{filter=key;chips.querySelectorAll('.chip').forEach(c=>c.setAttribute('aria-pressed','false'));b.setAttribute('aria-pressed','true');
+      updateDots();const v=visibleIdx();if(!v.includes(cur))show(v[0]);};chips.appendChild(b);};
+  mk(null,'Tutti gli eventi');for(const k in FRONTS_INFO)mk(k,FRONTS_INFO[k].n,FRONTS_INFO[k].c);
+  // linea del tempo
+  const tr=$('#track');tr.innerHTML='<div class="base"></div>';
+  const n=EVENTS.length,pos=i=>1.2+i*(97.6/(n-1));
+  let lastY='';EVENTS.forEach((ev,i)=>{const y=ev.d.slice(0,4);if(y!==lastY){const x=i?(pos(i)+pos(i-1))/2:0;
+    tr.insertAdjacentHTML('beforeend',`${i?`<div class="yt" style="left:${x}%"></div>`:''}<div class="yr" style="left:${i?x:0}%;${i?'':'transform:none'}">${y}</div>`);lastY=y;}});
+  EVENTS.forEach((ev,i)=>{const x=pos(i);
+    const b=document.createElement('button');b.className='dot';b.style.left=x+'%';b.style.background=FRONTS_INFO[ev.fr].c;
+    b.title=ev.lab+' – '+ev.title;b.setAttribute('aria-label',b.title);b.onclick=()=>{stopPlay();show(i);};b.dataset.i=i;tr.appendChild(b);});
+  $('#prev').onclick=()=>{stopPlay();step(-1);};$('#next').onclick=()=>{stopPlay();step(1);};
+  $('#play').onclick=()=>playTimer?stopPlay():startPlay();
+  document.addEventListener('keydown',e=>{if(e.target.closest&&e.target.closest('input,textarea'))return;
+    if(e.key==='ArrowRight'){stopPlay();step(1);}else if(e.key==='ArrowLeft'){stopPlay();step(-1);}else if(e.key===' '){e.preventDefault();playTimer?stopPlay():startPlay();}});
+  $('#btnLegend').onclick=e=>{const lb=$('#legendBox');if(!lb)return;lb.hidden=!lb.hidden;e.currentTarget.setAttribute('aria-pressed',String(!lb.hidden));};
+  $('#btnPanel').onclick=e=>{const m=$('#main');m.classList.toggle('nopanel');e.currentTarget.setAttribute('aria-pressed',String(!m.classList.contains('nopanel')));};
+  buildLegend();
+  if(window.innerHeight<950||window.innerWidth<900){$('#legendBox').hidden=true;$('#btnLegend').setAttribute('aria-pressed','false');}
+}
+function buildLegend(){
+  const sw=(inner)=>`<svg width="34" height="18" viewBox="0 0 34 18">${inner}</svg>`;
+  const it=(s,t)=>`<div class="lg">${s}<span>${t}</span></div>`;
+  $('#legendBox').innerHTML='<h3>Legenda</h3>'+
+    it(sw('<rect x="1" y="2" width="32" height="14" rx="3" fill="#4a7cc9"/>'),'Intesa e alleati (sfumature = Stati diversi)')+
+    it(sw('<rect x="1" y="2" width="32" height="14" rx="3" fill="#c8553d"/><rect x="17" y="2" width="16" height="14" rx="3" fill="#ee9a4d"/>'),'Imperi centrali')+
+    it(sw('<rect x="1" y="2" width="32" height="14" rx="3" fill="#d6cfbf"/>'),'Paesi neutrali')+
+    it(sw('<rect x="1" y="2" width="32" height="14" rx="3" fill="#c9bfdc"/>'),'Uscito dalla guerra')+
+    it(sw('<rect x="1" y="2" width="32" height="14" rx="3" fill="#eee" /><g stroke="#9e2f16" stroke-width="1.8">'+[...Array(7)].map((_,i)=>`<line x1="${i*5}" y1="18" x2="${i*5+8}" y2="0"/>`).join('')+'</g>'),'Territorio occupato (colore di chi occupa)')+
+    it(sw('<path d="M2 9 L32 9" stroke="#2b1a10" stroke-width="5"/><path d="M2 9 L32 9" stroke="#f6e7c4" stroke-width="1.6" stroke-dasharray="5 5"/>'),'Linea del fronte')+
+    it(sw('<path d="M2 9 L24 9" stroke="#b5361b" stroke-width="4"/><path d="M33 9 L22 3 L22 15Z" fill="#b5361b"/>'),'Attacco degli Imperi centrali')+
+    it(sw('<path d="M2 9 L24 9" stroke="#1d4f9a" stroke-width="4"/><path d="M33 9 L22 3 L22 15Z" fill="#1d4f9a"/>'),"Attacco dell'Intesa")+
+    it(sw('<path d="M2 9 L24 9" stroke="#555" stroke-width="4" stroke-dasharray="4 3"/><path d="M33 9 L22 3 L22 15Z" fill="#555"/>'),'Ritirata')+
+    it(sw(`<path d="${star(17,9,8,3.3)}" fill="#d42a17" stroke="#fff"/>`),'Battaglia')+
+    it(sw('<path d="M2 9 L32 9" stroke="#1d4f9a" stroke-width="3" stroke-dasharray="2 5" stroke-linecap="round"/>'),'Blocco navale britannico')+
+    '<div style="margin-top:6px;font-size:12px;color:#6b6258">Confini del 1914 (semplificati). Trascina per spostare la mappa, usa la rotellina o i pulsanti + / − per ingrandire.</div>';
+}
+function updateDots(){
+  document.querySelectorAll('#track .dot').forEach(b=>{const i=+b.dataset.i;b.classList.toggle('cur',i===cur);b.classList.toggle('dim',!!filter&&EVENTS[i].fr!==filter);});
+}
+function step(dir){const v=visibleIdx();let p=v.indexOf(cur);if(p<0){p=v.findIndex(i=>i>cur);if(dir<0)p--;else p=p-1;}const n=v[p+dir];if(n!==undefined)show(n);else if(playTimer)stopPlay();}
+function startPlay(){$('#play').setAttribute('aria-pressed','true');$('#play').textContent='❚❚ Pausa';const tick=()=>{const v=visibleIdx();if(v.indexOf(cur)>=v.length-1){stopPlay();return;}step(1);};playTimer=setInterval(tick,11000);}
+function stopPlay(){clearInterval(playTimer);playTimer=null;$('#play').setAttribute('aria-pressed','false');$('#play').textContent='▶ Riproduci';}
+
+function show(i,first){
+  cur=i;const ev=EVENTS[i];const fi=FRONTS_INFO[ev.fr];
+  const v=visibleIdx();
+  $('#panel').innerHTML=`<span class="tag" style="background:${fi.c}">${esc(fi.n)}</span><span class="count">${v.indexOf(i)+1} / ${v.length}</span>
+    <div class="when">${esc(ev.lab)}</div><h2>${esc(ev.title)}</h2><p class="txt">${ev.text}</p>
+    <div class="box r"><b>Da ricordare</b>${esc(ev.rem)}</div><div class="box q"><b>Per discutere in classe</b>${esc(ev.q)}</div>
+    <div class="navbtns"><button id="pb">◀ Indietro</button><button id="nb">Avanti ▶</button></div>`;
+  $('#pb').onclick=()=>{stopPlay();step(-1);};$('#nb').onclick=()=>{stopPlay();step(1);};
+  $('#pb').disabled=v.indexOf(i)<=0;$('#nb').disabled=v.indexOf(i)>=v.length-1;
+  $('#panel').scrollTop=0;
+  updateDots();
+  if(!proj)return;
+  applyState(ev);userZoom=false;
+  const target=fitView(ev.focus);
+  if(first){view=target;PULSE=true;applyView();PULSE=false;drawArrows(true);}else animateTo(target);
+}
+
+main();
+</script>
+<script src="a11y.js"></script>
+</body>
+</html>

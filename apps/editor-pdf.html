@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Editor PDF</title>
+<link rel="stylesheet" href="ptl.css">
+<style>
+:root { --accent: #d64545; }
+body { min-height: 100vh; }
+.barra-strumenti { position: sticky; top: 0; z-index: 20; background: var(--paper); border-bottom: 3px solid var(--ink); padding: 8px 12px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.str { font: 400 19px var(--font-hand); border: 2px solid var(--ink); border-radius: 10px; background: #fff; padding: 4px 10px; cursor: pointer; }
+.str[aria-pressed="true"] { background: var(--giallo); box-shadow: inset 0 0 0 2px var(--ink); }
+.str:disabled { opacity: .4; cursor: not-allowed; }
+.sep { width: 2px; height: 30px; background: #c9d4e3; margin: 0 4px; }
+.colori { display: flex; gap: 4px; }
+.colori button { width: 26px; height: 26px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 2px #9fb0c8; cursor: pointer; }
+.colori button[aria-pressed="true"] { box-shadow: 0 0 0 3px var(--ink); }
+.pagine { display: grid; gap: 18px; justify-items: center; padding: 18px 10px 60px; }
+.pagina { position: relative; background: #fff; box-shadow: 0 4px 16px rgba(31,42,68,.25); }
+.pagina canvas { display: block; }
+.pagina svg.strato { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; }
+.pagina .num { position: absolute; top: -22px; left: 0; font-size: 13px; color: var(--muted); }
+.sel { outline: 2px dashed #2f6fd6; }
+textarea.scrivi { position: absolute; z-index: 5; border: 2px dashed #2f6fd6; background: rgba(255,255,255,.85); resize: both; font-family: Helvetica, Arial, sans-serif; line-height: 1.2; padding: 0; margin: 0; min-width: 60px; overflow: hidden; }
+.vuoto { display: grid; place-items: center; min-height: 60vh; padding: 16px; }
+.drop { border: 3px dashed var(--accent); border-radius: 16px; background: #fdf1f1; padding: 30px 18px; text-align: center; display: grid; gap: 8px; justify-items: center; cursor: pointer; max-width: 620px; }
+.drop .e { font-size: 46px; }
+.miniature { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 14px; padding: 16px; }
+.mini { background: #fff; border: 2px solid var(--squares); border-radius: 10px; padding: 8px; display: grid; gap: 6px; justify-items: center; }
+.mini.scelta { border-color: var(--accent); box-shadow: 0 0 0 3px #f6d2d2; }
+.mini canvas { max-width: 100%; box-shadow: 0 2px 6px rgba(0,0,0,.2); transition: transform .2s; }
+.mini .row { gap: 4px; justify-content: center; }
+.mini .row button { font-size: 16px; padding: 2px 7px; border: 1.5px solid var(--ink); border-radius: 7px; background: #fff; cursor: pointer; }
+.modale { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: grid; place-items: center; z-index: 50; padding: 14px; }
+.modale .card { width: min(560px, 100%); display: grid; gap: 10px; }
+#firma-tela { width: 100%; height: 200px; background: #fff; border: 2px solid var(--ink); border-radius: 10px; touch-action: none; }
+.avviso { background: #fff2cc; border: 2px solid #b8860b; border-radius: 10px; padding: 8px 12px; font-size: 14px; }
+.toast { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 9px 16px; border-radius: 12px; z-index: 60; font-size: 15px; }
+</style>
+</head>
+<body>
+<header class="app-bar"><h1>Editor PDF</h1><span class="sub">Scrivi, evidenzia, firma, unisci e riordina · i file restano sul tuo dispositivo</span></header>
+
+<div class="barra-strumenti" id="barra" hidden>
+  <button class="str" data-mod="modifica" aria-pressed="true">✏️ Modifica</button>
+  <button class="str" data-mod="pagine" aria-pressed="false">📑 Pagine</button>
+  <span class="sep"></span>
+  <span id="strumenti-modifica" style="display:contents">
+    <button class="str" data-t="sposta" title="Seleziona e sposta">🖐️</button>
+    <button class="str" data-t="testo" title="Aggiungi testo">🔤 Testo</button>
+    <button class="str" data-t="penna" title="Penna">✒️</button>
+    <button class="str" data-t="evid" title="Evidenziatore">🖍️</button>
+    <button class="str" data-t="rett" title="Riquadro">▭</button>
+    <button class="str" data-t="bianco" title="Bianchetto">⬜ Bianchetto</button>
+    <button class="str" id="b-img" title="Aggiungi immagine">🖼️</button>
+    <button class="str" id="b-firma" title="Firma">✍️ Firma</button>
+    <span class="sep"></span>
+    <span class="colori" id="colori"></span>
+    <label class="row" style="gap:4px;font-size:14px">Dim. <input type="range" id="dim" min="1" max="10" value="3" style="width:80px"></label>
+    <span class="sep"></span>
+    <button class="str" id="b-annulla" title="Annulla">↶</button>
+    <button class="str" id="b-elimina" title="Elimina l'elemento selezionato" disabled>🗑</button>
+    <button class="str" id="b-zoom-meno" title="Rimpicciolisci">−</button>
+    <button class="str" id="b-zoom-piu" title="Ingrandisci">+</button>
+  </span>
+  <span style="flex:1"></span>
+  <button class="str" id="b-altro" title="Apri un altro file">📂</button>
+  <button class="btn primary" id="b-salva">💾 Salva PDF</button>
+</div>
+
+<div class="vuoto" id="vuoto">
+  <div style="display:grid;gap:14px;justify-items:center">
+    <label class="drop" id="drop" for="file">
+      <span class="e">📄✏️</span>
+      <b style="font:400 26px var(--font-hand)">Tocca per aprire un PDF, oppure trascinalo qui</b>
+      <span class="nota">Puoi scrivere, evidenziare, coprire, firmare, aggiungere immagini, ruotare, eliminare e riordinare le pagine, unire più PDF.</span>
+      <input type="file" id="file" accept="application/pdf,.pdf" hidden>
+    </label>
+    <p class="nota" style="max-width:620px;text-align:center">🔒 Il PDF non viene caricato da nessuna parte: tutto avviene nel browser. Il testo già scritto nel PDF non si può riscrivere direttamente: si copre con il bianchetto e si scrive sopra.</p>
+  </div>
+</div>
+<div class="pagine" id="pagine" hidden></div>
+<div id="vista-pagine" hidden>
+  <div class="row" style="padding:12px 16px 0;gap:8px">
+    <label class="btn" style="cursor:pointer">➕ Aggiungi pagine da un altro PDF<input type="file" id="file-unisci" accept="application/pdf,.pdf" multiple hidden></label>
+    <button class="btn" id="b-estrai">📤 Salva solo le pagine scelte</button>
+    <label class="row nota"><input type="checkbox" id="numeri"> Aggiungi i numeri di pagina al salvataggio</label>
+  </div>
+  <p class="nota" style="padding:0 16px">Tocca una miniatura per sceglierla. Le frecce spostano la pagina, ↻ la ruota, 🗑 la elimina.</p>
+  <div class="miniature" id="miniature"></div>
+</div>
+
+<div class="modale" id="modale-firma" hidden>
+  <div class="card">
+    <b style="font:400 26px var(--font-hand)">✍️ Disegna la tua firma</b>
+    <canvas id="firma-tela"></canvas>
+    <div class="row"><button class="btn" id="firma-pulisci">Cancella</button><span style="flex:1"></span><button class="btn" id="firma-annulla">Annulla</button><button class="btn primary" id="firma-ok">Inserisci</button></div>
+    <p class="nota" style="margin:0">La firma disegnata è un'immagine: non ha il valore legale di una firma digitale certificata.</p>
+  </div>
+</div>
+<input type="file" id="file-img" accept="image/png,image/jpeg" hidden>
+<div class="toast" id="toast" hidden></div>
+
+<script src="lib/pdf-lib.min.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const COLORI = ["#111111", "#d64545", "#2f6fd6", "#2e9b5f", "#f5c400", "#ffffff"];
+let pdfjs = null, byteLavoro = null, nomeFile = "documento", pagine = [], zoom = 1, strumento = "testo", colore = "#d64545", sel = null, storia = [];
+let annot = {}; /* annot[indicePagina] = [elementi] in unità della pagina (pt a zoom 1) */
+const toast = t => { $("toast").textContent = t; $("toast").hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => $("toast").hidden = true, 3500); };
+async function caricaPdfjs() {
+  if (pdfjs) return pdfjs;
+  pdfjs = await import("./lib/pdf.min.js");
+  pdfjs.GlobalWorkerOptions.workerSrc = new URL("lib/pdf.worker.min.js", location.href).href;
+  return pdfjs;
+}
+
+/* ---------- Apertura ---------- */
+async function apri(file) {
+  const buf = new Uint8Array(await file.arrayBuffer());
+  if (!(buf[0] === 0x25 && buf[1] === 0x50 && buf[2] === 0x44 && buf[3] === 0x46)) { toast("Questo file non sembra un PDF."); return; }
+  try { await PDFLib.PDFDocument.load(buf); } catch (e) { toast(/encrypt/i.test(String(e)) ? "Il PDF è protetto da password: non si può modificare." : "Non riesco ad aprire questo PDF."); return; }
+  nomeFile = file.name.replace(/\.pdf$/i, "") || "documento";
+  byteLavoro = buf; annot = {}; storia = []; sel = null;
+  $("vuoto").hidden = true; $("barra").hidden = false; modalita("modifica");
+}
+$("file").addEventListener("change", e => { const f = e.target.files[0]; if (f) apri(f); e.target.value = ""; });
+const drop = $("drop");
+["dragenter", "dragover"].forEach(ev => drop.addEventListener(ev, e => e.preventDefault()));
+drop.addEventListener("drop", e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) apri(f); });
+$("b-altro").addEventListener("click", () => $("file").click());
+
+/* ---------- Disegno delle pagine ---------- */
+async function disegnaPagine() {
+  const lib = await caricaPdfjs();
+  const doc = await lib.getDocument({ data: byteLavoro.slice(), isEvalSupported: false }).promise;
+  const box = $("pagine"); box.innerHTML = ""; pagine = [];
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const larghezza = Math.min(window.innerWidth - 30, 900);
+  for (let i = 1; i <= doc.numPages; i++) {
+    const pg = await doc.getPage(i), vp1 = pg.getViewport({ scale: 1 });
+    const base = larghezza / vp1.width, sc = base * zoom;
+    const vp = pg.getViewport({ scale: sc * dpr });
+    const wrap = document.createElement("div"); wrap.className = "pagina";
+    wrap.style.width = vp1.width * sc + "px"; wrap.style.height = vp1.height * sc + "px";
+    const c = document.createElement("canvas"); c.width = Math.round(vp.width); c.height = Math.round(vp.height);
+    c.style.width = "100%"; c.style.height = "100%";
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg"); svg.classList.add("strato");
+    svg.setAttribute("viewBox", `0 0 ${vp1.width} ${vp1.height}`); svg.dataset.i = i - 1;
+    wrap.innerHTML = `<span class="num">Pagina ${i} di ${doc.numPages}</span>`; wrap.append(c, svg); box.appendChild(wrap);
+    pagine.push({ vp1, svg, wrap, scala: sc });
+    pg.render({ canvasContext: c.getContext("2d"), viewport: vp });
+    collegaStrato(svg, i - 1); disegnaStrato(i - 1);
+  }
+}
+
+/* ---------- Elementi ---------- */
+const SVGNS = "http://www.w3.org/2000/svg";
+function disegnaStrato(i) {
+  const svg = pagine[i].svg; const lista = annot[i] || [];
+  svg.innerHTML = lista.map((a, k) => {
+    if (a.nascosto) return "";
+    const s = sel && sel.p === i && sel.k === k ? ' class="sel"' : "";
+    if (a.t === "testo") return `<text${s} data-k="${k}" x="${a.x}" y="${a.y + a.size * .82}" font-family="Helvetica, Arial, sans-serif" font-size="${a.size}" fill="${a.c}">${a.txt.split("\n").map((r, j) => `<tspan x="${a.x}" dy="${j ? a.size * 1.2 : 0}">${r.replace(/&/g, "&amp;").replace(/</g, "&lt;") || " "}</tspan>`).join("")}</text>`;
+    if (a.t === "linea") return `<polyline${s} data-k="${k}" points="${a.pts.map(p => p.join(",")).join(" ")}" fill="none" stroke="${a.c}" stroke-width="${a.w}" stroke-linecap="round" stroke-linejoin="round" opacity="${a.op}"/>`;
+    if (a.t === "rett") return `<rect${s} data-k="${k}" x="${a.x}" y="${a.y}" width="${a.w}" height="${a.h}" ${a.pieno ? `fill="${a.c}"` : `fill="none" stroke="${a.c}" stroke-width="${a.sw}"`}/>`;
+    if (a.t === "img") return `<image${s} data-k="${k}" href="${a.src}" x="${a.x}" y="${a.y}" width="${a.w}" height="${a.h}" preserveAspectRatio="none"/>` + (s ? `<rect data-k="${k}" data-ridim="1" x="${a.x + a.w - 9}" y="${a.y + a.h - 9}" width="18" height="18" fill="#2f6fd6" stroke="#fff" stroke-width="2" style="cursor:nwse-resize"/>` : "");
+    return "";
+  }).join("");
+}
+function aggiungi(i, a) { (annot[i] = annot[i] || []).push(a); storia.push({ tipo: "add", i }); sel = { p: i, k: annot[i].length - 1 }; disegnaStrato(i); aggiornaPulsanti(); }
+function aggiornaPulsanti() { $("b-elimina").disabled = !sel; $("b-annulla").disabled = !storia.length; }
+function punto(svg, e) { const pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY; return pt.matrixTransform(svg.getScreenCTM().inverse()); }
+function deseleziona() { if (sel) { const p = sel.p; sel = null; disegnaStrato(p); aggiornaPulsanti(); } }
+const spess = () => +$("dim").value;
+
+function collegaStrato(svg, i) {
+  let tratto = null, trasc = null, rett = null;
+  svg.addEventListener("pointerdown", e => {
+    const bersaglio = e.target.closest ? e.target.closest("[data-k]") : null;
+    const p = punto(svg, e), elK = bersaglio ? bersaglio.dataset.k : undefined;
+    if (strumento === "sposta" || (elK !== undefined && strumento !== "penna" && strumento !== "evid")) {
+      if (elK === undefined) { deseleziona(); return; }
+      const k = +elK, a = annot[i][k];
+      if (sel && (sel.p !== i || sel.k !== k)) { const vecchia = sel.p; sel = null; disegnaStrato(vecchia); }
+      sel = { p: i, k }; aggiornaPulsanti();
+      if (a.t === "testo" && e.detail >= 2) { modificaTesto(i, k); return; }
+      trasc = { k, x0: p.x, y0: p.y, orig: JSON.parse(JSON.stringify(a)), ridim: bersaglio.dataset.ridim === "1" };
+      storia.push({ tipo: "mod", i, k, prima: trasc.orig });
+      svg.setPointerCapture(e.pointerId); disegnaStrato(i); return;
+    }
+    deseleziona();
+    if (strumento === "testo") { e.preventDefault(); nuovoTesto(i, p.x, p.y); return; }
+    if (strumento === "penna" || strumento === "evid") {
+      const ev = strumento === "evid";
+      tratto = { t: "linea", pts: [[+p.x.toFixed(1), +p.y.toFixed(1)]], c: ev && colore === "#111111" ? "#f5c400" : colore, w: ev ? spess() * 4 + 6 : spess() * .8 + .6, op: ev ? .38 : 1 };
+      (annot[i] = annot[i] || []).push(tratto); storia.push({ tipo: "add", i });
+      svg.setPointerCapture(e.pointerId); disegnaStrato(i); return;
+    }
+    if (strumento === "rett" || strumento === "bianco") {
+      rett = { t: "rett", x: p.x, y: p.y, w: 0, h: 0, x0: p.x, y0: p.y, pieno: strumento === "bianco", c: strumento === "bianco" ? "#ffffff" : colore, sw: spess() * .8 + .6 };
+      (annot[i] = annot[i] || []).push(rett); storia.push({ tipo: "add", i });
+      svg.setPointerCapture(e.pointerId); return;
+    }
+  });
+  svg.addEventListener("pointermove", e => {
+    const p = punto(svg, e);
+    if (tratto) { tratto.pts.push([+p.x.toFixed(1), +p.y.toFixed(1)]); disegnaStrato(i); }
+    else if (rett) { rett.x = Math.min(rett.x0, p.x); rett.y = Math.min(rett.y0, p.y); rett.w = Math.abs(p.x - rett.x0); rett.h = Math.abs(p.y - rett.y0); disegnaStrato(i); }
+    else if (trasc) {
+      const a = annot[i][trasc.k], dx = p.x - trasc.x0, dy = p.y - trasc.y0, o = trasc.orig;
+      if (trasc.ridim && a.t === "img") { const w = Math.max(20, o.w + dx); a.w = w; a.h = w * o.h / o.w; }
+      else if (a.t === "linea") a.pts = o.pts.map(q => [q[0] + dx, q[1] + dy]);
+      else { a.x = o.x + dx; a.y = o.y + dy; }
+      disegnaStrato(i);
+    }
+  });
+  const fine = () => {
+    if (tratto && tratto.pts.length < 2) tratto.pts.push([tratto.pts[0][0] + .5, tratto.pts[0][1] + .5]);
+    if (rett) { if (rett.w < 4 || rett.h < 4) { annot[i].pop(); storia.pop(); } else { delete rett.x0; delete rett.y0; } disegnaStrato(i); }
+    tratto = null; rett = null; trasc = null; aggiornaPulsanti();
+  };
+  svg.addEventListener("pointerup", fine); svg.addEventListener("pointercancel", fine);
+}
+
+/* ---------- Testo ---------- */
+function apriEditor(i, x, y, size, c, testo, fatto) {
+  const P = pagine[i], ta = document.createElement("textarea"); ta.className = "scrivi";
+  ta.style.left = x * P.scala + "px"; ta.style.top = y * P.scala + "px";
+  ta.style.fontSize = size * P.scala + "px"; ta.style.color = c; ta.value = testo;
+  ta.style.width = Math.max(140, Math.min(P.vp1.width * P.scala - x * P.scala - 4, 420)) + "px"; ta.rows = Math.max(1, testo.split("\n").length);
+  P.wrap.appendChild(ta); ta.focus(); setTimeout(() => ta.focus(), 0);
+  ta.addEventListener("input", () => { ta.rows = Math.max(1, ta.value.split("\n").length); });
+  let chiuso = false;
+  const chiudi = () => { if (chiuso) return; chiuso = true; const v = ta.value.replace(/\s+$/, ""); ta.remove(); fatto(v); };
+  ta.addEventListener("blur", chiudi);
+  ta.addEventListener("keydown", e => { if (e.key === "Escape") ta.blur(); });
+}
+function nuovoTesto(i, x, y) {
+  const size = 7 + spess() * 2.5;
+  apriEditor(i, x, y - size * .1, size, colore === "#ffffff" ? "#111111" : colore, "", v => { if (v) aggiungi(i, { t: "testo", x, y: y - size * .1, size, c: colore === "#ffffff" ? "#111111" : colore, txt: v }); });
+}
+function modificaTesto(i, k) {
+  const a = annot[i][k], prima = JSON.parse(JSON.stringify(a));
+  a.nascosto = true; disegnaStrato(i);
+  apriEditor(i, a.x, a.y, a.size, a.c, a.txt, v => { delete a.nascosto; if (!v) { annot[i].splice(k, 1); sel = null; } else { a.txt = v; storia.push({ tipo: "mod", i, k, prima }); } disegnaStrato(i); aggiornaPulsanti(); });
+}
+
+/* ---------- Immagini e firma ---------- */
+function paginaVisibile() { let best = 0, d = 1e9; pagine.forEach((p, i) => { const r = p.wrap.getBoundingClientRect(), dist = Math.abs(r.top + r.height / 2 - window.innerHeight / 2); if (dist < d) { d = dist; best = i; } }); return best; }
+function inserisciImmagine(src, wNat, hNat) {
+  const i = paginaVisibile(), P = pagine[i].vp1, w = Math.min(P.width * .4, wNat), h = w * hNat / wNat;
+  strumento = "sposta"; aggiornaStrumenti();
+  aggiungi(i, { t: "img", src, x: (P.width - w) / 2, y: (P.height - h) / 2, w, h });
+  toast("Trascina l'immagine dove vuoi; il quadratino blu la ridimensiona.");
+}
+$("b-img").addEventListener("click", () => $("file-img").click());
+$("file-img").addEventListener("change", e => {
+  const f = e.target.files[0]; if (!f) return; e.target.value = "";
+  const rd = new FileReader(); rd.onload = () => { const im = new Image(); im.onload = () => {
+    const k = Math.min(1, 1600 / Math.max(im.width, im.height)), c = document.createElement("canvas"); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k);
+    c.getContext("2d").drawImage(im, 0, 0, c.width, c.height);
+    inserisciImmagine(c.toDataURL(f.type === "image/png" ? "image/png" : "image/jpeg", .9), c.width * .75, c.height * .75);
+  }; im.src = rd.result; }; rd.readAsDataURL(f);
+});
+const tela = $("firma-tela"); let firmaCtx = null, firmando = false, firmaVuota = true;
+$("b-firma").addEventListener("click", () => {
+  $("modale-firma").hidden = false; const r = tela.getBoundingClientRect(); tela.width = r.width * 2; tela.height = r.height * 2;
+  firmaCtx = tela.getContext("2d"); firmaCtx.scale(2, 2); firmaCtx.lineWidth = 2.6; firmaCtx.lineCap = "round"; firmaCtx.lineJoin = "round"; firmaCtx.strokeStyle = colore === "#ffffff" || colore === "#f5c400" ? "#1a3a8f" : colore; firmaVuota = true;
+});
+const fp = e => { const r = tela.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+tela.addEventListener("pointerdown", e => { firmando = true; tela.setPointerCapture(e.pointerId); firmaCtx.beginPath(); firmaCtx.moveTo(...fp(e)); });
+tela.addEventListener("pointermove", e => { if (!firmando) return; firmaCtx.lineTo(...fp(e)); firmaCtx.stroke(); firmaVuota = false; });
+tela.addEventListener("pointerup", () => firmando = false);
+$("firma-pulisci").addEventListener("click", () => { firmaCtx.clearRect(0, 0, tela.width, tela.height); firmaVuota = true; });
+$("firma-annulla").addEventListener("click", () => $("modale-firma").hidden = true);
+$("firma-ok").addEventListener("click", () => {
+  if (firmaVuota) { toast("Disegna prima la firma."); return; }
+  /* ritaglio dei bordi vuoti */
+  const d = firmaCtx.getImageData(0, 0, tela.width, tela.height).data; let x0 = tela.width, y0 = tela.height, x1 = 0, y1 = 0;
+  for (let y = 0; y < tela.height; y++) for (let x = 0; x < tela.width; x++) if (d[(y * tela.width + x) * 4 + 3] > 10) { if (x < x0) x0 = x; if (y < y0) y0 = y; if (x > x1) x1 = x; if (y > y1) y1 = y; }
+  const c = document.createElement("canvas"); c.width = x1 - x0 + 12; c.height = y1 - y0 + 12; c.getContext("2d").drawImage(tela, x0 - 6, y0 - 6, c.width, c.height, 0, 0, c.width, c.height);
+  $("modale-firma").hidden = true; inserisciImmagine(c.toDataURL("image/png"), c.width / 4, c.height / 4);
+});
+
+/* ---------- Barra ---------- */
+function aggiornaStrumenti() { document.querySelectorAll("[data-t]").forEach(b => b.setAttribute("aria-pressed", b.dataset.t === strumento)); document.querySelectorAll("svg.strato").forEach(s => s.style.cursor = strumento === "sposta" ? "default" : "crosshair"); }
+document.querySelectorAll("[data-t]").forEach(b => b.addEventListener("click", () => { strumento = b.dataset.t; aggiornaStrumenti(); if (strumento === "bianco") toast("Il bianchetto copre alla vista, ma il testo sotto resta nel file: non usarlo per nascondere dati riservati."); }));
+$("colori").innerHTML = COLORI.map(c => `<button data-c="${c}" style="background:${c}" aria-label="Colore ${c}" aria-pressed="${c === colore}"></button>`).join("");
+$("colori").querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
+  colore = b.dataset.c; $("colori").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b));
+  if (sel) { const a = annot[sel.p][sel.k]; if (a.t !== "img") { storia.push({ tipo: "mod", i: sel.p, k: sel.k, prima: JSON.parse(JSON.stringify(a)) }); a.c = colore; disegnaStrato(sel.p); } }
+}));
+$("b-elimina").addEventListener("click", () => { if (!sel) return; const a = annot[sel.p][sel.k]; storia.push({ tipo: "del", i: sel.p, k: sel.k, prima: a }); annot[sel.p].splice(sel.k, 1); const p = sel.p; sel = null; disegnaStrato(p); aggiornaPulsanti(); });
+document.addEventListener("keydown", e => { if ((e.key === "Delete" || e.key === "Backspace") && sel && document.activeElement.tagName !== "TEXTAREA" && document.activeElement.tagName !== "INPUT") { e.preventDefault(); $("b-elimina").click(); } if ((e.ctrlKey || e.metaKey) && e.key === "z") { e.preventDefault(); $("b-annulla").click(); } });
+$("b-annulla").addEventListener("click", () => {
+  const s = storia.pop(); if (!s) return; sel = null;
+  if (s.tipo === "add") annot[s.i].pop();
+  if (s.tipo === "mod") annot[s.i][s.k] = s.prima;
+  if (s.tipo === "del") annot[s.i].splice(s.k, 0, s.prima);
+  disegnaStrato(s.i); aggiornaPulsanti();
+});
+$("b-zoom-piu").addEventListener("click", () => { zoom = Math.min(2.5, zoom + .25); disegnaPagine(); });
+$("b-zoom-meno").addEventListener("click", () => { zoom = Math.max(.5, zoom - .25); disegnaPagine(); });
+let resizeT; window.addEventListener("resize", () => { clearTimeout(resizeT); resizeT = setTimeout(() => { if (!$("pagine").hidden) disegnaPagine(); }, 300); });
+
+/* ---------- Applicazione delle modifiche al PDF (pdf-lib) ---------- */
+function hexRgb(h) { const n = parseInt(h.slice(1), 16); return PDFLib.rgb((n >> 16 & 255) / 255, (n >> 8 & 255) / 255, (n & 255) / 255); }
+async function cuoci() {
+  const ci = Object.values(annot).some(l => l && l.length);
+  if (!ci) return byteLavoro;
+  const { PDFDocument, StandardFonts } = PDFLib;
+  const doc = await PDFDocument.load(byteLavoro);
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  const lib = await caricaPdfjs(), pj = await lib.getDocument({ data: byteLavoro.slice(), isEvalSupported: false }).promise;
+  const ok = {}; const pulisci = t => Array.from(t).map(ch => { if (ch in ok) return ok[ch]; let o = ch; try { font.encodeText(ch); } catch (e) { o = { "→": "->", "☐": "[ ]", "✓": "v", "✔": "v", "€": "EUR" }[ch] || "?"; } ok[ch] = o; return o; }).join("");
+  const pagineDoc = doc.getPages();
+  for (const [iS, lista] of Object.entries(annot)) {
+    if (!lista || !lista.length) continue;
+    const i = +iS, pg = pagineDoc[i], vp = (await pj.getPage(i + 1)).getViewport({ scale: 1 });
+    const P = (x, y) => vp.convertToPdfPoint(x, y);
+    const rot = pg.getRotation().angle % 360;
+    for (const a of lista) {
+      if (a.t === "testo") {
+        a.txt.split("\n").forEach((r, j) => { const [x, y] = P(a.x, a.y + a.size * .82 + j * a.size * 1.2); if (r) pg.drawText(pulisci(r), { x, y, size: a.size, font, color: hexRgb(a.c), rotate: PDFLib.degrees(rot) }); });
+      } else if (a.t === "linea") {
+        for (let k = 1; k < a.pts.length; k++) { const [x1, y1] = P(...a.pts[k - 1]), [x2, y2] = P(...a.pts[k]); pg.drawLine({ start: { x: x1, y: y1 }, end: { x: x2, y: y2 }, thickness: a.w, color: hexRgb(a.c), opacity: a.op, lineCap: PDFLib.LineCapStyle.Round }); }
+      } else if (a.t === "rett") {
+        const [xa, ya] = P(a.x, a.y), [xb, yb] = P(a.x + a.w, a.y + a.h);
+        const opt = { x: Math.min(xa, xb), y: Math.min(ya, yb), width: Math.abs(xb - xa), height: Math.abs(yb - ya) };
+        if (a.pieno) pg.drawRectangle({ ...opt, color: hexRgb(a.c) }); else pg.drawRectangle({ ...opt, borderColor: hexRgb(a.c), borderWidth: a.sw });
+      } else if (a.t === "img") {
+        const b64 = a.src.split(",")[1], bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+        const img = a.src.startsWith("data:image/png") ? await doc.embedPng(bytes) : await doc.embedJpg(bytes);
+        const [xa, ya] = P(a.x, a.y), [xb, yb] = P(a.x + a.w, a.y + a.h);
+        pg.drawImage(img, { x: Math.min(xa, xb), y: Math.min(ya, yb), width: Math.abs(xb - xa), height: Math.abs(yb - ya) });
+      }
+    }
+  }
+  return await doc.save();
+}
+
+/* ---------- Pagine: ordine, rotazione, eliminazione, unione ---------- */
+let ordine = [], fonti = [], scelte = new Set();
+async function preparaPagine() {
+  if (Object.values(annot).some(l => l && l.length)) { byteLavoro = await cuoci(); annot = {}; storia = []; sel = null; toast("Le modifiche sono state fissate nel PDF."); }
+  fonti = [byteLavoro]; cacheMini = {}; const d = await PDFLib.PDFDocument.load(byteLavoro);
+  ordine = d.getPages().map((p, i) => ({ f: 0, i, rot: 0 })); scelte = new Set(); fonti._n = ordine.length; fonti._doc = {};
+  await disegnaMiniature();
+}
+let cacheMini = {};
+async function miniatura(f, i) {
+  const k = f + ":" + i; if (cacheMini[k]) return cacheMini[k];
+  const lib = await caricaPdfjs(); fonti._doc = fonti._doc || {};
+  const doc = fonti._doc[f] || (fonti._doc[f] = await lib.getDocument({ data: fonti[f].slice(), isEvalSupported: false }).promise);
+  const pg = await doc.getPage(i + 1), vp0 = pg.getViewport({ scale: 1 }), vp = pg.getViewport({ scale: 220 / Math.max(vp0.width, vp0.height) });
+  const c = document.createElement("canvas"); c.width = vp.width; c.height = vp.height; await pg.render({ canvasContext: c.getContext("2d"), viewport: vp }).promise;
+  return (cacheMini[k] = c.toDataURL("image/jpeg", .8));
+}
+async function disegnaMiniature() {
+  const box = $("miniature"); box.innerHTML = "";
+  for (const [n, o] of ordine.entries()) {
+    const d = document.createElement("div"); d.className = "mini" + (scelte.has(n) ? " scelta" : "");
+    d.innerHTML = `<img src="${await miniatura(o.f, o.i)}" alt="Pagina ${n + 1}" style="max-width:100%;max-height:170px;transform:rotate(${o.rot}deg);box-shadow:0 2px 6px rgba(0,0,0,.2);cursor:pointer"><b>${n + 1}</b><div class="row"><button data-a="su" aria-label="Sposta prima">◀</button><button data-a="ruota" aria-label="Ruota">↻</button><button data-a="via" aria-label="Elimina">🗑</button><button data-a="giu" aria-label="Sposta dopo">▶</button></div>`;
+    d.querySelector("img").addEventListener("click", () => { scelte.has(n) ? scelte.delete(n) : scelte.add(n); disegnaMiniature(); });
+    d.querySelectorAll("[data-a]").forEach(b => b.addEventListener("click", () => {
+      const a = b.dataset.a; scelte = new Set();
+      if (a === "su" && n > 0) [ordine[n - 1], ordine[n]] = [ordine[n], ordine[n - 1]];
+      if (a === "giu" && n < ordine.length - 1) [ordine[n + 1], ordine[n]] = [ordine[n], ordine[n + 1]];
+      if (a === "ruota") o.rot = (o.rot + 90) % 360;
+      if (a === "via") { if (ordine.length === 1) { toast("Il PDF deve avere almeno una pagina."); return; } ordine.splice(n, 1); }
+      disegnaMiniature();
+    }));
+    box.appendChild(d);
+  }
+}
+$("file-unisci").addEventListener("change", async e => {
+  for (const f of Array.from(e.target.files)) {
+    try { const b = new Uint8Array(await f.arrayBuffer()), d = await PDFLib.PDFDocument.load(b); const fi = fonti.push(b) - 1; d.getPages().forEach((p, i) => ordine.push({ f: fi, i, rot: 0 })); }
+    catch (er) { toast(`Non riesco ad aprire ${f.name}.`); }
+  }
+  e.target.value = ""; disegnaMiniature(); toast("Pagine aggiunte in fondo: spostale con le frecce.");
+});
+async function componi(soloScelte) {
+  const { PDFDocument, degrees, StandardFonts, rgb } = PDFLib;
+  const out = await PDFDocument.create(), caricati = {};
+  const lista = soloScelte ? ordine.filter((o, n) => scelte.has(n)) : ordine;
+  for (const o of lista) {
+    caricati[o.f] = caricati[o.f] || await PDFDocument.load(fonti[o.f]);
+    const [p] = await out.copyPages(caricati[o.f], [o.i]);
+    p.setRotation(degrees((p.getRotation().angle + o.rot) % 360)); out.addPage(p);
+  }
+  if ($("numeri").checked) {
+    const font = await out.embedFont(StandardFonts.Helvetica), tot = out.getPageCount();
+    out.getPages().forEach((p, k) => {
+      const { width } = p.getSize(), testo = `${k + 1} / ${tot}`, w = font.widthOfTextAtSize(testo, 10), r = p.getRotation().angle % 360;
+      if (r === 0) p.drawText(testo, { x: (width - w) / 2, y: 18, size: 10, font, color: rgb(.3, .3, .35) });
+    });
+  }
+  return await out.save();
+}
+$("b-estrai").addEventListener("click", async () => { if (!scelte.size) { toast("Prima tocca le miniature delle pagine da salvare."); return; } await salva(await componi(true), nomeFile + "-estratto.pdf"); });
+
+/* ---------- Modalità e salvataggio ---------- */
+async function modalita(m) {
+  document.querySelectorAll("[data-mod]").forEach(b => b.setAttribute("aria-pressed", b.dataset.mod === m));
+  $("strumenti-modifica").style.display = m === "modifica" ? "contents" : "none";
+  $("pagine").hidden = m !== "modifica"; $("vista-pagine").hidden = m !== "pagine";
+  if (m === "modifica") { if (ordine.length && pagineModificate()) { byteLavoro = await componi(false); } ordine = []; await disegnaPagine(); aggiornaStrumenti(); aggiornaPulsanti(); }
+  else await preparaPagine();
+}
+function pagineModificate() { return fonti.length > 1 || ordine.length !== fonti._n || ordine.some((o, n) => o.rot || o.i !== n || o.f !== 0); }
+document.querySelectorAll("[data-mod]").forEach(b => b.addEventListener("click", () => modalita(b.dataset.mod)));
+async function salva(bytes, nome) {
+  let r = null;
+  try { if (window.parent !== window && typeof window.parent.ptlSalva === "function") r = await window.parent.ptlSalva(nome, bytes); } catch (e) { r = e && e.code ? e.code : null; }
+  if (r === null && window.parent === window) {
+    try { const url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" })), a = document.createElement("a"); a.href = url; a.download = nome; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 4000); r = "saved"; } catch (e) {}
+  }
+  toast(r === "saved" ? "✔ PDF salvato." : r === "declined" ? "Salvataggio annullato." : "Il salvataggio non è disponibile qui: usa l'app dal sito pubblicato.");
+}
+$("b-salva").addEventListener("click", async () => {
+  try {
+    const inPagine = !$("vista-pagine").hidden;
+    const bytes = inPagine ? await componi(false) : await cuoci();
+    await salva(bytes, nomeFile + "-modificato.pdf");
+  } catch (e) { console.error(e); toast("Non sono riuscito a salvare il PDF."); }
+});
+aggiornaStrumenti();
+</script>
+<script src="a11y.js"></script>
+</body>
+</html>

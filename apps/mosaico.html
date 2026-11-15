@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dal mosaico al pixel</title>
+<link rel="stylesheet" href="ptl.css">
+<style>
+:root { --accent: #0f766e; }
+.layout { display: grid; grid-template-columns: minmax(280px, 620px) 1fr; gap: 16px; align-items: start; }
+@media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+canvas { width: 100%; aspect-ratio: 1; border: 3px solid var(--ink); border-radius: 8px; background: #fff; touch-action: none; display: block; image-rendering: pixelated; }
+.gruppo { background: var(--label); border: 2px solid var(--ink); border-radius: 12px; padding: 10px 12px; display: grid; gap: 8px; }
+.gruppo h3 { margin: 0; font: 400 22px var(--font-hand); }
+.scelte { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.scelte button { font: 400 18px var(--font-hand); border: 2px solid var(--ink); border-radius: 10px; background: #fff; padding: 2px 10px; cursor: pointer; }
+.scelte button[aria-pressed="true"] { background: var(--giallo); }
+.colori button { width: 36px; height: 36px; border-radius: 8px; padding: 0; }
+.colori button[aria-pressed="true"] { outline: 4px solid var(--ink); outline-offset: 2px; background: inherit; }
+.due-c { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.spiega { background: #e6f6f4; border: 2px solid #99d5cc; border-radius: 12px; padding: 10px 14px; font-size: 17px; }
+</style>
+</head>
+<body>
+<header class="app-bar"><h1>Dal mosaico al pixel</h1><span class="sub">Immagini fatte di tasselli</span></header>
+<div class="container">
+  <div class="tabs" role="tablist"><button class="tab" id="t-crea" aria-selected="true">🎨 Crea</button><button class="tab" id="t-copia" aria-selected="false">🎯 Copia il modello</button><button class="tab" id="t-storia" aria-selected="false">🏛️ Dal mosaico al pixel</button></div>
+  <section id="s-crea" class="layout">
+    <canvas id="cv" width="640" height="640" aria-label="Griglia da disegnare"></canvas>
+    <div style="display:grid;gap:12px">
+      <div class="gruppo"><h3>Strumento</h3><div class="scelte" id="strumenti"></div><label class="row"><input type="checkbox" id="specchio"> 🪞 Simmetria (specchio verticale)</label></div>
+      <div class="gruppo"><h3>Colore</h3><div class="scelte colori" id="colori"></div><label class="row">Altro colore <input type="color" id="col-libero" value="#ff69b4"></label></div>
+      <div class="gruppo"><h3>Stile e griglia</h3><div class="scelte" id="stili"></div><div class="scelte" id="misure"></div></div>
+      <div class="scelte"><button id="annulla">↶ Annulla</button><button id="pulisci">🧽 Pulisci</button><button id="salva-png">🖼 Salva immagine</button></div>
+      <p class="feedback" id="fb" style="font-size:19px"></p><img id="img-out" hidden alt="La tua immagine" style="max-width:100%;border:2px solid var(--ink)">
+    </div>
+  </section>
+  <section id="s-copia" hidden style="display:grid;gap:12px">
+    <p class="consegna">Copia il modello tassello per tassello. Conta le righe e le colonne!</p>
+    <div class="scelte" id="modelli"></div>
+    <div class="due-c"><div><b>Modello</b><canvas id="cv-mod" width="480" height="480" aria-label="Modello"></canvas></div><div><b>La tua copia</b><canvas id="cv-cop" width="480" height="480" aria-label="La tua copia"></canvas></div></div>
+    <div class="scelte colori" id="colori2"></div>
+    <div class="row"><button class="btn primary" id="cop-ok">Controlla</button><button class="btn" id="cop-pul">🧽 Ricomincia</button></div>
+    <p class="feedback" id="cop-fb"></p>
+  </section>
+  <section id="s-storia" hidden class="card" style="display:grid;gap:10px">
+    <p class="consegna">Tasselli di pietra, tasselli di luce</p>
+    <p>Il <b>mosaico</b> è un'immagine fatta di tanti piccoli pezzi colorati, le <b>tessere</b>: pietre, marmi, vetro, a volte oro. I Romani decoravano i pavimenti delle case (pensa ai mosaici di Pompei); nell'arte bizantina i mosaici con il fondo d'oro coprivano le pareti delle chiese, come a Ravenna.</p>
+    <p>Lo schermo del tablet funziona allo stesso modo: l'immagine è fatta di milioni di quadratini, i <b>pixel</b> (da <i>picture element</i>, «elemento dell'immagine»). Ogni pixel ha un solo colore, proprio come una tessera.</p>
+    <p>Più tasselli usi, più l'immagine è precisa: si chiama <b>risoluzione</b>. Prova a disegnare la stessa figura con la griglia 16 e con la 32 e confronta.</p>
+    <p class="spiega">Guarda da lontano: da vicino vedi i tasselli, da lontano l'occhio li unisce e vede la figura. È lo stesso trucco che usano i mosaici, il puntinismo di Seurat e gli schermi.</p>
+  </section>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const PAL = ["#ffffff", "#1f2a44", "#7b8794", "#d62828", "#f77f00", "#fcbf49", "#ffe66d", "#2a9d8f", "#52b788", "#1d6e3f", "#4ea8de", "#1d4e89", "#7b2cbf", "#f4a3b5", "#8d5524", "#e9c46a"];
+let S = { n: 24, stile: "mosaico", g: null };
+try { const v = JSON.parse(localStorage.getItem("mosaico")); if (v && v.g) S = v; } catch (e) {}
+if (!S.g) S.g = Array(S.n * S.n).fill(null);
+let colore = PAL[3], strumento = "matita", storia = [];
+const salva = () => { try { localStorage.setItem("mosaico", JSON.stringify(S)); } catch (e) {} };
+/* ---- Disegno (pixel o tessere) ---- */
+function rnd(i) { const x = Math.sin(i * 12.9898) * 43758.5453; return x - Math.floor(x); }
+function schiarisci(c, k) { const n = parseInt(c.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255, f = v => Math.max(0, Math.min(255, Math.round(v + k))); return `rgb(${f(r)},${f(g)},${f(b)})`; }
+function disegnaGriglia(cv, g, n, stile, griglia) {
+  const x = cv.getContext("2d"), W = cv.width, c = W / n;
+  x.fillStyle = stile === "mosaico" ? "#d9d2c3" : "#fff"; x.fillRect(0, 0, W, W);
+  for (let i = 0; i < n * n; i++) {
+    const r = Math.floor(i / n), q = i % n, col = g[i];
+    if (stile === "mosaico") {
+      const base = col || "#efe9dc", j = c * .08, dx = (rnd(i) - .5) * j, dy = (rnd(i + 99) - .5) * j, gap = c * .12;
+      x.fillStyle = schiarisci(base, (rnd(i + 7) - .5) * 26);
+      x.beginPath(); const X = q * c + gap / 2 + dx, Y = r * c + gap / 2 + dy, L = c - gap, rr = c * .12;
+      x.moveTo(X + rr, Y); x.lineTo(X + L - rr, Y); x.quadraticCurveTo(X + L, Y, X + L, Y + rr); x.lineTo(X + L, Y + L - rr); x.quadraticCurveTo(X + L, Y + L, X + L - rr, Y + L); x.lineTo(X + rr, Y + L); x.quadraticCurveTo(X, Y + L, X, Y + L - rr); x.lineTo(X, Y + rr); x.quadraticCurveTo(X, Y, X + rr, Y); x.fill();
+    } else if (col) { x.fillStyle = col; x.fillRect(q * c, r * c, c + .5, c + .5); }
+  }
+  if (griglia && stile !== "mosaico") { x.strokeStyle = "rgba(31,42,68,.18)"; x.lineWidth = 1; for (let i = 0; i <= n; i++) { x.beginPath(); x.moveTo(i * c, 0); x.lineTo(i * c, W); x.stroke(); x.beginPath(); x.moveTo(0, i * c); x.lineTo(W, i * c); x.stroke(); } }
+  if (griglia && n % 2 === 0) { x.strokeStyle = "rgba(15,118,110,.35)"; x.lineWidth = 2; x.setLineDash([6, 6]); x.beginPath(); x.moveTo(W / 2, 0); x.lineTo(W / 2, W); x.stroke(); x.beginPath(); x.moveTo(0, W / 2); x.lineTo(W, W / 2); x.stroke(); x.setLineDash([]); }
+}
+const disegna = () => disegnaGriglia($("cv"), S.g, S.n, S.stile, true);
+/* ---- Strumenti ---- */
+const STR = [["matita", "✏️ Matita"], ["gomma", "🧽 Gomma"], ["secchio", "🪣 Riempi"], ["contagocce", "💧 Contagocce"]];
+function bottoni() {
+  $("strumenti").innerHTML = STR.map(([k, t]) => `<button data-s="${k}" aria-pressed="${k === strumento}">${t}</button>`).join("");
+  $("strumenti").querySelectorAll("button").forEach(b => b.onclick = () => { strumento = b.dataset.s; bottoni(); });
+  [["colori", (c) => { colore = c; strumento = strumento === "gomma" || strumento === "contagocce" ? "matita" : strumento; bottoni(); }], ["colori2", c => { colore = c; bottoni(); }]].forEach(([id, f]) => {
+    $(id).innerHTML = PAL.map(c => `<button data-c="${c}" style="background:${c}" aria-pressed="${c === colore}" aria-label="colore ${c}"></button>`).join("");
+    $(id).querySelectorAll("button").forEach(b => b.onclick = () => f(b.dataset.c));
+  });
+  $("stili").innerHTML = [["mosaico", "🏛️ Mosaico"], ["pixel", "👾 Pixel"]].map(([k, t]) => `<button data-st="${k}" aria-pressed="${k === S.stile}">${t}</button>`).join("");
+  $("stili").querySelectorAll("button").forEach(b => b.onclick = () => { S.stile = b.dataset.st; salva(); bottoni(); disegna(); });
+  $("misure").innerHTML = [16, 24, 32].map(n => `<button data-n="${n}" aria-pressed="${n === S.n}">${n} × ${n}</button>`).join("");
+  $("misure").querySelectorAll("button").forEach(b => b.onclick = () => cambiaMisura(+b.dataset.n));
+}
+function cambiaMisura(n) {
+  if (n === S.n) return; const vecchia = S.g, m = S.n, g = Array(n * n).fill(null);
+  for (let r = 0; r < n; r++) for (let q = 0; q < n; q++) { const R = Math.floor(r * m / n), Q = Math.floor(q * m / n); g[r * n + q] = vecchia[R * m + Q]; }
+  storia.push({ g: vecchia, n: m }); S.n = n; S.g = g; salva(); bottoni(); disegna();
+}
+$("col-libero").addEventListener("input", e => { colore = e.target.value; if (strumento === "gomma" || strumento === "contagocce") strumento = "matita"; bottoni(); });
+function cella(cv, n, e) { const r = cv.getBoundingClientRect(); const q = Math.floor((e.clientX - r.left) / r.width * n), rr = Math.floor((e.clientY - r.top) / r.height * n); return q < 0 || rr < 0 || q >= n || rr >= n ? -1 : rr * n + q; }
+function riempi(g, n, i, nuovo) { const vecchio = g[i]; if (vecchio === nuovo) return; const pila = [i]; while (pila.length) { const k = pila.pop(); if (g[k] !== vecchio) continue; g[k] = nuovo; const r = Math.floor(k / n), q = k % n; if (q > 0) pila.push(k - 1); if (q < n - 1) pila.push(k + 1); if (r > 0) pila.push(k - n); if (r < n - 1) pila.push(k + n); } }
+let giu = false;
+function applica(i) {
+  if (i < 0) return; const n = S.n;
+  if (strumento === "contagocce") { if (S.g[i]) { colore = S.g[i]; strumento = "matita"; bottoni(); } return; }
+  if (strumento === "secchio") { riempi(S.g, n, i, colore); if ($("specchio").checked) { const r = Math.floor(i / n), q = i % n; riempi(S.g, n, r * n + (n - 1 - q), colore); } disegna(); return; }
+  const v = strumento === "gomma" ? null : colore; S.g[i] = v;
+  if ($("specchio").checked) { const r = Math.floor(i / n), q = i % n; S.g[r * n + (n - 1 - q)] = v; }
+  disegna();
+}
+$("cv").addEventListener("pointerdown", e => { storia.push({ g: S.g.slice(), n: S.n }); if (storia.length > 40) storia.shift(); giu = true; $("cv").setPointerCapture(e.pointerId); applica(cella($("cv"), S.n, e)); });
+$("cv").addEventListener("pointermove", e => { if (giu && (strumento === "matita" || strumento === "gomma")) applica(cella($("cv"), S.n, e)); });
+$("cv").addEventListener("pointerup", () => { giu = false; salva(); });
+$("annulla").onclick = () => { const s = storia.pop(); if (!s) return; S.g = s.g; S.n = s.n; salva(); bottoni(); disegna(); };
+let conf = false;
+$("pulisci").onclick = () => { if (!conf) { conf = true; $("pulisci").textContent = "Sicuro? Tocca ancora"; setTimeout(() => { conf = false; $("pulisci").textContent = "🧽 Pulisci"; }, 3000); return; } conf = false; $("pulisci").textContent = "🧽 Pulisci"; storia.push({ g: S.g.slice(), n: S.n }); S.g = Array(S.n * S.n).fill(null); salva(); disegna(); };
+$("salva-png").onclick = async () => {
+  const c = document.createElement("canvas"); c.width = c.height = 1200; disegnaGriglia(c, S.g, S.n, S.stile, false);
+  const blob = await new Promise(r => c.toBlob(r, "image/png")); let r = null;
+  try { if (window.parent !== window && typeof window.parent.ptlSalva === "function") r = await window.parent.ptlSalva(S.stile + ".png", blob); } catch (e) {}
+  if (r === "saved") { $("fb").className = "feedback ok"; $("fb").textContent = "✔ Immagine salvata."; return; }
+  $("img-out").src = c.toDataURL("image/png"); $("img-out").hidden = false; $("fb").className = "feedback"; $("fb").textContent = "Tieni premuta l'immagine e scegli «Salva immagine».";
+};
+/* ---- Copia il modello ---- */
+const LET = { ".": null, r: "#d62828", w: "#ffffff", b: "#1d4e89", n: "#8d5524", g: "#52b788", y: "#ffe66d", o: "#f77f00", k: "#1f2a44", c: "#4ea8de" };
+const MODELLI = {
+  "❤️ Cuore": ["............", "..rr....rr..", ".rrrr..rrrr.", "rrrrrrrrrrrr", "rrrrrrrrrrrr", "rrrrrrrrrrrr", ".rrrrrrrrrr.", "..rrrrrrrr..", "...rrrrrr...", "....rrrr....", ".....rr.....", "............"],
+  "🏠 Casa": [".....rr.....", "....rrrr....", "...rrrrrr...", "..rrrrrrrr..", ".rrrrrrrrrr.", "..wwwwwwww..", "..wccwwccw..", "..wccwwccw..", "..wwwwwwww..", "..wwwnnwww..", "..wwwnnwww..", "gggggggggggg"],
+  "🌼 Fiore": ["............", "....yyyy....", "...yyyyyy...", "..yyyooyyy..", "..yyooooyy..", "...yyooyy...", "....yyyy....", ".....gg.....", "..gg.gg.....", "...gggg.....", ".....gg.....", "gggggggggggg"],
+  "🐟 Pesce": ["............", "............", "...bbbbb....", "..bbbbbbb..b", ".bbkbbbbbbbb", "bbbbbbbbbbbb", ".bbbbbbbbbbb", "..bbbbbbb..b", "...bbbbb....", "............", "cccccccccccc", "cccccccccccc"]
+};
+let mod = Object.keys(MODELLI)[0], copia = Array(144).fill(null);
+const gMod = () => MODELLI[mod].join("").split("").map(ch => LET[ch]);
+function disegnaCopia() { disegnaGriglia($("cv-mod"), gMod(), 12, "pixel", true); disegnaGriglia($("cv-cop"), copia, 12, "pixel", true); }
+$("modelli").innerHTML = Object.keys(MODELLI).map(k => `<button data-m="${k}">${k}</button>`).join("");
+function bottoniModelli() { $("modelli").querySelectorAll("button").forEach(b => { b.setAttribute("aria-pressed", b.dataset.m === mod); b.onclick = () => { mod = b.dataset.m; copia = Array(144).fill(null); $("cop-fb").textContent = ""; bottoniModelli(); disegnaCopia(); }; }); }
+let giu2 = false;
+const appl2 = e => { const i = cella($("cv-cop"), 12, e); if (i < 0) return; copia[i] = copia[i] === colore && !giu2.mosso ? null : colore; disegnaCopia(); };
+$("cv-cop").addEventListener("pointerdown", e => { giu2 = { mosso: false }; $("cv-cop").setPointerCapture(e.pointerId); const i = cella($("cv-cop"), 12, e); if (i >= 0) { copia[i] = copia[i] === colore ? null : colore; disegnaCopia(); } });
+$("cv-cop").addEventListener("pointermove", e => { if (!giu2) return; giu2.mosso = true; const i = cella($("cv-cop"), 12, e); if (i >= 0 && copia[i] !== colore) { copia[i] = colore; disegnaCopia(); } });
+$("cv-cop").addEventListener("pointerup", () => giu2 = false);
+$("cop-pul").onclick = () => { copia = Array(144).fill(null); $("cop-fb").textContent = ""; disegnaCopia(); };
+$("cop-ok").onclick = () => {
+  const m = gMod(), norm = c => c === "#ffffff" ? null : c; let ok = 0; m.forEach((c, i) => { if (norm(c) === norm(copia[i])) ok++; });
+  const p = Math.round(ok / 144 * 100);
+  $("cop-fb").className = "feedback " + (p === 100 ? "ok" : p >= 85 ? "" : "ko");
+  $("cop-fb").textContent = p === 100 ? "✔ Copia perfetta!" : `Uguale al ${p}%. ${p >= 85 ? "Quasi! Cerca i tasselli diversi riga per riga." : "Conta i tasselli: parti dalla prima riga in alto."}`;
+};
+/* ---- Schede ---- */
+const TAB = ["crea", "copia", "storia"];
+TAB.forEach(t => $("t-" + t).addEventListener("click", () => { TAB.forEach(x => { $("t-" + x).setAttribute("aria-selected", x === t); $("s-" + x).hidden = x !== t; }); if (t === "copia") disegnaCopia(); }));
+bottoni(); bottoniModelli(); disegna();
+</script>
+<script src="a11y.js"></script>
+</body>
+</html>

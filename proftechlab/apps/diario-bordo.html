@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diario di bordo</title>
+<link rel="stylesheet" href="ptl.css">
+<style>
+:root { --accent: #1f9bb0; }
+.progetti { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+.progetto { background: var(--label); border: 3px solid var(--ink); border-radius: 14px; padding: 14px; display: grid; gap: 8px; cursor: pointer; text-align: left; font: inherit; color: inherit; box-shadow: 4px 5px 0 rgba(31,42,68,.15); }
+.progetto h3 { margin: 0; font-family: var(--font-hand); font-weight: 400; font-size: 26px; }
+.fasi-bar { display: flex; gap: 4px; }
+.fasi-bar span { flex: 1; height: 10px; border-radius: 99px; background: #e3e9f1; }
+.fasi-bar span.fatta { background: var(--accent); }
+.fasi { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+.fase-btn { border: 2px solid var(--ink); border-radius: 12px; background: #fff; padding: 8px 4px; cursor: pointer; display: grid; justify-items: center; gap: 2px; font: 400 17px var(--font-hand); line-height: 1.1; }
+.fase-btn .e { font-size: 26px; }
+.fase-btn[aria-pressed="true"] { background: var(--giallo); }
+.fase-btn.piena { border-color: var(--accent); box-shadow: inset 0 -5px 0 var(--accent); }
+.voce { background: #fff; border: 2px solid var(--squares); border-radius: 12px; padding: 10px 12px; display: grid; gap: 6px; }
+.voce img { max-width: 100%; max-height: 260px; border-radius: 8px; justify-self: start; }
+.voce .data { font-size: 13px; color: var(--muted); display: flex; justify-content: space-between; }
+.voce .data button { border: 0; background: none; color: var(--ko); cursor: pointer; font-size: 18px; }
+.editor { display: grid; gap: 8px; }
+.editor textarea, .editor input[type="text"] { width: 100%; font: 400 19px var(--font-hand); border: 2px solid var(--ink); border-radius: 8px; padding: 6px 10px; }
+.editor textarea { min-height: 80px; }
+.autoval { display: flex; gap: 8px; flex-wrap: wrap; }
+.autoval button { border: 2px solid var(--ink); border-radius: 12px; background: #fff; padding: 6px 10px; cursor: pointer; font: 400 17px var(--font-hand); display: grid; justify-items: center; }
+.autoval button span { font-size: 26px; }
+.autoval button[aria-pressed="true"] { background: var(--giallo); }
+.domande-guida { margin: 0; padding-left: 1.2em; color: var(--muted); font-size: 15px; }
+@media (max-width: 760px) { .fasi { grid-template-columns: repeat(3, 1fr); } }
+</style>
+</head>
+<body>
+<header class="app-bar"><h1>Diario di bordo</h1><span class="sub">Documenta il progetto, fase per fase · STEM</span></header>
+<div class="container">
+  <section id="s-lista" style="display:grid;gap:14px">
+    <div class="card" style="display:grid;gap:8px">
+      <p class="consegna">Ogni gruppo tiene il diario del suo progetto: idea, schizzo, costruzione, prove, miglioramenti e presentazione.</p>
+      <div class="row"><input type="text" id="nuovo-titolo" placeholder="Titolo del progetto (es. Il ponte di cartone)" style="width:min(380px,100%)"><input type="text" id="nuovo-gruppo" placeholder="Gruppo (es. Gruppo 3 · 2B)" style="width:200px"><button class="btn primary" id="nuovo">+ Nuovo progetto</button></div>
+      <p class="nota">Niente nomi e cognomi e niente foto di volti: fotografa solo oggetti, schizzi e prototipi. Testi e foto restano su questo dispositivo.</p>
+    </div>
+    <div class="progetti" id="progetti"></div>
+  </section>
+
+  <section id="s-progetto" hidden style="display:grid;gap:14px">
+    <div class="row" style="justify-content:space-between">
+      <button class="btn" id="indietro">← Tutti i progetti</button>
+      <div class="row"><button class="btn giallo" id="esporta">💾 Esporta il diario</button><button class="btn" id="copia">📋 Copia il testo</button><button class="btn no" id="elimina" style="background:var(--ko);color:#fff">🗑</button></div>
+    </div>
+    <h2 id="p-titolo" style="margin:0;font-family:var(--font-chalk);font-size:42px;line-height:1"></h2>
+    <div class="fasi" id="fasi"></div>
+    <div class="card editor" id="fase-box"></div>
+    <div id="voci" style="display:grid;gap:10px"></div>
+    <p class="feedback" id="msg" aria-live="polite"></p>
+  </section>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const esc = t => String(t).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const uid = () => Math.random().toString(36).slice(2, 10);
+const FASI = [
+  { k: "idea", e: "💡", n: "Idea", g: ["Quale problema vogliamo risolvere?", "Per chi è il nostro progetto?", "Quali idee abbiamo scartato e perché?"] },
+  { k: "progetto", e: "✏️", n: "Progetto", g: ["Disegniamo uno schizzo con le misure", "Quali materiali e strumenti servono?", "Come ci dividiamo i compiti?"] },
+  { k: "costruzione", e: "🔨", n: "Costruzione", g: ["Che cosa abbiamo costruito oggi?", "Quali difficoltà abbiamo incontrato?", "Abbiamo cambiato qualcosa rispetto al progetto?"] },
+  { k: "test", e: "🧪", n: "Prova", g: ["Come abbiamo provato il prototipo?", "Che cosa abbiamo misurato o osservato?", "Funziona? Dove si rompe o sbaglia?"] },
+  { k: "miglioramento", e: "🔧", n: "Miglioramento", g: ["Che cosa cambiamo dopo la prova?", "Perché pensiamo che funzionerà meglio?", "Rifacciamo la prova: che cosa è cambiato?"] },
+  { k: "presentazione", e: "🎤", n: "Presentazione", g: ["Come spieghiamo il progetto agli altri?", "Che cosa abbiamo imparato?", "Che cosa faremmo diversamente?"] }
+];
+const AUTOVAL = [["🌱", "Ci siamo bloccati"], ["🌿", "Abbastanza bene"], ["🌳", "Bene"], ["🌟", "Benissimo"]];
+let dati = { progetti: [] }; try { dati = JSON.parse(localStorage.getItem("diarioBordo")) || dati; } catch (e) {}
+function salva() {
+  try { localStorage.setItem("diarioBordo", JSON.stringify(dati)); return true; }
+  catch (e) { $("msg").textContent = "Spazio pieno su questo dispositivo: esporta il diario e togli qualche foto."; $("msg").className = "feedback ko"; return false; }
+}
+let corrente = null, fase = "idea", fotoNuova = "";
+const prog = () => dati.progetti.find(p => p.id === corrente);
+
+function disegnaLista() {
+  $("progetti").innerHTML = dati.progetti.map(p => `<button class="progetto" data-id="${p.id}"><h3>${esc(p.titolo)}</h3><span class="nota">${esc(p.gruppo || "")}</span>
+    <div class="fasi-bar">${FASI.map(f => `<span class="${(p.voci || []).some(v => v.fase === f.k) ? "fatta" : ""}" title="${f.n}"></span>`).join("")}</div>
+    <span class="nota">${(p.voci || []).length} annotazioni</span></button>`).join("") || `<p class="nota">Nessun progetto: creane uno qui sopra.</p>`;
+  $("progetti").querySelectorAll(".progetto").forEach(b => b.addEventListener("click", () => apri(b.dataset.id)));
+}
+$("nuovo").addEventListener("click", () => {
+  const t = $("nuovo-titolo").value.trim(); if (!t) { $("nuovo-titolo").focus(); return; }
+  const p = { id: uid(), titolo: t.slice(0, 80), gruppo: $("nuovo-gruppo").value.trim().slice(0, 40), voci: [], autoval: {}, creato: Date.now() };
+  dati.progetti.unshift(p); salva(); $("nuovo-titolo").value = ""; $("nuovo-gruppo").value = ""; apri(p.id);
+});
+function apri(id) { corrente = id; fase = "idea"; $("s-lista").hidden = true; $("s-progetto").hidden = false; disegnaProgetto(); }
+$("indietro").addEventListener("click", () => { corrente = null; $("s-progetto").hidden = true; $("s-lista").hidden = false; disegnaLista(); });
+function disegnaProgetto() {
+  const p = prog(); if (!p) return;
+  $("p-titolo").textContent = p.titolo + (p.gruppo ? " · " + p.gruppo : "");
+  $("fasi").innerHTML = FASI.map((f, i) => `<button class="fase-btn ${p.voci.some(v => v.fase === f.k) ? "piena" : ""}" data-k="${f.k}" aria-pressed="${f.k === fase}"><span class="e">${f.e}</span>${i + 1}. ${f.n}</button>`).join("");
+  $("fasi").querySelectorAll("button").forEach(b => b.addEventListener("click", () => { fase = b.dataset.k; fotoNuova = ""; disegnaProgetto(); }));
+  const F = FASI.find(f => f.k === fase), av = (p.autoval || {})[fase];
+  $("fase-box").innerHTML = `<b style="font-family:var(--font-hand);font-size:26px;font-weight:400">${F.e} ${F.n}: aggiungi un'annotazione</b>
+    <ul class="domande-guida">${F.g.map(g => `<li>${g}</li>`).join("")}</ul>
+    <textarea id="testo" placeholder="Scrivete qui che cosa avete fatto, deciso o scoperto…"></textarea>
+    <div class="row"><input type="text" id="funziona" placeholder="✔ Che cosa ha funzionato" style="flex:1;min-width:200px"><input type="text" id="cambia" placeholder="✘ Che cosa cambieremmo" style="flex:1;min-width:200px"></div>
+    <div class="row"><label class="btn" style="cursor:pointer">📷 Aggiungi una foto<input type="file" id="foto" accept="image/*" capture="environment" hidden></label><span class="nota" id="foto-nota">${fotoNuova ? "✔ Foto pronta" : ""}</span><button class="btn primary" id="aggiungi">+ Salva nel diario</button></div>
+    <div><b>Come è andata questa fase?</b><div class="autoval" id="autoval">${AUTOVAL.map(([e, t], i) => `<button data-i="${i}" aria-pressed="${av === i}"><span>${e}</span>${t}</button>`).join("")}</div></div>`;
+  $("autoval").querySelectorAll("button").forEach(b => b.addEventListener("click", () => { p.autoval = p.autoval || {}; p.autoval[fase] = +b.dataset.i; salva(); disegnaProgetto(); }));
+  $("foto").addEventListener("change", e => {
+    const f = e.target.files[0]; if (!f) return;
+    const rd = new FileReader(); rd.onload = () => { const img = new Image(); img.onload = () => {
+      const k = Math.min(1, 720 / Math.max(img.width, img.height)), c = document.createElement("canvas");
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      fotoNuova = c.toDataURL("image/jpeg", .65); $("foto-nota").textContent = "✔ Foto pronta";
+    }; img.src = rd.result; }; rd.readAsDataURL(f);
+  });
+  $("aggiungi").addEventListener("click", () => {
+    const testo = $("testo").value.trim(), funz = $("funziona").value.trim(), camb = $("cambia").value.trim();
+    if (!testo && !fotoNuova) { $("msg").textContent = "Scrivete qualcosa o aggiungete una foto."; $("msg").className = "feedback ko"; return; }
+    p.voci.push({ id: uid(), fase, data: Date.now(), testo, funz, camb, foto: fotoNuova });
+    if (!salva()) { p.voci.pop(); return; }
+    fotoNuova = ""; $("msg").textContent = "✔ Salvato nel diario."; $("msg").className = "feedback ok"; disegnaProgetto();
+  });
+  const voci = p.voci.filter(v => v.fase === fase).slice().reverse();
+  $("voci").innerHTML = voci.map(v => `<div class="voce"><div class="data"><span>${new Date(v.data).toLocaleString("it-IT", { dateStyle: "short", timeStyle: "short" })}</span><button data-id="${v.id}" aria-label="Elimina annotazione">🗑</button></div>
+    ${v.testo ? `<div style="white-space:pre-wrap">${esc(v.testo)}</div>` : ""}${v.funz ? `<div>✔ ${esc(v.funz)}</div>` : ""}${v.camb ? `<div>✘ ${esc(v.camb)}</div>` : ""}${v.foto ? `<img src="${v.foto}" alt="Foto del progetto">` : ""}</div>`).join("") || `<p class="nota">Nessuna annotazione in questa fase.</p>`;
+  $("voci").querySelectorAll("[data-id]").forEach(b => b.addEventListener("click", () => { p.voci = p.voci.filter(v => v.id !== b.dataset.id); salva(); disegnaProgetto(); }));
+}
+function testoDiario(p) {
+  return `${p.titolo}${p.gruppo ? " – " + p.gruppo : ""}\n\n` + FASI.map(f => {
+    const vv = p.voci.filter(v => v.fase === f.k); const av = (p.autoval || {})[f.k];
+    return `${f.n.toUpperCase()}${av !== undefined ? " (autovalutazione: " + AUTOVAL[av][1] + ")" : ""}\n` + (vv.map(v => `- ${new Date(v.data).toLocaleDateString("it-IT")}: ${v.testo}${v.funz ? "\n  Ha funzionato: " + v.funz : ""}${v.camb ? "\n  Cambieremmo: " + v.camb : ""}${v.foto ? "\n  [foto]" : ""}`).join("\n") || "- (nessuna annotazione)");
+  }).join("\n\n");
+}
+function htmlDiario(p) {
+  return `<!DOCTYPE html><html lang="it"><head><meta charset="utf-8"><title>${esc(p.titolo)}</title><style>body{font-family:Georgia,serif;max-width:190mm;margin:12mm auto;color:#111}h1{margin:0}h2{border-bottom:2px solid #1f9bb0;padding-bottom:3px;margin-top:22px}.v{margin:10px 0;break-inside:avoid}.d{color:#666;font-size:12px}img{max-width:100%;max-height:90mm;border-radius:4px;margin-top:4px}</style></head><body>
+  <h1>${esc(p.titolo)}</h1><p>${esc(p.gruppo || "")} · Diario di bordo · Prof Tech Lab</p>` + FASI.map(f => {
+    const vv = p.voci.filter(v => v.fase === f.k), av = (p.autoval || {})[f.k];
+    return `<h2>${f.e} ${f.n}${av !== undefined ? ` <small>· ${AUTOVAL[av][0]} ${AUTOVAL[av][1]}</small>` : ""}</h2>` + (vv.map(v => `<div class="v"><div class="d">${new Date(v.data).toLocaleString("it-IT")}</div>${v.testo ? `<div style="white-space:pre-wrap">${esc(v.testo)}</div>` : ""}${v.funz ? `<div>✔ ${esc(v.funz)}</div>` : ""}${v.camb ? `<div>✘ ${esc(v.camb)}</div>` : ""}${v.foto ? `<img src="${v.foto}" alt="">` : ""}</div>`).join("") || "<p><i>Nessuna annotazione.</i></p>");
+  }).join("") + `</body></html>`;
+}
+$("esporta").addEventListener("click", async () => {
+  const p = prog(); if (!p) return;
+  const nome = (p.titolo.replace(/[^a-z0-9àèéìòù ]/gi, "").trim().replace(/\s+/g, "-") || "diario") + ".html";
+  let r = null;
+  try { if (window.parent !== window && typeof window.parent.ptlSalva === "function") r = await window.parent.ptlSalva(nome, htmlDiario(p)); } catch (e) { r = e && e.code === "declined" ? "declined" : null; }
+  $("msg").textContent = r === "saved" ? "✔ Diario esportato: aprilo e stampalo o salvalo in PDF." : r === "declined" ? "Esportazione annullata." : "Esportazione non disponibile qui: usa «Copia il testo».";
+  $("msg").className = "feedback " + (r === "saved" ? "ok" : r === "declined" ? "" : "ko");
+});
+$("copia").addEventListener("click", async () => { const p = prog(); if (!p) return; try { await navigator.clipboard.writeText(testoDiario(p)); $("msg").textContent = "✔ Testo copiato (le foto sono solo nel file esportato)."; $("msg").className = "feedback ok"; } catch (e) { $("msg").textContent = "Copia non riuscita."; $("msg").className = "feedback ko"; } });
+let conf = false;
+$("elimina").addEventListener("click", () => {
+  if (!conf) { conf = true; $("elimina").textContent = "Tocca ancora per eliminare il progetto"; setTimeout(() => { conf = false; $("elimina").textContent = "🗑"; }, 3000); return; }
+  dati.progetti = dati.progetti.filter(p => p.id !== corrente); salva(); conf = false; $("elimina").textContent = "🗑"; $("indietro").click();
+});
+disegnaLista();
+</script>
+<script src="a11y.js"></script>
+</body>
+</html>

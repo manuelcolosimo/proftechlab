@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inquadra!</title>
+<link rel="stylesheet" href="ptl.css">
+<style>
+:root { --accent: #ea580c; }
+.layout { display: grid; grid-template-columns: minmax(300px, 1.3fr) 1fr; gap: 16px; align-items: start; }
+@media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+.mirino { position: relative; background: #111; border-radius: 14px; overflow: hidden; border: 3px solid var(--ink); aspect-ratio: 4 / 3; }
+.mirino video, .mirino img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.mirino canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.mirino .vuoto { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; color: #eee; padding: 20px; gap: 10px; font: 400 22px var(--font-hand); }
+.scelte { display: flex; gap: 6px; flex-wrap: wrap; }
+.scelte button { font: 400 18px var(--font-hand); border: 2px solid var(--ink); border-radius: 10px; background: #fff; padding: 2px 10px; cursor: pointer; }
+.scelte button[aria-pressed="true"] { background: var(--giallo); }
+.sfida { background: var(--label); border: 2px solid var(--ink); border-left: 10px solid var(--accent); border-radius: 12px; padding: 10px 14px; display: grid; gap: 6px; }
+.sfida h3 { margin: 0; font: 400 26px var(--font-hand); }
+.lista-sfide { display: flex; gap: 6px; flex-wrap: wrap; }
+.lista-sfide button { width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--ink); background: #fff; font: 700 16px var(--font-body); cursor: pointer; }
+.lista-sfide button.fatta { background: var(--ok); color: #fff; } .lista-sfide button[aria-current="true"] { outline: 4px solid var(--giallo); }
+.scatta { width: 84px; height: 84px; border-radius: 50%; border: 6px solid #fff; background: var(--accent); box-shadow: 0 0 0 3px var(--ink); cursor: pointer; font-size: 30px; }
+.album { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.foto { background: #fff; border: 2px solid var(--ink); border-radius: 10px; padding: 8px; display: grid; gap: 6px; }
+.foto .wrap { position: relative; aspect-ratio: 4/3; overflow: hidden; border-radius: 6px; background: #000; }
+.foto img { width: 100%; height: 100%; object-fit: cover; }
+.foto canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.foto .row button { font-size: 15px; border: 1.5px solid var(--ink); border-radius: 8px; background: #fff; padding: 2px 8px; cursor: pointer; }
+.check label { display: flex; gap: 8px; align-items: center; font-size: 17px; }
+.privacy { background: #fff7ed; border: 2px solid #fdba74; border-radius: 12px; padding: 8px 12px; font-size: 16px; }
+</style>
+</head>
+<body>
+<header class="app-bar"><h1>Inquadra!</h1><span class="sub">Sfide di composizione fotografica</span></header>
+<div class="container">
+  <div class="tabs" role="tablist"><button class="tab" id="t-scatta" aria-selected="true">📷 Scatta</button><button class="tab" id="t-album" aria-selected="false">🖼️ Il mio album</button></div>
+  <section id="s-scatta" class="layout">
+    <div style="display:grid;gap:10px">
+      <div class="mirino" id="mirino"><video id="video" playsinline muted hidden></video><img id="anteprima" hidden alt="Foto da analizzare"><canvas id="guida"></canvas>
+        <div class="vuoto" id="vuoto"><span>Accendi la fotocamera oppure carica una foto da analizzare.</span><div class="scelte" style="justify-content:center"><button id="b-cam">📷 Accendi la fotocamera</button><button id="b-file">🖼 Carica una foto</button></div></div></div>
+      <div class="row" style="justify-content:center"><button class="scatta" id="b-scatta" aria-label="Scatta" hidden>●</button></div>
+      <div><b>Griglia nel mirino:</b><div class="scelte" id="griglie"></div></div>
+      <p class="feedback" id="fb" style="font-size:19px"></p>
+    </div>
+    <div style="display:grid;gap:12px">
+      <div class="lista-sfide" id="lista"></div>
+      <div class="sfida" id="sfida"></div>
+      <p class="privacy">🔒 Fotografa oggetti, ambienti e natura. Le persone si fotografano solo con il loro permesso (e mai i compagni senza il permesso del docente). Le foto restano solo su questo dispositivo.</p>
+    </div>
+  </section>
+  <section id="s-album" hidden style="display:grid;gap:12px">
+    <p class="consegna">Le tue foto. Attiva la griglia per controllare la composizione.</p>
+    <div class="album" id="album"></div>
+  </section>
+</div>
+<input type="file" id="file" accept="image/*" hidden>
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const SFIDE = [
+  { t: "La regola dei terzi", g: "terzi", d: "Dividi l'immagine in 9 parti uguali. Metti il soggetto su uno dei 4 incroci, non al centro: la foto diventa più viva.", c: ["Il soggetto è su un incrocio della griglia?", "La linea dell'orizzonte (se c'è) è su una linea dei terzi?"] },
+  { t: "Linee che guidano", g: "diagonali", d: "Usa linee vere (il bordo di un banco, un corridoio, una strada, una ringhiera) che portano l'occhio verso il soggetto.", c: ["Ci sono linee che partono dal bordo della foto?", "Le linee portano verso il soggetto?"] },
+  { t: "Visto dal basso", g: "terzi", d: "Abbassati e fotografa un oggetto dal basso verso l'alto (punto di vista «a rana»): sembrerà grande, importante, imponente.", c: ["Hai fotografato dal basso?", "L'oggetto sembra più grande del normale?"] },
+  { t: "Visto dall'alto", g: "terzi", d: "Fotografa dall'alto verso il basso (punto di vista «a volo d'uccello»): l'oggetto sembra piccolo e lo spazio intorno si vede bene.", c: ["Hai fotografato dall'alto?", "Si vede bene lo spazio intorno all'oggetto?"] },
+  { t: "Simmetria", g: "centro", d: "Cerca un soggetto simmetrico e mettilo esattamente al centro: la foto trasmette ordine ed equilibrio.", c: ["Il soggetto è al centro?", "La parte destra e la sinistra si somigliano?"] },
+  { t: "Una cornice naturale", g: "terzi", d: "Inquadra il soggetto attraverso una «cornice»: una porta, una finestra, dei rami, un'apertura tra gli oggetti.", c: ["C'è una cornice intorno al soggetto?", "La cornice porta l'attenzione al soggetto?"] },
+  { t: "Il dettaglio", g: "nessuna", d: "Avvicinati tanto da riempire tutta l'inquadratura con un particolare: la trama del legno, una foglia, le punte delle matite.", c: ["Il particolare riempie tutta la foto?", "Si vede bene la trama o la superficie?"] },
+  { t: "Ripetizione e ritmo", g: "terzi", d: "Fotografa oggetti uguali che si ripetono: sedie in fila, libri, mattoni. La ripetizione crea un ritmo visivo.", c: ["Ci sono almeno 4 oggetti che si ripetono?", "Riempiono buona parte della foto?"] },
+  { t: "Lo spazio vuoto", g: "terzi", d: "Metti un soggetto piccolo in un grande spazio vuoto (un muro, il cielo, il pavimento): lo spazio vuoto lo fa risaltare.", c: ["Il soggetto è piccolo?", "Intorno c'è tanto spazio vuoto e semplice?"] },
+  { t: "Colori complementari", g: "nessuna", d: "Cerca due colori complementari vicini (rosso e verde, giallo e viola, blu e arancione): si fanno risaltare a vicenda.", c: ["Ci sono due colori complementari?", "Sono vicini e ben visibili?"] }
+];
+let cur = 0, griglia = "terzi", stream = null, fatte = [];
+try { fatte = JSON.parse(localStorage.getItem("inquadra-fatte")) || []; } catch (e) {}
+/* ---- Archivio foto (IndexedDB, solo su questo dispositivo) ---- */
+let dbp = null;
+function db() { if (!dbp) dbp = new Promise((res, rej) => { const r = indexedDB.open("inquadra", 1); r.onupgradeneeded = () => r.result.createObjectStore("foto", { keyPath: "id" }); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); return dbp; }
+async function tx(mode, f) { const d = await db(); return new Promise((res, rej) => { const t = d.transaction("foto", mode), s = t.objectStore("foto"), r = f(s); t.oncomplete = () => res(r && r.result); t.onerror = () => rej(t.error); }); }
+const tutte = () => tx("readonly", s => s.getAll());
+/* ---- Griglie ---- */
+function disegnaGriglia(cv, tipo) {
+  const r = cv.getBoundingClientRect(); cv.width = Math.max(1, r.width * 2); cv.height = Math.max(1, r.height * 2);
+  const x = cv.getContext("2d"), W = cv.width, H = cv.height; x.clearRect(0, 0, W, H); if (tipo === "nessuna") return;
+  x.strokeStyle = "rgba(255,255,255,.85)"; x.lineWidth = 3; x.shadowColor = "rgba(0,0,0,.6)"; x.shadowBlur = 4;
+  const L = (a, b, c, d) => { x.beginPath(); x.moveTo(a, b); x.lineTo(c, d); x.stroke(); };
+  if (tipo === "terzi") { [1, 2].forEach(i => { L(W * i / 3, 0, W * i / 3, H); L(0, H * i / 3, W, H * i / 3); }); x.fillStyle = "rgba(255,215,0,.9)"; [1, 2].forEach(i => [1, 2].forEach(j => { x.beginPath(); x.arc(W * i / 3, H * j / 3, 10, 0, 7); x.fill(); })); }
+  if (tipo === "diagonali") { L(0, 0, W, H); L(W, 0, 0, H); }
+  if (tipo === "centro") { L(W / 2, 0, W / 2, H); L(0, H / 2, W, H / 2); x.beginPath(); x.arc(W / 2, H / 2, Math.min(W, H) * .08, 0, 7); x.stroke(); }
+}
+function griglie() {
+  $("griglie").innerHTML = [["terzi", "Terzi"], ["diagonali", "Diagonali"], ["centro", "Centro"], ["nessuna", "Nessuna"]].map(([k, t]) => `<button data-g="${k}" aria-pressed="${k === griglia}">${t}</button>`).join("");
+  $("griglie").querySelectorAll("button").forEach(b => b.onclick = () => { griglia = b.dataset.g; griglie(); disegnaGriglia($("guida"), griglia); });
+}
+window.addEventListener("resize", () => disegnaGriglia($("guida"), griglia));
+/* ---- Sfide ---- */
+function sfida() {
+  const s = SFIDE[cur];
+  $("lista").innerHTML = SFIDE.map((x, i) => `<button data-i="${i}" class="${fatte.includes(i) ? "fatta" : ""}" aria-current="${i === cur}" title="${esc(x.t)}">${i + 1}</button>`).join("");
+  $("lista").querySelectorAll("button").forEach(b => b.onclick = () => { cur = +b.dataset.i; griglia = SFIDE[cur].g; griglie(); disegnaGriglia($("guida"), griglia); sfida(); });
+  $("sfida").innerHTML = `<h3>Sfida ${cur + 1}: ${esc(s.t)}</h3><p style="margin:0">${esc(s.d)}</p><div class="check"><b>Dopo lo scatto controlla:</b>${s.c.map((c, i) => `<label><input type="checkbox" data-c="${i}"> ${esc(c)}</label>`).join("")}</div>`;
+}
+/* ---- Fotocamera e file ---- */
+$("b-cam").onclick = async () => {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { $("fb").className = "feedback ko"; $("fb").textContent = "Qui la fotocamera non è disponibile: usa «Carica una foto» (dall'iPad puoi scattarla al momento)."; return; }
+  try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1600 } }, audio: false });
+    const v = $("video"); v.srcObject = stream; v.hidden = false; await v.play(); $("anteprima").hidden = true; $("vuoto").hidden = true; $("b-scatta").hidden = false; $("fb").textContent = ""; disegnaGriglia($("guida"), griglia);
+  } catch (e) { $("fb").className = "feedback ko"; $("fb").textContent = "Non riesco ad accendere la fotocamera (permesso negato o non disponibile). Usa «Carica una foto»."; }
+};
+$("b-file").onclick = () => $("file").click();
+$("file").addEventListener("change", async e => { const f = e.target.files[0]; e.target.value = ""; if (!f) return; const url = await riduci(f); $("anteprima").src = url; $("anteprima").hidden = false; $("video").hidden = true; $("vuoto").hidden = true; await new Promise(r => setTimeout(r, 50)); disegnaGriglia($("guida"), griglia); await salvaFoto(url); });
+function riduci(file) { return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => { const im = new Image(); im.onload = () => { const k = Math.min(1, 1280 / Math.max(im.width, im.height)), c = document.createElement("canvas"); c.width = im.width * k; c.height = im.height * k; c.getContext("2d").drawImage(im, 0, 0, c.width, c.height); res(c.toDataURL("image/jpeg", .82)); }; im.onerror = rej; im.src = r.result; }; r.readAsDataURL(file); }); }
+$("b-scatta").onclick = async () => {
+  const v = $("video"); if (!v.videoWidth) return;
+  const k = Math.min(1, 1280 / v.videoWidth), c = document.createElement("canvas"); c.width = v.videoWidth * k; c.height = v.videoHeight * k; c.getContext("2d").drawImage(v, 0, 0, c.width, c.height);
+  const url = c.toDataURL("image/jpeg", .82); $("mirino").animate([{ opacity: .2 }, { opacity: 1 }], 250); await salvaFoto(url);
+};
+async function salvaFoto(url) {
+  const check = [...$("sfida").querySelectorAll("[data-c]")].map(i => i.checked);
+  try { await tx("readwrite", s => s.put({ id: Date.now(), url, sfida: cur, data: new Date().toLocaleDateString("it-IT"), check })); }
+  catch (e) { $("fb").className = "feedback ko"; $("fb").textContent = "Non sono riuscito a salvare la foto (spazio pieno?)."; return; }
+  if (!fatte.includes(cur)) { fatte.push(cur); try { localStorage.setItem("inquadra-fatte", JSON.stringify(fatte)); } catch (e) {} }
+  $("fb").className = "feedback ok"; $("fb").textContent = "✔ Foto salvata nell'album. Rispondi alle domande della sfida per controllare la composizione."; sfida();
+}
+/* ---- Album ---- */
+async function album() {
+  let foto = []; try { foto = (await tutte()).sort((a, b) => b.id - a.id); } catch (e) {}
+  $("album").innerHTML = foto.length ? foto.map(f => `<div class="foto"><div class="wrap"><img src="${f.url}" alt="Foto della sfida ${f.sfida + 1}"><canvas data-g="${esc(SFIDE[f.sfida].g)}" hidden></canvas></div><b style="font:400 20px var(--font-hand)">${f.sfida + 1}. ${esc(SFIDE[f.sfida].t)}</b><span class="nota">${esc(f.data)}</span>
+    <div class="row"><button data-gr="${f.id}">▦ Griglia</button><button data-sv="${f.id}">💾 Salva</button><button data-del="${f.id}">🗑</button></div></div>`).join("") : '<p class="nota">Ancora nessuna foto: scegli una sfida e scatta!</p>';
+  $("album").querySelectorAll("[data-gr]").forEach(b => b.onclick = () => { const cv = b.closest(".foto").querySelector("canvas"); cv.hidden = !cv.hidden; if (!cv.hidden) disegnaGriglia(cv, cv.dataset.g === "nessuna" ? "terzi" : cv.dataset.g); });
+  $("album").querySelectorAll("[data-sv]").forEach(b => b.onclick = async () => { const f = foto.find(x => x.id === +b.dataset.sv), blob = await (await fetch(f.url)).blob(); let r = null; try { if (window.parent !== window && typeof window.parent.ptlSalva === "function") r = await window.parent.ptlSalva(`sfida-${f.sfida + 1}.jpg`, blob); } catch (e) {} if (r !== "saved" && r !== "declined") { const a = document.createElement("a"); a.href = f.url; a.download = `sfida-${f.sfida + 1}.jpg`; a.click(); } });
+  $("album").querySelectorAll("[data-del]").forEach(b => b.onclick = async () => { if (b.dataset.conf !== "1") { b.dataset.conf = "1"; b.textContent = "Sicuro?"; return; } await tx("readwrite", s => s.delete(+b.dataset.del)); album(); });
+}
+/* ---- Schede ---- */
+["scatta", "album"].forEach(t => $("t-" + t).addEventListener("click", () => { ["scatta", "album"].forEach(x => { $("t-" + x).setAttribute("aria-selected", x === t); $("s-" + x).hidden = x !== t; }); if (t === "album") album(); else disegnaGriglia($("guida"), griglia); }));
+griglie(); sfida(); disegnaGriglia($("guida"), griglia);
+</script>
+<script src="a11y.js"></script>
+</body>
+</html>

@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calcolo Passo Passo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f6f4ef; --card:#ffffff; --ink:#1f2933; --muted:#5b6670; --line:#d9d4c7;
+  --accent:#2f6fde; --ok:#1e8a4c; --ok-bg:#e3f5ea; --warn:#9a5800; --warn-bg:#fff2dc;
+  --focus:#ff8a00; --prod:#7b3fe4; --rem:#1e8a4c; --cell:2.4em;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{font-size:18px}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.35;
+  display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden}
+button{font:inherit;cursor:pointer;border:2px solid var(--line);background:var(--card);color:var(--ink);border-radius:14px;padding:.4em .8em;min-height:48px;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+button:active{transform:scale(.97)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
+[hidden]{display:none!important}
+header{flex:none;display:flex;gap:.5em;align-items:center;justify-content:space-between;padding:.3em .8em;background:var(--card);border-bottom:2px solid var(--line)}
+.brand{font-size:1.15rem;white-space:nowrap}
+.brand b{color:var(--accent)}
+.tools{display:flex;gap:.35em}
+.tools button{min-height:42px;padding:.25em .6em;font-size:.9rem;white-space:nowrap}
+main{flex:1;min-height:0;padding:.6em;overflow:auto}
+
+/* scelta */
+#setup{max-width:1100px;margin:0 auto}
+h1{font-size:1.35rem;margin:.3em 0 .5em}
+h2{font-size:1.1rem;margin:1em 0 .5em}
+.ops{display:grid;grid-template-columns:repeat(4,1fr);gap:.6em}
+.ops button{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:110px;font-size:1.05rem}
+.ops .sym{font-size:3rem;font-weight:700;line-height:1.05}
+.levels{display:grid;grid-template-columns:repeat(3,1fr);gap:.6em}
+.levels button{min-height:66px;font-size:1.05rem}
+.levels small{display:block;color:var(--muted);font-size:.8rem}
+.ops button[aria-pressed="true"],.levels button[aria-pressed="true"]{border-color:var(--accent);background:#e8f0ff;box-shadow:0 0 0 2px var(--accent) inset}
+.go{display:block;width:100%;margin-top:1.1em;font-size:1.4rem;min-height:68px}
+details{margin-top:1.1em;background:var(--card);border:2px solid var(--line);border-radius:14px;padding:.6em 1em}
+summary{cursor:pointer;font-weight:700;min-height:40px;display:flex;align-items:center}
+.custom{display:flex;flex-wrap:wrap;gap:.8em;align-items:flex-end;margin-top:.6em}
+.custom label{display:flex;flex-direction:column;font-size:.9rem;color:var(--muted)}
+.custom input,select{font:inherit;font-size:1.25rem;padding:.35em .6em;border:2px solid var(--line);border-radius:10px;width:8em;min-height:52px;background:#fff}
+select{width:auto}
+.err{color:#b42318;font-weight:700;margin-top:.5em;min-height:1.3em}
+.note{color:var(--muted);font-size:.9rem}
+footer{text-align:center;color:var(--muted);font-size:.78rem;padding:1.2em 1em}
+
+/* lavoro: tutto in uno schermo, calcoli e parte visiva affiancati */
+#work{height:100%;display:flex;flex-direction:column}
+.topbar{flex:none;display:flex;gap:.6em;align-items:center;margin-bottom:.35em}
+.topbar .title{font-size:1.35rem;font-weight:700;flex:1;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topbar button{min-height:42px}
+.bar{flex:none;height:7px;background:#e7e2d6;border-radius:8px;overflow:hidden;margin-bottom:.5em}
+.bar i{display:block;height:100%;background:var(--ok);width:0;transition:width .3s}
+.layout{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(270px,36%);gap:.6em}
+.left{display:flex;flex-direction:column;gap:.5em;min-height:0;min-width:0}
+.boardWrap{flex:1;min-height:110px;background:var(--card);border:2px solid var(--line);border-radius:18px;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:.4em}
+#bfit{width:max-content;font-size:20px}
+.panel{background:var(--card);border:2px solid var(--line);border-radius:18px;padding:.7em;overflow:auto;min-height:0}
+
+/* fasi della divisione */
+.phases{flex:none;display:grid;grid-template-columns:repeat(4,1fr);gap:.3em}
+.phases span{background:#fff;border:2px solid var(--line);border-radius:12px;padding:.3em .2em;text-align:center;font-size:.9rem;color:var(--muted);line-height:1.15}
+.phases span b{display:block;font-size:1.2rem}
+.phases span.on{background:var(--focus);border-color:var(--focus);color:#fff;font-weight:700;transform:scale(1.04)}
+.phases span.done{background:#f0ece2;color:#9aa1a6}
+
+/* griglia */
+table.board{border-collapse:collapse;margin:0 auto;font-size:1em}
+table.board td{width:var(--cell);height:var(--cell);text-align:center;vertical-align:middle;position:relative;padding:0}
+table.board td.sign{width:1.3em;color:var(--muted);font-weight:700}
+table.board tr.ptr td{height:1.1em;font-size:.7em;color:var(--focus);line-height:1}
+table.board.colored tr.num td:not(.sign),table.board.colored tr.hdr td:not(.sign){background:var(--pc)}
+table.board tr.hdr td{font-size:.55em;font-weight:700;color:#3b4650;height:1.9em}
+table.board tr.carry td{height:1.3em;font-size:.62em;color:#d0312d;font-weight:700}
+table.board tr.line td:not(.sign){height:5px;border-top:3px solid var(--ink)}
+table.board tr.uline td{height:4px}
+table.board tr.uline td.ul{border-top:3px solid var(--prod)}
+table.board td.hl{box-shadow:inset 3px 0 0 var(--focus),inset -3px 0 0 var(--focus)}
+table.board tr.hdr td.hl{box-shadow:inset 3px 3px 0 var(--focus),inset -3px 0 0 var(--focus)}
+table.board tr:last-child td.hl{box-shadow:inset 3px 0 0 var(--focus),inset -3px 0 0 var(--focus),inset 0 -3px 0 var(--focus)}
+table.board td.hc{box-shadow:inset 0 0 0 3px var(--focus);background-color:#ffe9c7!important;border-radius:8px}
+table.board td.comma::after{content:",";position:absolute;right:-.14em;bottom:.02em;font-weight:700;font-size:1.15em;z-index:2}
+.st-pad .v,.st-fade .v,.st-ph .v{color:#a8adb2}
+.st-used .v{text-decoration:line-through;opacity:.4}
+.st-grp{border-bottom:4px solid var(--accent)}
+.st-low .v{color:var(--accent);font-weight:700}
+.st-prod .v,.st-minus .v{color:var(--prod);font-weight:700}
+.st-rem .v{color:var(--rem);font-weight:700}
+td .old{position:absolute;left:0;right:0;bottom:.12em;text-decoration:line-through;color:#8a9399;font-size:.8em}
+td .nv{position:absolute;left:0;right:0;top:-.12em;font-size:.62em;color:#d0312d;font-weight:700}
+td.fresh .v,td.fresh .nv{animation:pop .55s ease-out}
+td.fresh.st-low .v{animation:drop .7s ease-out}
+@keyframes pop{0%{transform:scale(1.8);color:var(--ok)}100%{transform:scale(1)}}
+@keyframes drop{0%{transform:translateY(-2.5em);opacity:.3}100%{transform:none;opacity:1}}
+.legend{display:flex;flex-wrap:wrap;gap:.3em;justify-content:center;margin-top:.6em;font-size:.42em}
+.legend span{padding:.1em .45em;border-radius:6px;background:var(--pc)}
+.divwrap{display:flex;justify-content:center;align-items:flex-start}
+.dright{min-width:4.5em}
+.divisor{border-left:3px solid var(--ink);border-bottom:3px solid var(--ink);padding:0 .6em;height:var(--cell);line-height:var(--cell);font-weight:700}
+.quot{padding:.15em .6em;min-height:var(--cell);color:var(--accent);font-weight:700;letter-spacing:.06em}
+.qlabel{font-size:.45em;color:var(--muted);padding-left:.4em}
+.prebig{font-size:1.6em;padding:.5em}
+
+/* parte visiva: gruppi */
+.visual{flex:none;background:var(--card);border:2px solid var(--line);border-radius:18px;padding:.5em .7em;max-height:42%;overflow:auto}
+.visual .cap{font-weight:700;font-size:1.1rem;margin-bottom:.5em}
+.groups{gap:.6em!important}
+.groups{display:flex;flex-wrap:wrap;gap:.35em;align-items:flex-start}
+.grp{border:2px solid var(--prod);border-radius:10px;padding:.2em;display:flex;flex-wrap:wrap;gap:3px;max-width:8.4em;background:#f5efff;position:relative}
+.grp i,.left-over i{display:block;width:1.35em;height:1.35em;border-radius:50%;background:var(--prod)}
+.grp .n{position:absolute;top:-.75em;left:-.5em;background:var(--prod);color:#fff;border-radius:50%;width:1.35em;height:1.35em;font-size:.75rem;display:flex;align-items:center;justify-content:center;font-weight:700}
+.grp.box{max-width:none;min-width:2.6em;justify-content:center;font-weight:700;color:var(--prod);padding:.35em .5em}
+.left-over{border:2px dashed var(--rem);border-radius:10px;padding:.2em;display:flex;flex-wrap:wrap;gap:3px;max-width:8.4em;background:#eaf7ef}
+.left-over i{background:var(--rem)}
+.left-over.box{font-weight:700;color:var(--rem);padding:.35em .5em}
+
+/* pannello calcoli */
+.log{font-size:1rem;margin-bottom:.4em}
+.log:empty{display:none}
+.log div{padding:.35em .6em;border-radius:10px;margin-bottom:.25em}
+.log .ok{background:var(--ok-bg);color:var(--ok);font-weight:700}
+.log .auto{background:#eef3fb;color:#24456f}
+.log .no{background:var(--warn-bg);color:var(--warn);font-weight:700}
+.steptext{display:flex;gap:.4em;align-items:flex-start}
+.steptext p{margin:0;font-size:1.12rem;flex:1;font-weight:700}
+button.icon{min-width:46px;min-height:46px;padding:.1em;font-size:1.25rem}
+.expr{font-size:2.1rem;text-align:center;margin:.2em 0 .3em;font-weight:700;white-space:nowrap}
+.c-cur{color:#c76a00}
+.c-prod{color:var(--prod)}
+.ans{display:inline-block;min-width:1.6em;padding:0 .2em;border-bottom:5px solid var(--accent);color:var(--accent)}
+.ans.blink{animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{border-color:transparent}}
+.keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:.4em}
+.keypad button{font-size:1.6rem;font-weight:700;min-height:50px;padding:0;min-width:0}
+.keypad button.k-hint{font-size:1rem;background:#fff7e0;border-color:#f0d58a}
+.keypad button.k-del{font-size:1.3rem}
+.choices{display:grid;grid-template-columns:1fr;gap:.45em;margin:.4em 0}
+.choices.grid{grid-template-columns:1fr 1fr}
+.choices button{font-size:1.25rem;min-height:54px}
+.choices.grid button{font-size:1.05rem;min-height:46px;padding:.2em .3em}
+.choices button.fit{background:#eaf7ef;border-color:#9fd5b3}
+.choices button.over{background:#fdf0f0;border-color:#efc2c2;color:#8d3b3b}
+.choices button.act{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700;font-size:1.35rem;min-height:70px}
+.choices button.bad{border-color:#e08b8b;animation:shake .3s}
+@keyframes shake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.helper:empty{display:none}
+.helper{flex:none;max-height:35%;overflow:auto}
+.hint{background:var(--warn-bg);border:2px solid #f0d58a;padding:.5em .7em;border-radius:14px;margin-bottom:.4em;font-size:1.1rem}
+.tabrow{display:grid;grid-template-columns:repeat(auto-fill,minmax(5.2em,1fr));gap:.3em;margin-top:.35em}
+.tabrow span{background:#fff;border:1px solid #ecd9a6;border-radius:6px;padding:.1em 0;font-size:1rem;text-align:center;white-space:nowrap}
+.tabrow span.hit{background:#ffd43b;border-color:#e0a800;font-weight:700}
+.showb{width:100%;margin:0 0 .45em;background:#fff2dc;border-color:#e0a800;font-weight:700}
+.endbox{text-align:center}
+.endbox .lbl{font-size:1.1rem;color:var(--muted)}
+.endbox .res{font-size:2.1rem;font-weight:700;color:var(--ok);margin:.15em 0 .3em;word-break:break-word}
+.endbox p{margin:.4em 0}
+.endbox .row{display:grid;grid-template-columns:1fr 1fr;gap:.5em;margin-top:.8em}
+
+.modal{position:fixed;inset:0;background:rgba(20,25,30,.45);display:flex;align-items:center;justify-content:center;z-index:20;padding:1em}
+.mbox{background:var(--card);border-radius:16px;padding:1em;max-width:620px;width:100%;max-height:92vh;overflow:auto}
+.mhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:.4em}
+table.tav{border-collapse:collapse;margin:0 auto;font-size:1.05rem}
+table.tav td,table.tav th{width:2.5em;height:2.1em;text-align:center;border:1px solid #e3ded2;cursor:pointer}
+table.tav th{background:#eef1f5}
+table.tav .rowh,table.tav .colh{background:#fff7d1}
+table.tav .hit{background:#ffd43b;font-weight:700;outline:3px solid #e0a800}
+
+/* telefono in verticale: due colonne strette */
+@media (max-width:700px){
+  html{font-size:14px}
+  .layout{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:.4em}
+  .ops{grid-template-columns:repeat(2,1fr)}
+  .brand{font-size:1rem}
+  .tools .lbl{display:none}
+  .expr{font-size:1.55rem}
+  .keypad button{min-height:44px;font-size:1.35rem}
+  .choices.grid{grid-template-columns:1fr}
+  .choices.grid button{min-height:38px;font-size:1rem}
+  .phases span{font-size:.75rem;padding:.2em .1em}
+  .panel{padding:.5em}
+}
+/* telefono in orizzontale: poco spazio in altezza */
+@media (max-height:520px){
+  html{font-size:14px}
+  header{padding:.15em .6em}
+  .tools button,.topbar button{min-height:36px}
+  .topbar{margin-bottom:.2em}
+  .expr{font-size:1.5rem;margin:0 0 .2em}
+  .keypad{gap:.3em}
+  .keypad button{min-height:38px;font-size:1.25rem}
+  .choices.grid{grid-template-columns:1fr 1fr 1fr}
+  .choices.grid button{min-height:36px}
+  .choices button.act{min-height:50px}
+  .ops button{min-height:72px}
+  .ops .sym{font-size:2rem}
+  .phases span b{display:inline;font-size:1rem;margin-right:.2em}
+  .steptext p{font-size:1rem}
+  .log{font-size:.9rem}
+  .log div{padding:.2em .5em}
+  button.icon{min-width:38px;min-height:38px}
+  .keypad{grid-template-columns:repeat(6,1fr)}
+  .keypad [data-k="1"]{order:1}.keypad [data-k="2"]{order:2}.keypad [data-k="3"]{order:3}.keypad [data-k="4"]{order:4}.keypad [data-k="5"]{order:5}.keypad [data-k="6"]{order:6}
+  .keypad [data-k="7"]{order:7}.keypad [data-k="8"]{order:8}.keypad [data-k="9"]{order:9}.keypad [data-k="0"]{order:10}.keypad [data-k="del"]{order:11}.keypad [data-k="hint"]{order:12;font-size:.85rem}
+  .visual .cap{font-size:.9rem;margin-bottom:.2em}
+  .grp i,.left-over i{width:.9em;height:.9em}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">Calcolo <b>Passo Passo</b></div>
+  <div class="tools">
+    <button id="tavBtn" type="button" aria-label="Tavola pitagorica">✖<span class="lbl"> Tavola</span></button>
+    <button id="voiceBtn" type="button" aria-pressed="false">🔈<span class="lbl" id="voiceLbl"> Voce: no</span></button>
+    <button id="fontMinus" type="button" aria-label="Testo più piccolo">A−</button>
+    <button id="fontPlus" type="button" aria-label="Testo più grande">A+</button>
+  </div>
+</header>
+
+<main>
+<section id="setup">
+  <h1>1. Scegli l'operazione</h1>
+  <div class="ops" id="ops">
+    <button type="button" data-op="add" aria-pressed="true"><span class="sym">+</span>Addizione</button>
+    <button type="button" data-op="sub" aria-pressed="false"><span class="sym">−</span>Sottrazione</button>
+    <button type="button" data-op="mul" aria-pressed="false"><span class="sym">×</span>Moltiplicazione</button>
+    <button type="button" data-op="div" aria-pressed="false"><span class="sym">:</span>Divisione</button>
+  </div>
+  <h2>2. Scegli il livello</h2>
+  <div class="levels" id="levels">
+    <button type="button" data-l="1" aria-pressed="true">Facile<small>numeri interi</small></button>
+    <button type="button" data-l="2" aria-pressed="false">Medio<small>con la virgola</small></button>
+    <button type="button" data-l="3" aria-pressed="false">Difficile<small>più cifre dopo la virgola</small></button>
+  </div>
+  <button type="button" id="randBtn" class="primary go">Inizia ▶</button>
+  <details id="customBox">
+    <summary>Voglio scrivere io i numeri</summary>
+    <div class="custom">
+      <label>Primo numero<input id="n1" inputmode="decimal" autocomplete="off" placeholder="12,5"></label>
+      <label>Secondo numero<input id="n2" inputmode="decimal" autocomplete="off" placeholder="3,75"></label>
+      <label id="qdecWrap" hidden>Cifre dopo la virgola nel risultato
+        <select id="qdec"><option value="0">0 (con resto)</option><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option></select>
+      </label>
+      <button type="button" id="startBtn" class="primary">Inizia ▶</button>
+    </div>
+    <div class="err" id="err" role="alert"></div>
+  </details>
+  <footer>Prototipo didattico · Prof Tech Lab · Strumento compensativo e di allenamento.<br>Sul telefono funziona meglio in orizzontale.</footer>
+</section>
+
+<section id="work" hidden>
+  <div class="topbar">
+    <button type="button" id="backBtn" aria-label="Torna alla scelta">← Indietro</button>
+    <div class="title" id="title"></div>
+  </div>
+  <div class="bar"><i id="barFill"></i></div>
+  <div class="layout">
+    <div class="left">
+      <div class="phases" id="phases" hidden></div>
+      <div class="visual" id="visual" hidden></div>
+      <div class="boardWrap" id="boardWrap"><div id="bfit"></div></div>
+      <div class="helper" id="helper"></div>
+    </div>
+    <div class="panel" id="panel">
+      <div class="log" id="log" role="status" aria-live="polite"></div>
+      <div id="stepArea">
+        <div class="steptext"><p id="stext"></p><button type="button" class="icon" id="sayBtn" aria-label="Leggi ad alta voce">🔊</button></div>
+        <div class="expr" id="expr"></div>
+        <button type="button" id="showBtn" class="showb" hidden>Mostrami la risposta</button>
+        <div class="choices" id="choices"></div>
+        <div class="keypad" id="keypad"></div>
+      </div>
+      <div id="endArea" hidden></div>
+    </div>
+  </div>
+</section>
+</main>
+
+<div class="modal" id="tavModal" hidden role="dialog" aria-modal="true" aria-label="Tavola pitagorica">
+  <div class="mbox">
+    <div class="mhead"><strong>Tavola pitagorica</strong><button type="button" id="tavClose">Chiudi ✕</button></div>
+    <p class="note" id="tavNote">Tocca un numero: si colorano la sua riga e la sua colonna.</p>
+    <div id="tavGrid"></div>
+  </div>
+</div>
+
+<script>
+/* ===================== MOTORE (logica pura) ===================== */
+const PLACE={6:'unità di milione',5:'centinaia di migliaia',4:'decine di migliaia',3:'migliaia',2:'centinaia',1:'decine',0:'unità','-1':'decimi','-2':'centesimi','-3':'millesimi'};
+const PSHORT={6:'uM',5:'hk',4:'dak',3:'k',2:'h',1:'da',0:'u','-1':'d','-2':'c','-3':'m'};
+const PCOL={6:'#eceff3',5:'#eceff3',4:'#eceff3',3:'#e9e4f7',2:'#ffe3cc',1:'#d7e9ff',0:'#d5f2dc','-1':'#fff0b8','-2':'#fbd9e4','-3':'#e8e0d4'};
+const placeName=p=>PLACE[p]||'cifre';
+
+function parseNum(s){
+  s=String(s).trim().replace(/\s/g,'').replace('.',',');
+  const m=s.match(/^(\d{1,7})(?:,(\d{1,3}))?$/);
+  if(!m) return null;
+  const int=m[1].replace(/^0+(?=\d)/,''), dec=m[2]||'';
+  return {int,dec,str:int+(dec?','+dec:'')};
+}
+const scaled=(n,d)=>parseInt(n.int+n.dec.padEnd(d,'0'),10);
+const numVal=n=>parseFloat(n.int+'.'+(n.dec||'0'));
+function fromScaled(v,d,keep){
+  const s=String(v).padStart(d+1,'0');
+  const i=s.slice(0,s.length-d); let f=d?s.slice(s.length-d):'';
+  if(!keep) f=f.replace(/0+$/,'');
+  return i+(f?','+f:'');
+}
+// articoli corretti davanti ai numeri: il 4, l'8, l'11, lo 0, nell'8, dello 0...
+function art(n,w){
+  const s=String(n), z=s==='0', v=!z&&(s==='1'||s[0]==='8'||(s.startsWith('11')&&(s.length===2||s.length===5)));
+  const F={il:['il ',"l'",'lo '],nel:['nel ',"nell'",'nello '],del:['del ',"dell'",'dello '],dal:['dal ',"dall'",'dallo ']};
+  const f=F[w.toLowerCase()][z?2:v?1:0];
+  return (w[0]==='I'?f[0].toUpperCase()+f.slice(1):f)+s;
+}
+const cifre=k=>k===1?'1 cifra':k+' cifre';
+const dopoVirgola=(n,k)=>k===0?`${n} non ha la virgola`:`${n} ha ${cifre(k)} dopo la virgola`;
+
+function newBoard(W){return {W,rows:[],header:null,colored:false,fresh:new Set(),div:null};}
+function addRow(b,id,kind,sign){const r={id,kind,sign:sign||'',cells:new Array(b.W).fill(null),comma:-1};b.rows.push(r);return r;}
+const R=(b,id)=>b.rows.find(r=>r.id===id);
+function setC(b,id,c,v,st,old){R(b,id).cells[c]={v:String(v),st:st||'n',old:old===undefined?undefined:String(old)};b.fresh.add(id+':'+c);}
+const S=(kind,o)=>Object.assign({kind,apply:()=>{}},o);
+const mkErrs=(ans,list)=>list.filter(e=>e&&e.v!==ans);
+const ERR_RIP='Hai dimenticato il riporto rosso!', ERR_ALL='Scrivi tutto il numero, con tutte e due le cifre: il riporto lo sposto io.';
+
+function addHints(parts){
+  const s=[...parts].sort((a,b)=>b-a), big=s[0], rest=s.slice(1);
+  const h=[`Parti da ${big} e conta in avanti di ${rest.join(', poi di ')}. Puoi usare le dita.`];
+  if(s.length>=2&&s[0]+s[1]>10&&s[0]<10){const t=10-s[0];h.push(`Trucco: arriva prima a 10. ${s[0]} + ${t} = 10, poi aggiungi ${s[1]-t}.`);}
+  return h;
+}
+const subHints=(t,b)=>[`Parti da ${b} e conta in avanti fino a ${t}. Quanti passi fai?`,`Pensa così: ${b} + ? = ${t}`];
+
+/* ---------- ADDIZIONE ---------- */
+function placeAligned(b,id,N,d,col){
+  const m={}, row=R(b,id);
+  for(let k=0;k<N.int.length;k++){const p=N.int.length-1-k;m[p]=+N.int[k];row.cells[col(p)]={v:N.int[k],st:'n'};}
+  for(let k=0;k<d;k++){const p=-(k+1),ch=N.dec[k];m[p]=ch!==undefined?+ch:0;row.cells[col(p)]={v:ch!==undefined?ch:'0',st:ch!==undefined?'n':'pad'};}
+  if(d) row.comma=col(0);
+  return m;
+}
+function buildAdd(A,B){
+  const d=Math.max(A.dec.length,B.dec.length), I=Math.max(A.int.length,B.int.length), W=I+1+d;
+  const col=p=>I-p;
+  const b=newBoard(W); b.colored=true; b.header=[]; for(let c=0;c<W;c++) b.header.push(I-c);
+  addRow(b,'car','carry'); addRow(b,'a','num'); addRow(b,'b','num','+'); addRow(b,'l','line'); addRow(b,'r','num');
+  const ma=placeAligned(b,'a',A,d,col), mb=placeAligned(b,'b',B,d,col); if(d) R(b,'r').comma=col(0);
+  const steps=[S('auto',{msg:'Ho messo i numeri in colonna'+(d?', virgola sotto virgola':'')+'.'+(A.dec.length!==B.dec.length?' Gli zeri grigi riempiono i posti vuoti.':'')+' Si parte da destra.'})];
+  let carry=0;
+  for(let p=-d;p<I;p++){
+    const da=ma[p], db=mb[p], parts=[];
+    if(da!==undefined)parts.push(da); if(db!==undefined)parts.push(db); if(carry)parts.push(carry);
+    const sum=parts.reduce((x,y)=>x+y,0), c=col(p), last=p===I-1, cIn=carry, fl=Math.floor(sum/10);
+    const write=bd=>{
+      if(cIn){const cc=R(bd,'car').cells[c]; if(cc) cc.st='used';}
+      if(sum>=10){setC(bd,'r',c,sum%10); if(last) setC(bd,'r',c-1,fl); else setC(bd,'car',c-1,fl,'carry');}
+      else setC(bd,'r',c,sum);
+    };
+    if(parts.length===1) steps.push(S('auto',{cols:[c],msg:`Qui c'è solo ${parts[0]}: lo copio sotto.`,apply:write}));
+    else steps.push(S('input',{cols:[c],text:cIn?'Somma i numeri della colonna arancione. Conta anche il riporto rosso!':'Somma i numeri della colonna arancione.',
+      expr:parts.join(' + ')+' = ?',answer:sum,hint:addHints(parts),errs:mkErrs(sum,[cIn?{v:sum-cIn,msg:ERR_RIP}:null,sum>=10?{v:sum%10,msg:ERR_ALL}:null]),apply:write,
+      ok:sum>=10&&!last?`Scrivo ${sum%10} e porto ${fl} nella colonna a sinistra.`:`Scrivo ${sum}.`}));
+    carry=sum>=10?1:0;
+  }
+  const v=scaled(A,d)+scaled(B,d);
+  steps.push(S('end',{result:fromScaled(v,d)}));
+  return {board:b,steps};
+}
+
+/* ---------- SOTTRAZIONE ---------- */
+function buildSub(A,B){
+  const d=Math.max(A.dec.length,B.dec.length), I=Math.max(A.int.length,B.int.length), W=I+d;
+  const col=p=>I-1-p;
+  const b=newBoard(W); b.colored=true; b.header=[]; for(let c=0;c<W;c++) b.header.push(I-1-c);
+  addRow(b,'a','num'); addRow(b,'b','num','−'); addRow(b,'l','line'); addRow(b,'r','num');
+  const ma=placeAligned(b,'a',A,d,col), mb=placeAligned(b,'b',B,d,col); if(d) R(b,'r').comma=col(0);
+  const diff=scaled(A,d)-scaled(B,d);
+  const isLead=p=>p>0&&diff<10**(p+d);
+  const T={...ma};
+  const steps=[S('auto',{msg:'Ho messo i numeri in colonna'+(d?', virgola sotto virgola':'')+'.'+(A.dec.length!==B.dec.length?' Gli zeri grigi riempiono i posti vuoti.':'')+' Si parte da destra.'})];
+  for(let p=-d;p<I;p++){
+    const t=T[p], bb=mb[p], c=col(p);
+    if(bb===undefined){
+      const lead=isLead(p)&&t===0;
+      steps.push(S('auto',{cols:[c],msg:lead?'Qui resta 0 all\'inizio del numero: non si scrive.':`Sotto non c'è niente da togliere: copio ${t}.`,apply:bd=>setC(bd,'r',c,t,lead?'fade':'n')}));
+      continue;
+    }
+    if(t<bb){
+      let q=p+1; while(T[q]===0) q++;
+      const ch=[[col(q),T[q]-1,T[q]]]; T[q]--;
+      for(let r=q-1;r>p;r--){ch.push([col(r),9,0]);T[r]=9;}
+      T[p]=t+10;
+      steps.push(S('auto',{cols:[c],msg:`${t} è più piccolo di ${bb}: prendo 1 in prestito dalla colonna a sinistra${q>p+1?' (gli 0 in mezzo diventano 9)':''}. ${art(t,'Il')} diventa ${t+10}.`,
+        apply:bd=>{ch.forEach(([cc,nv,ov])=>setC(bd,'a',cc,nv,'brw',ov)); setC(bd,'a',c,t+10,'brw',t);}}));
+    }
+    const tt=T[p], res=tt-bb, lead=isLead(p)&&res===0;
+    steps.push(S('input',{cols:[c],text:'Fai la sottrazione nella colonna arancione.',expr:`${tt} − ${bb} = ?`,answer:res,hint:subHints(tt,bb),errs:mkErrs(res,[{v:tt+bb,msg:'Hai fatto più: qui si toglie (−).'},tt>=10&&tt-10<bb?{v:bb-(tt-10),msg:`Attenzione: dopo il prestito il numero di sopra è ${tt}, non ${tt-10}.`}:null]),
+      ok:lead?'Fa 0, ma è all\'inizio del numero: non si scrive.':`Scrivo ${res}.`,apply:bd=>setC(bd,'r',c,res,lead?'fade':'n')}));
+  }
+  steps.push(S('end',{result:fromScaled(diff,d)}));
+  return {board:b,steps};
+}
+
+/* ---------- MOLTIPLICAZIONE ---------- */
+function placeComma(Ps,k){const s=Ps.padStart(k+1,'0');return k?s.slice(0,-k)+','+s.slice(-k):s;}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function buildMul(A,B){
+  const fa=A.int+A.dec, fb=B.int+B.dec;
+  const sa=fa.replace(/^0+(?=\d)/,''), sb=fb.replace(/^0+(?=\d)/,'');
+  const la=sa.length, lb=sb.length, decA=A.dec.length, decB=B.dec.length, decT=decA+decB;
+  const P=parseInt(sa,10)*parseInt(sb,10), Ps=String(P);
+  const W=Math.max(fa.length,fb.length,la+lb,decT+1);
+  const col=r=>W-1-r;
+  const b=newBoard(W); b.grow=true;
+  addRow(b,'car','carry'); const ra=addRow(b,'a','num'); const rb=addRow(b,'b','num','×'); addRow(b,'l1','line');
+  for(let j=0;j<lb;j++) addRow(b,'p'+j,'num',j>0&&j===lb-1?'+':'');
+  if(lb>1){addRow(b,'l2','line');addRow(b,'car2','carry');addRow(b,'res','num');}
+  for(let k=0;k<fa.length;k++) ra.cells[col(fa.length-1-k)]={v:fa[k],st:k<fa.length-la?'fade':'n'};
+  for(let k=0;k<fb.length;k++) rb.cells[col(fb.length-1-k)]={v:fb[k],st:k<fb.length-lb?'fade':'n'};
+  if(decA) ra.comma=col(decA); if(decB) rb.comma=col(decB);
+  const steps=[S('auto',{msg:decT?'Ho messo i numeri in colonna a destra. Le virgole per ora non contano: le rimettiamo alla fine.':'Ho messo i numeri in colonna a destra.'})];
+  const pd=[];
+  for(let j=0;j<lb;j++){
+    const bj=+sb[lb-1-j], rid='p'+j; pd[j]={};
+    if(j>0) steps.push(S('auto',{msg:`Nuova riga: metto ${j===1?'un trattino':j+' trattini'} a destra. Ora moltiplico per ${bj}.`,
+      apply:bd=>{R(bd,'car').cells.fill(null);for(let r=0;r<j;r++)setC(bd,rid,col(r),'-','ph');}}));
+    if(bj===0){
+      for(let i=0;i<la;i++) pd[j][i+j]=0;
+      steps.push(S('auto',{msg:'Moltiplico per 0: viene tutto 0.',apply:bd=>{for(let i=0;i<la;i++)setC(bd,rid,col(i+j),0);}}));
+      continue;
+    }
+    let c=0;
+    for(let i=0;i<la;i++){
+      const ai=+sa[la-1-i], prod=ai*bj+c, last=i===la-1, cIn=c, fl=Math.floor(prod/10);
+      const cells=[['a',col(i)],['b',col(j)]]; if(cIn) cells.push(['car',col(i)]);
+      if(last){pd[j][i+j]=prod%10; if(prod>=10) pd[j][i+j+1]=fl;} else pd[j][i+j]=prod%10;
+      steps.push(S('input',{cells,tavola:[ai,bj],text:cIn?'Moltiplica i numeri arancioni. Poi aggiungi il riporto rosso.':'Moltiplica i numeri arancioni.',
+        expr:cIn?`${ai} × ${bj} + ${cIn} = ?`:`${ai} × ${bj} = ?`,answer:prod,errs:mkErrs(prod,[cIn?{v:ai*bj,msg:'Hai dimenticato di aggiungere il riporto rosso!'}:null,{v:ai+bj+cIn,msg:'Hai sommato: qui si moltiplica (×). Guarda la tabellina.'},prod>=10?{v:prod%10,msg:ERR_ALL}:null]),
+        hint:[{tab:[ai,bj]}].concat(cIn?[`${ai} × ${bj} = ${ai*bj}. Ora aggiungi ${cIn}.`]:[]),
+        ok:!last&&prod>=10?`Scrivo ${prod%10} e porto ${fl}.`:`Scrivo ${prod}.`,
+        apply:bd=>{
+          if(cIn){const cc=R(bd,'car').cells[col(i)]; if(cc) cc.st='used';}
+          if(last){setC(bd,rid,col(i+j),prod%10); if(prod>=10) setC(bd,rid,col(i+j+1),fl);}
+          else {setC(bd,rid,col(i+j),prod%10); if(fl) setC(bd,'car',col(i+1),fl,'carry');}
+        }}));
+      c=last?0:fl;
+    }
+  }
+  const resId=lb>1?'res':'p0';
+  if(lb>1){
+    steps.push(S('auto',{msg:'Ora sommo le righe, colonna per colonna. I trattini valgono 0.'}));
+    let carry=0;
+    for(let r=0;r<Ps.length;r++){
+      const parts=[]; for(let j=0;j<lb;j++) if(pd[j][r]!==undefined) parts.push(pd[j][r]);
+      if(carry) parts.push(carry);
+      const sum=parts.reduce((x,y)=>x+y,0), c=col(r), cIn=carry, fl=Math.floor(sum/10);
+      const write=bd=>{
+        if(cIn){const cc=R(bd,'car2').cells[c]; if(cc) cc.st='used';}
+        setC(bd,'res',c,sum%10); if(fl) setC(bd,'car2',col(r+1),fl,'carry');
+      };
+      if(parts.length===1) steps.push(S('auto',{cols:[c],msg:`Qui c'è solo ${parts[0]}: lo copio sotto.`,apply:write}));
+      else steps.push(S('input',{cols:[c],text:cIn?'Somma la colonna arancione. Conta anche il riporto rosso!':'Somma la colonna arancione.',expr:parts.join(' + ')+' = ?',answer:sum,hint:addHints(parts),errs:mkErrs(sum,[cIn?{v:sum-cIn,msg:ERR_RIP}:null,sum>=10?{v:sum%10,msg:ERR_ALL}:null]),
+        ok:fl?`Scrivo ${sum%10} e porto ${fl}.`:`Scrivo ${sum}.`,apply:write}));
+      carry=fl;
+    }
+  }
+  if(decT>0){
+    const correct=placeComma(Ps,decT);
+    const opts=new Set([correct]); opts.add(placeComma(Ps,decT+1)); if(decT-1>=1) opts.add(placeComma(Ps,decT-1)); else opts.add(Ps);
+    const padded=Ps.padStart(decT+1,'0');
+    const decCells=[]; for(let r=0;r<decA;r++) decCells.push(['a',col(r)]); for(let r=0;r<decB;r++) decCells.push(['b',col(r)]);
+    steps.push(S('choice',{cells:decCells,text:`Ora la virgola! ${dopoVirgola(A.str,decA)}, ${dopoVirgola(B.str,decB)}. In tutto ${decT}: conta ${cifre(decT)} da destra. Qual è il risultato giusto?`,
+      choices:shuffle([...opts].map(o=>({label:o,ok:o===correct,why:`Conta di nuovo: dopo la virgola ci devono essere ${cifre(decT)}.`}))),
+      ok:padded.length>Ps.length?`Giusto! Le cifre non bastavano: ho messo degli zeri davanti.`:`Giusto! La virgola va dopo ${cifre(decT)} da destra.`,
+      apply:bd=>{for(let r=Ps.length;r<padded.length;r++) setC(bd,resId,col(r),0,'pad'); R(bd,resId).comma=col(decT);}}));
+  }
+  const result=fromScaled(P,decT), full=placeComma(Ps,decT);
+  steps.push(S('end',{result,note:decT&&full!==result?`${full} = ${result}: gli zeri alla fine, dopo la virgola, si possono togliere.`:''}));
+  return {board:b,steps};
+}
+
+/* ---------- DIVISIONE ---------- */
+const PHASES=[['1','Prendo'],['2','Quante volte?'],['3','Tolgo'],['4','Abbasso']];
+function buildDiv(A,B,maxQ){
+  const Bd=B.dec.replace(/0+$/,''), k=Bd.length;
+  const nInt=(A.int+A.dec.padEnd(k,'0')).slice(0,A.int.length+k).replace(/^0+(?=\d)/,'');
+  const nDec=A.dec.slice(k);
+  maxQ=Math.max(maxQ,nDec.length);
+  const bStr=(B.int+Bd).replace(/^0+(?=\d)/,''), b=parseInt(bStr,10);
+  const D=(nInt+nDec).split('').map(Number), p=nInt.length;
+  const newA=nInt+(nDec?','+nDec:'');
+  let i0=-1,pref=0; for(let i=0;i<p;i++){pref=pref*10+D[i];if(pref>=b){i0=i;break;}}
+  const zeroInt=i0<0, ip=parseInt(nInt,10);
+  const its=[]; let start,cur;
+  if(!zeroInt){start=i0;cur=pref;}
+  else if(maxQ>0){start=p;cur=ip*10+(p<D.length?D[p]:0);}
+  if(!(zeroInt&&maxQ===0)){
+    let i=start;
+    for(;;){
+      const q=Math.floor(cur/b), rem=cur-q*b; const it={i,cur,q,rem}; its.push(it);
+      if(i>=p-1&&((rem===0&&i>=D.length-1)||(i-(p-1))>=maxQ)) break;
+      i++; const dig=i<D.length?D[i]:0; cur=rem*10+dig; it.next={i,dig,added:i>=D.length};
+    }
+  }
+  const lastI=its.length?its[its.length-1].i:p-1;
+  const W=Math.max(D.length,lastI+1);
+  const bd0=newBoard(W); bd0.isDiv=true; bd0.grow=true;
+  const dv=addRow(bd0,'dv','num');
+  D.forEach((x,c)=>dv.cells[c]={v:String(x),st:'n'});
+  if(D.length>p) dv.comma=p-1;
+  // metodo esteso: sotto ogni numero scrivo il prodotto da togliere, una riga e il resto
+  its.forEach((it,j)=>{ if(it.q>0){addRow(bd0,'m'+j,'num');addRow(bd0,'u'+j,'uline');} addRow(bd0,'r'+j,'num'); });
+  bd0.div={divisor:bStr,q:'',ready:k===0,orig:`${A.str} : ${B.str}`};
+  const steps=[];
+  const ph=(s,n)=>Object.assign(s,{phase:n});
+  if(k>0) steps.push(ph(S('auto',{msg:`${B.str} ha la virgola: la sposto di ${k===1?'1 posto':k+' posti'} a destra in tutti e due i numeri. Il risultato non cambia: ${A.str} : ${B.str} diventa ${newA} : ${bStr}.`,apply:bd=>{bd.div.ready=true;}}),1));
+  const curCells=(row,i,v)=>{const L=String(v).length,a=[];for(let c=i-L+1;c<=i;c++)a.push([row,c]);return a;};
+  if(zeroInt){
+    steps.push(ph(S('auto',{msg:`${nInt} è più piccolo di ${b}: nel risultato scrivo 0`+(maxQ>0?` e la virgola. Poi prendo anche la cifra dopo: ${its[0].cur}.`:'.'),
+      apply:bd=>{bd.div.q='0'+(maxQ>0?',':''); if(maxQ>0){ if(start>=D.length){setC(bd,'dv',start,0,'pad'); R(bd,'dv').comma=p-1;} for(let c=0;c<=start;c++){const x=R(bd,'dv').cells[c]; if(x&&x.st!=='pad') x.st='grp';} }}}),1));
+  } else {
+    const count=Math.min(p,i0+2);
+    const mark=bd=>{for(let c=0;c<=i0;c++) R(bd,'dv').cells[c].st='grp';};
+    if(count<=1) steps.push(ph(S('auto',{msg:`Parto da ${pref}: ${art(b,'il')} ci sta.`,apply:mark}),1));
+    else {
+      const ch=[]; let v=0;
+      for(let L=1;L<=count;L++){v=v*10+D[L-1]; const val=v;
+        ch.push({label:String(val),ok:L===i0+1,why:L<i0+1?`${art(b,'Il')} ${art(val,'nel')} non ci sta: prendi una cifra in più.`:`Ci sta, ma è troppo grande: prendi il numero più piccolo dove ${art(b,'il')} ci sta.`});}
+      steps.push(ph(S('choice',{text:`Da quale numero parto? Scegli il più piccolo dove ${art(b,'il')} ci sta.`,choices:ch,ok:`Giusto: parto da ${pref}.`,apply:mark}),1));
+    }
+  }
+  its.forEach((it,j)=>{
+    const row=j===0?'dv':'r'+(j-1), cc=curCells(row,it.i,it.cur), prod=b*it.q, ps=String(prod), L=ps.length;
+    const prodCells=[]; for(let c=it.i-L+1;c<=it.i;c++) prodCells.push(['m'+j,c]);
+    if(j>0){
+      const nx=its[j-1].next, needComma=nx.i===p&&!zeroInt;
+      steps.push(ph(S('choice',{cells:[['dv',nx.i]],text:(nx.added?'Le cifre sono finite: si aggiunge uno 0.':'Ora abbasso la cifra successiva.')+(needComma?' Siamo dopo la virgola: metto la virgola nel risultato.':''),
+        choices:[{label:nx.added?'⬇ Aggiungo 0 e lo abbasso':`⬇ Abbasso ${art(nx.dig,'il')}`,ok:true,cls:'act'}],ok:`Ora il numero è ${it.cur}.`,
+        apply:bd=>{setC(bd,'r'+(j-1),nx.i,nx.dig,'low'); if(nx.added){setC(bd,'dv',nx.i,0,'pad'); if(nx.i===p) R(bd,'dv').comma=p-1;} if(needComma) bd.div.q+=',';}}),4));
+    }
+    const ch=[]; for(let n=0;n<=9;n++) ch.push({label:n===0?'0 · non ci sta':`${b} × ${n} = ${b*n}`,ok:n===it.q,cls:b*n<=it.cur?'fit':'over',
+      why:n>it.q?`${b*n} è più di ${it.cur}: troppo!`:(n===0?`${art(b,'Il')} ci sta almeno una volta!`:`Ci sta, ma ce n'è uno più grande che ci sta ancora.`)});
+    steps.push(ph(S('choice',{grid:true,cells:cc,visual:{cur:it.cur,b,q:it.q,mode:'q'},text:`Quante volte ${art(b,'il')} sta ${art(it.cur,'nel')}? Tocca l'ultimo verde ✓.`,choices:ch,
+      ok:it.q===0?`${art(b,'Il')} non ci sta: scrivo 0 nel risultato.`:`${b} × ${it.q} = ${prod}. Scrivo ${it.q} nel risultato e ${prod} sotto ${art(it.cur,'il')}.`,
+      apply:bd=>{bd.div.q+=it.q;
+        if(it.q>0){for(let x=0;x<L;x++) setC(bd,'m'+j,it.i-L+1+x,ps[x],'prod');
+          const mc=it.i-L; if(mc>=0) setC(bd,'m'+j,mc,'−','minus'); else R(bd,'m'+j).sign='−';
+          for(let c=it.i-L+1;c<=it.i;c++) R(bd,'u'+j).cells[c]={v:'',st:'ul'};}}}),2));
+    const writeRem=bd=>{const s=String(it.rem),Lr=s.length;for(let x=0;x<Lr;x++) setC(bd,'r'+j,it.i-Lr+1+x,s[x],'rem');};
+    if(it.q===0) steps.push(ph(S('auto',{msg:`Non tolgo niente: resta ${it.rem}.`,apply:writeRem}),3));
+    else steps.push(ph(S('input',{cells:cc.concat(prodCells),visual:{cur:it.cur,b,q:it.q,mode:'r'},text:'Quanto resta? Togli il numero viola da quello arancione.',
+      expr:`${it.cur} − ${prod} = ?`,exprHtml:`<span class="c-cur">${it.cur}</span> − <span class="c-prod">${prod}</span> = ?`,answer:it.rem,remMax:b,
+      hint:subHints(it.cur,prod),errs:mkErrs(it.rem,[{v:it.cur+prod,msg:'Hai fatto più: qui si toglie (−).'}]),ok:`Resta ${it.rem}.`,apply:writeRem}),3));
+  });
+  let Q;
+  if(zeroInt) Q='0'+(its.length?','+its.map(x=>x.q).join(''):'');
+  else {Q='';its.forEach(it=>{if(it.i===p&&!Q.includes(','))Q+=',';Q+=it.q;});}
+  const lastRem=its.length?its[its.length-1].rem:ip, exact=lastRem===0;
+  let note='';
+  if(!exact) note=maxQ===0?`Resto: ${fromScaled(lastRem,k)}.`:`La divisione non finisce qui: mi fermo a ${cifre(maxQ)} dopo la virgola. Il risultato è approssimato.`;
+  steps.push(S('end',{result:(exact||maxQ===0?'':'≈ ')+Q,note,quot:Q,rem:lastRem}));
+  return {board:bd0,steps};
+}
+
+/* ---------- generatori ---------- */
+const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+function genNum(minI,maxI,dec){
+  let s=String(rnd(minI,maxI));
+  if(dec>0){let f='';for(let i=0;i<dec;i++)f+=rnd(0,9);f=f.slice(0,-1)+rnd(1,9);s+=','+f;}
+  return s;
+}
+function generate(op,L){
+  const decs=()=>L===1?0:L===2?1:rnd(1,2);
+  if(op==='add'){const a=genNum(10,L===3?999:9999,decs()),b=genNum(5,L===3?99:999,L===1?0:rnd(L===2?0:1,L===2?1:2));return [a,b];}
+  if(op==='sub'){
+    for(;;){const a=genNum(20,L===3?999:9999,decs()),b=genNum(5,L===3?99:999,L===1?0:rnd(L===2?0:1,L===2?1:2));
+      if(numVal(parseNum(a))>numVal(parseNum(b))) return [a,b];}
+  }
+  if(op==='mul'){
+    if(L===1) return [String(rnd(12,999)),String(rnd(2,Math.random()<.5?9:49))];
+    if(L===2) return [genNum(1,99,1),Math.random()<.5?String(rnd(2,9)):String(rnd(11,39))];
+    return [genNum(1,99,rnd(1,2)),genNum(0,9,1)];
+  }
+  if(L===1){const b=rnd(2,9),q=rnd(10,300),r=rnd(0,b-1);return [String(q*b+r),String(b),0];}
+  if(L===2){const b=rnd(2,9),qs=Math.random()<.6?rnd(11,999):rnd(101,2999),qd=qs<1000&&Math.random()<.6?1:2;
+    return [fromScaled(qs*b,qd),String(b),2];}
+  const bs=[3,4,5,6,8,12,15,24,25][rnd(0,8)], q=rnd(12,480), qd=Math.random()<.5?0:1;
+  return [fromScaled(q*bs,qd+1),fromScaled(bs,1),2];
+}
+function build(op,A,B,maxQ){
+  if(op==='add') return buildAdd(A,B);
+  if(op==='sub') return buildSub(A,B);
+  if(op==='mul') return buildMul(A,B);
+  return buildDiv(A,B,maxQ);
+}
+const SYM={add:'+',sub:'−',mul:'×',div:':'};
+
+/* ===================== INTERFACCIA ===================== */
+if(typeof document!=='undefined'){
+const $=id=>document.getElementById(id);
+const st={op:'add',level:1,board:null,steps:[],idx:0,ans:'',errors:0,hints:0,voice:false,font:18,A:null,B:null,maxQ:2,log:[],busy:false,timer:0};
+try{const s=JSON.parse(localStorage.getItem('cpp-prefs')||'{}');if(s.font)st.font=s.font;if(s.voice)st.voice=true;}catch(e){}
+const savePrefs=()=>{try{localStorage.setItem('cpp-prefs',JSON.stringify({font:st.font,voice:st.voice}));}catch(e){}};
+const applyFont=()=>{document.documentElement.style.fontSize=st.font+'px';if(!$('work').hidden)requestAnimationFrame(fitBoard);};
+const applyVoice=()=>{$('voiceBtn').firstChild.textContent=st.voice?'🔊':'🔈';$('voiceLbl').textContent=st.voice?' Voce: sì':' Voce: no';$('voiceBtn').setAttribute('aria-pressed',st.voice);};
+applyVoice();
+if(st.font!==18) applyFont();
+
+function toSpeech(t){
+  return t.replace(/(\d),(\d)/g,'$1 virgola $2').replace(/ × /g,' per ').replace(/ : /g,' diviso ').replace(/ − /g,' meno ').replace(/ \+ /g,' più ')
+    .replace(/= \?/g,'uguale?').replace(/≈/g,'circa').replace(/[✓✗→←⬇·!]/g,' ');
+}
+function speak(t,force){
+  if((!st.voice&&!force)||!('speechSynthesis' in window)) return;
+  try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(toSpeech(t));u.lang='it-IT';u.rate=.9;
+    const v=speechSynthesis.getVoices().find(v=>v.lang&&v.lang.toLowerCase().startsWith('it'));if(v)u.voice=v;speechSynthesis.speak(u);}catch(e){}
+}
+
+/* scelta */
+document.querySelectorAll('#ops button').forEach(b=>b.onclick=()=>{st.op=b.dataset.op;document.querySelectorAll('#ops button').forEach(x=>x.setAttribute('aria-pressed',x===b));$('qdecWrap').hidden=st.op!=='div';});
+document.querySelectorAll('#levels button').forEach(b=>b.onclick=()=>{st.level=+b.dataset.l;document.querySelectorAll('#levels button').forEach(x=>x.setAttribute('aria-pressed',x===b));});
+const startRandom=()=>{const g=generate(st.op,st.level);start(parseNum(g[0]),parseNum(g[1]),g[2]!==undefined?g[2]:2);};
+$('randBtn').onclick=startRandom;
+$('startBtn').onclick=()=>{
+  const A=parseNum($('n1').value),B=parseNum($('n2').value),e=$('err');e.textContent='';
+  if(!A||!B){e.textContent='Scrivi due numeri (esempio: 12,5).';return;}
+  if(st.op==='sub'&&numVal(A)<numVal(B)){e.textContent='Nella sottrazione il primo numero deve essere il più grande.';return;}
+  if((st.op==='mul'||st.op==='div')&&(numVal(A)===0||numVal(B)===0)){e.textContent=st.op==='div'&&numVal(B)===0?'Non si può dividere per zero.':'Usa numeri diversi da zero.';return;}
+  if(st.op==='mul'&&(A.int+A.dec).replace(/^0+/,'').length>5){e.textContent='Il primo numero può avere al massimo 5 cifre.';return;}
+  if(st.op==='mul'&&(B.int+B.dec).replace(/^0+/,'').length>3){e.textContent='Il secondo numero può avere al massimo 3 cifre.';return;}
+  if(st.op==='div'&&(B.int+B.dec.replace(/0+$/,'')).replace(/^0+/,'').length>3){e.textContent='Il divisore può avere al massimo 3 cifre.';return;}
+  start(A,B,+$('qdec').value);
+};
+$('backBtn').onclick=()=>{$('work').hidden=true;$('setup').hidden=false;try{speechSynthesis.cancel();}catch(e){}};
+$('voiceBtn').onclick=()=>{st.voice=!st.voice;applyVoice();savePrefs();if(st.voice)speak('Voce accesa');else try{speechSynthesis.cancel();}catch(e){}};
+$('fontPlus').onclick=()=>{st.font=Math.min(26,st.font+2);applyFont();savePrefs();};
+$('fontMinus').onclick=()=>{st.font=Math.max(12,st.font-2);applyFont();savePrefs();};
+
+function start(A,B,maxQ){
+  st.A=A;st.B=B;st.maxQ=maxQ;
+  const r=build(st.op,A,B,maxQ);
+  st.board=r.board;st.steps=r.steps;st.idx=0;st.log=[];
+  $('title').textContent=`${A.str} ${SYM[st.op]} ${B.str}`;
+  $('setup').hidden=true;$('work').hidden=false;
+  showStep();
+}
+
+/* tastierino */
+$('keypad').innerHTML=['7','8','9','4','5','6','1','2','3'].map(k=>`<button type="button" data-k="${k}">${k}</button>`).join('')
+  +'<button type="button" class="k-hint" data-k="hint">💡 Aiuto</button><button type="button" data-k="0">0</button><button type="button" class="k-del" data-k="del" aria-label="Cancella">⌫</button>';
+$('keypad').onclick=e=>{const b=e.target.closest('button');if(!b)return;const k=b.dataset.k;if(k==='hint')hint();else press(k);};
+function press(k){
+  const s=st.steps[st.idx]; if(!s||s.kind!=='input'||st.busy) return;
+  if(k==='del') st.ans=st.ans.slice(0,-1);
+  else if(st.ans.length<6) st.ans+=k;
+  renderExpr();
+  clearTimeout(st.timer);
+  if(k==='del'||st.ans==='') return;
+  // controllo automatico: subito se ha scritto tutte le cifre, dopo una pausa se ne ha scritte meno
+  if(st.ans.length>=String(s.answer).length){st.busy=true;st.timer=setTimeout(()=>{st.busy=false;check();},300);}
+  else st.timer=setTimeout(check,1800);
+}
+document.addEventListener('keydown',e=>{
+  if($('work').hidden||!$('tavModal').hidden||e.target.tagName==='INPUT') return;
+  if(/^[0-9]$/.test(e.key)) press(e.key);
+  else if(e.key==='Backspace'){press('del');e.preventDefault();}
+});
+
+function renderExpr(){
+  const s=st.steps[st.idx]; if(!s||!s.expr){$('expr').innerHTML='';return;}
+  $('expr').innerHTML=(s.exprHtml||s.expr).replace('?',`<span class="ans${st.ans?'':' blink'}" id="ans">${st.ans||'&nbsp;'}</span>`);
+}
+function renderBoard(s){
+  const b=st.board; s=s||{};
+  const hlCols=new Set(s.cols||[]), hlCells=new Set((s.cells||[]).map(x=>x.join(':')));
+  const pc=p=>PCOL[p]||'#f0f0f0';
+  let h=`<table class="board${b.colored?' colored':''}" aria-label="Operazione in colonna">`;
+  if(b.header){
+    h+='<tr class="ptr"><td class="sign"></td>'+b.header.map((p,c)=>`<td>${hlCols.has(c)?'▼':''}</td>`).join('')+'</tr>';
+    h+='<tr class="hdr"><td class="sign"></td>'+b.header.map((p,c)=>`<td class="${hlCols.has(c)?'hl':''}" style="--pc:${pc(p)}" title="${placeName(p)}">${PSHORT[p]||''}</td>`).join('')+'</tr>';
+  }
+  // in moltiplicazione e divisione mostro solo le righe già usate: la griglia cresce passo dopo passo e resta grande
+  let rows=b.rows;
+  if(b.grow){let last=0;rows.forEach((r,i)=>{if(r.cells.some(c=>c))last=i;});if(rows[last+1]&&rows[last+1].kind==='line')last++;rows=rows.slice(0,last+1);}
+  for(const r of rows){
+    if(r.kind==='line'){h+='<tr class="line"><td class="sign"></td>'+'<td></td>'.repeat(b.W)+'</tr>';continue;}
+    if(r.kind==='uline'){h+='<tr class="uline"><td class="sign"></td>'+r.cells.map(c=>`<td class="${c&&c.st==='ul'?'ul':''}"></td>`).join('')+'</tr>';continue;}
+    h+=`<tr class="${r.kind}"><td class="sign">${r.sign}</td>`;
+    for(let c=0;c<b.W;c++){
+      const cell=r.cells[c], cls=[]; let inner='';
+      if(hlCols.has(c)) cls.push('hl'); if(hlCells.has(r.id+':'+c)) cls.push('hc');
+      if(cell){cls.push('st-'+cell.st); if(b.fresh.has(r.id+':'+c)) cls.push('fresh');
+        inner=cell.old!==undefined?`<span class="old">${cell.old}</span><span class="nv">${cell.v}</span>`:`<span class="v">${cell.v}</span>`;
+        if(r.comma===c) cls.push('comma');}
+      const sty=b.colored&&b.header?` style="--pc:${pc(b.header[c])}"`:'';
+      h+=`<td class="${cls.join(' ')}"${sty}>${inner}</td>`;
+    }
+    h+='</tr>';
+  }
+  h+='</table>';
+  if(b.div){
+    if(!b.div.ready) h=`<div class="prebig">${b.div.orig}</div>`;
+    else h=`<div class="divwrap"><div>${h}</div><div class="dright"><div class="divisor">${b.div.divisor}</div><div class="quot">${b.div.q||'&nbsp;'}</div><div class="qlabel">risultato</div></div></div>`;
+  }
+  if(b.colored&&b.header) h+='<div class="legend">'+b.header.filter(p=>PSHORT[p]).map(p=>`<span style="--pc:${pc(p)}"><b>${PSHORT[p]}</b> ${placeName(p)}</span>`).join('')+'</div>';
+  $('bfit').innerHTML=h;
+  b.fresh.clear();
+}
+// adatta la griglia allo spazio disponibile: si vede sempre tutta, senza scorrere
+function fitBoard(){
+  const wrap=$('boardWrap'), inner=$('bfit'); if(!inner.firstChild) return;
+  inner.style.fontSize='20px';
+  const w=inner.scrollWidth, h=inner.scrollHeight, aw=wrap.clientWidth-14, ah=wrap.clientHeight-14;
+  if(!w||!h||aw<=0||ah<=0) return;
+  inner.style.fontSize=Math.max(8,Math.min(42,20*Math.min(aw/w,ah/h)))+'px';
+}
+window.addEventListener('resize',()=>{if(!$('work').hidden)fitBoard();});
+function renderPhases(s){
+  if(!st.board.isDiv||s.kind==='end'){$('phases').hidden=true;return;}
+  $('phases').hidden=false;
+  $('phases').innerHTML=PHASES.map(([n,t],i)=>`<span class="${s.phase===i+1?'on':''}"><b>${n}</b>${t}</span>`).join('');
+}
+function renderVisual(s){
+  const v=s.visual; if(!v){$('visual').hidden=true;$('visual').innerHTML='';return;}
+  const {cur,b,q,mode}=v, rest=cur-q*b, dots=cur<=60&&b<=12;
+  let g='';
+  for(let n=1;n<=q;n++) g+=`<div class="grp${dots?'':' box'}"><span class="n">${n}</span>${dots?'<i></i>'.repeat(b):b}</div>`;
+  if(rest>0) g+=dots?`<div class="left-over">${'<i></i>'.repeat(rest)}</div>`:`<div class="left-over box">${mode==='r'?'?':rest}</div>`;
+  let cap;
+  if(q===0) cap=`${art(cur,'Il')} è più piccolo ${art(b,'del')}: non riesco a fare nemmeno un gruppo.`;
+  else if(mode==='q') cap=`Divido ${cur} in gruppi da ${b}: ${q===1?'si forma 1 gruppo':'si formano '+q+' gruppi'}.`;
+  else cap=rest>0?(dots?'Quanti pallini verdi restano fuori dai gruppi?':`Fuori dai gruppi resta un pezzetto: quanto vale?`):'Non resta fuori niente!';
+  $('visual').hidden=false;
+  $('visual').innerHTML=`<div class="cap">${cap}</div><div class="groups">${g}</div>`;
+}
+function renderLog(){
+  $('log').innerHTML=st.log.slice(-3).map(([t,c])=>`<div class="${c}">${c==='ok'?'✓ ':c==='auto'?'→ ':''}${t}</div>`).join('');
+}
+function showStep(){
+  clearTimeout(st.timer);
+  let s=st.steps[st.idx];
+  // i passaggi automatici si eseguono da soli: il messaggio resta visibile
+  while(s.kind==='auto'){s.apply(st.board);st.log.push([s.msg,'auto']);st.idx++;s=st.steps[st.idx];}
+  st.ans='';st.errors=0;st.hints=0;st.busy=false;
+  $('helper').innerHTML='';$('choices').innerHTML='';$('showBtn').hidden=true;
+  $('barFill').style.width=Math.round(100*st.idx/(st.steps.length-1))+'%';
+  renderPhases(s);renderVisual(s);renderBoard(s);renderLog();
+  if(s.kind==='end'){renderEnd(s);requestAnimationFrame(fitBoard);return;}
+  $('stepArea').hidden=false;$('endArea').hidden=true;
+  $('stext').textContent=s.text; renderExpr();
+  $('keypad').hidden=s.kind!=='input';
+  if(s.kind==='choice'){
+    $('choices').className='choices'+(s.grid?' grid':'');
+    $('choices').innerHTML=s.choices.map((c,i)=>`<button type="button" data-i="${i}" class="${c.cls||''}">${c.cls==='fit'?'✓ ':''}${c.label}</button>`).join('');
+    $('choices').querySelectorAll('button').forEach(btn=>btn.onclick=()=>choose(+btn.dataset.i,btn));
+  }
+  requestAnimationFrame(fitBoard);
+  speak(s.text+(s.expr?'. '+s.expr:''));
+}
+const PRAISE=['Giusto!','Esatto!','Perfetto!','Bravo!','Ottimo!'];
+function advance(msg,cls){
+  const s=st.steps[st.idx]; s.apply(st.board);
+  st.log=[[msg,cls||'ok']]; st.idx++; showStep();
+}
+// riconosce gli errori tipici e spiega cosa è successo
+function diagnose(s,v){
+  const e=(s.errs||[]).find(x=>x.v===v); if(e) return e.msg;
+  if(s.remMax!==undefined&&v>=s.remMax) return `Il resto deve essere più piccolo di ${s.remMax}! Ricontrolla.`;
+  if(Math.abs(v-s.answer)===1) return 'Ci sei quasi: hai sbagliato di 1.';
+  return st.errors===1?'Non ancora. Riprova: guarda l\'aiuto.':'Non ancora. Riprova o tocca Mostrami.';
+}
+function check(){
+  const s=st.steps[st.idx]; if(!s||s.kind!=='input'||st.ans==='') return;
+  const v=+st.ans;
+  if(v===s.answer){advance(PRAISE[Math.floor(Math.random()*PRAISE.length)]+' '+s.ok);return;}
+  st.errors++; st.ans=''; renderExpr();
+  const msg=diagnose(s,v);
+  st.log=[[msg,'no']]; renderLog();
+  if(st.hints<st.errors) hint(true);
+  if(st.errors>=2) $('showBtn').hidden=false;
+  speak(msg);
+}
+function choose(i,btn){
+  const s=st.steps[st.idx], c=s.choices[i];
+  if(c.ok){advance(s.ok);return;}
+  btn.classList.remove('bad');void btn.offsetWidth;btn.classList.add('bad');
+  st.log=[[c.why||'Non è questa. Riprova.','no']];renderLog();speak(c.why||'Riprova');
+}
+function hint(silent){
+  const s=st.steps[st.idx]; if(!s||!s.hint) return;
+  if(st.hints>=s.hint.length){$('showBtn').hidden=false;if(s.tavola&&!silent)openTav(s.tavola);return;}
+  const h=s.hint[st.hints++];
+  let html;
+  if(typeof h==='object'&&h.tab){
+    const [a,b]=h.tab;
+    html=`<div class="hint">💡 Tabellina ${art(a,'del')}:<div class="tabrow">${[1,2,3,4,5,6,7,8,9,10].map(n=>`<span class="${n===b?'hit':''}">${a}×${n}=${a*n}</span>`).join('')}</div></div>`;
+    speak(`Guarda la tabellina ${art(a,'del')}`);
+  } else {html=`<div class="hint">💡 ${h}</div>`;speak(h);}
+  $('helper').insertAdjacentHTML('beforeend',html);
+  if(st.hints>=s.hint.length) $('showBtn').hidden=false;
+  requestAnimationFrame(fitBoard);
+}
+$('showBtn').onclick=()=>{const s=st.steps[st.idx];if(s&&s.kind==='input')advance(`La risposta era ${s.answer}. ${s.ok}`,'no');};
+$('sayBtn').onclick=()=>{const s=st.steps[st.idx];if(s)speak((s.text||'')+(s.expr?'. '+s.expr:''),true);};
+function renderEnd(s){
+  $('stepArea').hidden=true;$('endArea').hidden=false;$('barFill').style.width='100%';
+  $('endArea').innerHTML=`<div class="endbox"><div class="lbl">Fatto! 🎉 Il risultato è</div><div class="res">${st.A.str} ${SYM[st.op]} ${st.B.str} = ${s.result}</div>${s.note?`<p>${s.note}</p>`:''}
+    <div class="row"><button type="button" class="primary" id="againBtn">Un altro ▶</button><button type="button" id="changeBtn">Cambia</button></div></div>`;
+  $('againBtn').onclick=startRandom;
+  $('changeBtn').onclick=()=>$('backBtn').onclick();
+  speak('Fatto! Il risultato è '+s.result);
+}
+
+/* tavola pitagorica */
+function buildTav(hit){
+  let h='<table class="tav"><tr><th>×</th>';for(let c=1;c<=10;c++)h+=`<th data-c="${c}">${c}</th>`;h+='</tr>';
+  for(let r=1;r<=10;r++){h+=`<tr><th data-r="${r}">${r}</th>`;for(let c=1;c<=10;c++)h+=`<td data-r="${r}" data-c="${c}">${r*c}</td>`;h+='</tr>';}
+  $('tavGrid').innerHTML=h+'</table>';
+  $('tavGrid').onclick=e=>{const td=e.target.closest('td,th');if(!td)return;mark(+td.dataset.r||0,+td.dataset.c||0);};
+  mark(hit?hit[0]:0,hit?hit[1]:0);
+}
+function mark(r,c){
+  $('tavGrid').querySelectorAll('td,th').forEach(x=>{const xr=+x.dataset.r||0,xc=+x.dataset.c||0;x.classList.toggle('rowh',!!r&&xr===r&&!(c&&xc===c));x.classList.toggle('colh',!!c&&xc===c&&!(r&&xr===r));x.classList.toggle('hit',!!(r&&c)&&xr===r&&xc===c);});
+  $('tavNote').textContent=r&&c?`${r} × ${c} = ${r*c}`:'Tocca un numero: si colorano la sua riga e la sua colonna.';
+}
+function openTav(hit){buildTav(hit);$('tavModal').hidden=false;}
+$('tavBtn').onclick=()=>{const s=st.steps[st.idx];openTav(!$('work').hidden&&s&&s.tavola?s.tavola:null);};
+$('tavClose').onclick=()=>{$('tavModal').hidden=true;};
+$('tavModal').onclick=e=>{if(e.target===$('tavModal'))$('tavModal').hidden=true;};
+document.addEventListener('keydown',e=>{if(e.key==='Escape')$('tavModal').hidden=true;});
+}
+</script>
+<script src="a11y.js"></script>
+</body>
+</html>

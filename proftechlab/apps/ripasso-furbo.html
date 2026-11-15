@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ripasso furbo</title>
+<link rel="stylesheet" href="ptl.css">
+<style>
+:root { --accent: #8e5bd0; --viola: #8e5bd0; }
+.mazzi { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; }
+.mazzo { background: var(--label); border: 3px solid var(--ink); border-radius: 14px; padding: 14px; display: grid; gap: 8px; box-shadow: 4px 5px 0 rgba(31,42,68,.15); }
+.mazzo h3 { margin: 0; font-family: var(--font-hand); font-weight: 400; font-size: 26px; line-height: 1.1; }
+.mazzo .mat { font-size: 14px; color: var(--muted); }
+.mini-scatole { display: flex; gap: 4px; align-items: flex-end; height: 44px; }
+.mini-scatole div { flex: 1; background: var(--viola); border-radius: 4px 4px 0 0; min-height: 3px; }
+.mazzo .row .btn { font-size: 18px; padding: 4px 10px; }
+.scatole { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.scatola { background: #f1e9fb; border: 2px solid var(--viola); border-radius: 10px; padding: 8px 4px; text-align: center; display: grid; gap: 2px; }
+.scatola b { font-family: var(--font-chalk); font-size: 34px; line-height: 1; color: var(--viola); }
+.scatola span { font-size: 12.5px; color: var(--muted); line-height: 1.2; }
+.scatola.fine { background: #e2f3ea; border-color: var(--ok); } .scatola.fine b { color: var(--ok); }
+.carta-wrap { display: grid; justify-items: center; gap: 12px; }
+.carta { width: min(640px, 100%); min-height: 260px; background: #fff; border: 3px solid var(--ink); border-radius: 18px; box-shadow: 6px 7px 0 rgba(31,42,68,.18); padding: 22px; display: grid; place-content: center; text-align: center; gap: 10px; position: relative;
+  background-image: repeating-linear-gradient(transparent 0 33px, #dbe6f1 33px 34px); }
+.carta .lato { position: absolute; top: 10px; left: 14px; font: 400 17px var(--font-hand); color: var(--viola); }
+.carta .scat { position: absolute; top: 10px; right: 14px; font-size: 13px; color: var(--muted); }
+.carta .testo { font-family: var(--font-hand); font-size: clamp(26px, 4vw, 38px); line-height: 1.25; white-space: pre-wrap; }
+.carta.retro { border-color: var(--viola); }
+.carta img { max-width: 100%; max-height: 200px; justify-self: center; border-radius: 8px; }
+.risposte { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.btn.si { background: var(--ok); color: #fff; } .btn.no { background: var(--ko); color: #fff; }
+.progresso { width: min(640px, 100%); height: 14px; border: 2px solid var(--ink); border-radius: 99px; overflow: hidden; background: #fff; }
+.progresso div { height: 100%; background: var(--viola); transition: width .3s; }
+.editor { display: grid; gap: 10px; }
+.editor label { display: grid; gap: 4px; font-weight: 700; }
+.editor input[type="text"], .editor textarea { width: 100%; font: 400 20px var(--font-hand); border: 2px solid var(--ink); border-radius: 8px; padding: 6px 10px; }
+.editor textarea { min-height: 90px; }
+.lista-carte { display: grid; gap: 6px; }
+.riga-carta { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: center; background: #fff; border: 2px solid var(--squares); border-radius: 10px; padding: 6px 10px; font-size: 15px; }
+.riga-carta button { border: 0; background: none; font-size: 20px; cursor: pointer; color: var(--ko); }
+.confronto { font-family: var(--font-hand); font-size: 22px; text-align: center; }
+.vuoto { font-family: var(--font-hand); font-size: 22px; color: var(--muted); text-align: center; }
+@media (max-width: 560px) { .scatole { grid-template-columns: repeat(5, 1fr); gap: 4px; } .scatola span { display: none; } .riga-carta { grid-template-columns: 1fr auto; } .riga-carta .r { grid-column: 1; } }
+</style>
+</head>
+<body>
+<header class="app-bar"><h1>Ripasso furbo</h1><span class="sub">Flashcard con le 5 scatole · metodo di studio</span></header>
+<div class="container">
+  <div class="tabs" role="tablist">
+    <button class="tab" id="t-mazzi" aria-selected="true">📚 I miei mazzi</button>
+    <button class="tab" id="t-studia" aria-selected="false">🧠 Ripassa</button>
+    <button class="tab" id="t-crea" aria-selected="false">✏️ Crea e modifica</button>
+    <button class="tab" id="t-come" aria-selected="false">❓ Come funziona</button>
+  </div>
+
+  <!-- MAZZI -->
+  <section id="s-mazzi" style="display:grid;gap:14px">
+    <details class="card" id="guida" open>
+      <summary style="cursor:pointer;font:400 24px var(--font-hand)">📘 Come si usa: un mazzo, tre usi</summary>
+      <ol style="margin:8px 0 0;padding-left:1.3em;display:grid;gap:6px;font-size:16px">
+        <li><b>Il docente prepara il mazzo</b> in «✏️ Crea e modifica»: una carta per domanda, con la risposta breve. Si possono incollare tante righe insieme (<i>domanda ; risposta</i>), anche da un foglio di calcolo.</li>
+        <li><b>Gli studenti ripassano</b>: il docente copia il codice del mazzo e lo manda alla classe (Classroom, registro, chat di classe). Ogni studente lo importa con «📥 Importa un mazzo» e ripassa con le 5 scatole, sul proprio dispositivo.</li>
+        <li><b>Il docente crea la verifica dallo stesso mazzo</b>: in «✏️ Crea e modifica» premi «📄 Crea una verifica da questo mazzo». Si apre il Generatore con il mazzo già scelto: domande a scelta multipla o aperte, file A e B, correttore.</li>
+      </ol>
+      <p class="nota" style="margin:8px 0 0">Così ciò che si ripassa è proprio ciò che verrà chiesto: lo studente sa su cosa prepararsi e la verifica premia chi ha studiato davvero. Consiglio: per la scelta multipla servono almeno 8 carte con risposte brevi e dello stesso tipo (tutte definizioni, tutte date, tutti numeri…).</p>
+    </details>
+    <div class="row"><button class="btn primary" id="nuovo-mazzo">+ Nuovo mazzo</button><button class="btn" id="importa-apri">📥 Importa un mazzo</button></div>
+    <div class="card" id="importa-box" hidden style="display:grid;gap:8px">
+      <b>Incolla il codice ricevuto dal docente o da un compagno</b>
+      <textarea id="importa-codice" style="width:100%;min-height:80px;font:15px monospace;border:2px solid var(--ink);border-radius:8px;padding:6px"></textarea>
+      <div class="row"><button class="btn primary" id="importa-ok">Importa</button><label class="btn" style="cursor:pointer">📄 Apri un file .json<input type="file" id="importa-file" accept=".json,application/json" hidden></label></div>
+      <p class="feedback" id="importa-msg"></p>
+    </div>
+    <div class="mazzi" id="lista-mazzi"></div>
+  </section>
+
+  <!-- STUDIA -->
+  <section id="s-studia" hidden style="display:grid;gap:14px">
+    <div class="card" style="display:grid;gap:10px">
+      <div class="row" style="justify-content:space-between"><b id="studia-titolo" style="font-family:var(--font-hand);font-size:26px;font-weight:400"></b>
+        <label class="row nota"><input type="checkbox" id="modo-scrivi"> Scrivo io la risposta</label></div>
+      <div class="scatole" id="scatole"></div>
+    </div>
+    <div class="carta-wrap" id="area-carta"></div>
+  </section>
+
+  <!-- CREA -->
+  <section id="s-crea" hidden class="card editor">
+    <div class="row"><label style="flex:1">Mazzo <select id="crea-mazzo" style="width:100%"></select></label></div>
+    <label>Nome del mazzo <input type="text" id="crea-nome" maxlength="60"></label>
+    <label>Materia <input type="text" id="crea-materia" maxlength="40" placeholder="es. Tecnologia"></label>
+    <hr style="border:0;border-top:2px dashed var(--squares);width:100%">
+    <b style="font-family:var(--font-hand);font-size:24px;font-weight:400">Nuova carta</b>
+    <label>Davanti (domanda) <textarea id="crea-f" maxlength="400"></textarea></label>
+    <label>Dietro (risposta) <textarea id="crea-r" maxlength="600"></textarea></label>
+    <div class="row"><label class="btn" style="cursor:pointer;font-weight:400">🖼️ Aggiungi un'immagine<input type="file" id="crea-img" accept="image/*" hidden></label><span class="nota" id="crea-img-nota"></span></div>
+    <div class="row"><button class="btn primary" id="crea-aggiungi">+ Aggiungi la carta</button></div>
+    <details><summary style="cursor:pointer;font-weight:700">Aggiungi tante carte insieme</summary>
+      <p class="nota">Una carta per riga: <b>domanda ; risposta</b> (va bene anche il tasto Tab tra le due parti, se copi da un foglio di calcolo).</p>
+      <textarea id="crea-tante" placeholder="7 × 8 ; 56&#10;Capitale della Francia ; Parigi"></textarea>
+      <button class="btn" id="crea-tante-ok">Aggiungi tutte</button></details>
+    <p class="feedback" id="crea-msg" aria-live="polite"></p>
+    <b id="crea-conta"></b>
+    <div class="lista-carte" id="crea-lista"></div>
+    <hr style="border:0;border-top:2px dashed var(--squares);width:100%">
+    <div class="row">
+      <button class="btn primary" id="crea-verifica">📄 Crea una verifica da questo mazzo</button>
+      <button class="btn" id="condividi-copia">📋 Copia il codice per condividere</button>
+      <button class="btn" id="condividi-file">💾 Salva come file</button>
+      <button class="btn" id="azzera-mazzo">↺ Rimetti tutte le carte nella scatola 1</button>
+      <button class="btn no" id="elimina-mazzo">🗑 Elimina il mazzo</button>
+    </div>
+    <p class="nota">Le immagini non viaggiano nel codice da copiare (sarebbe troppo lungo): sono incluse solo nel file.</p>
+    <textarea id="codice-out" hidden readonly style="width:100%;min-height:70px;font:13px monospace"></textarea>
+  </section>
+
+  <!-- COME FUNZIONA -->
+  <section id="s-come" hidden class="card" style="display:grid;gap:10px;font-size:17px">
+    <p class="consegna">Perché funziona</p>
+    <p style="margin:0">Rileggere tante volte dà l'impressione di sapere. Quello che fa ricordare davvero è <b>provare a richiamare la risposta dalla memoria</b>, prima di guardarla, e <b>ripassare a distanza di tempo</b> invece che tutto la sera prima.</p>
+    <p class="consegna">Le 5 scatole</p>
+    <ol style="margin:0;padding-left:1.2em;display:grid;gap:4px">
+      <li>Tutte le carte nuove partono dalla <b>scatola 1</b>, che si ripassa <b>ogni volta</b>.</li>
+      <li>Se sai la risposta, la carta sale di una scatola: la rivedrai <b>più di rado</b> (scatola 2 ogni 2 ripassi, 3 ogni 4, 4 ogni 8).</li>
+      <li>Se sbagli, torna nella scatola 1 e la rivedi subito, alla fine del ripasso.</li>
+      <li>Una carta saputa nella scatola 4 arriva nella <b>scatola 5: imparata!</b> Ogni tanto torna, per non dimenticarla.</li>
+    </ol>
+    <p class="consegna">Consigli</p>
+    <ul style="margin:0;padding-left:1.2em;display:grid;gap:4px">
+      <li>Pochi minuti al giorno funzionano meglio di un'ora una volta alla settimana.</li>
+      <li>Sii onesto con te stesso: "quasi giusta" vuol dire "da ripassare".</li>
+      <li>Domande brevi, una sola idea per carta.</li>
+      <li>Con il pulsante 🔊 puoi ascoltare domanda e risposta.</li>
+    </ul>
+  </section>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const KEY = "ripassoFurbo";
+const INTERVALLI = { 1: 1, 2: 2, 3: 4, 4: 8, 5: 16 };
+const NOMI_SCATOLE = ["Ogni volta", "Ogni 2 ripassi", "Ogni 4 ripassi", "Ogni 8 ripassi", "Imparate!"];
+const uid = () => Math.random().toString(36).slice(2, 10);
+const esc = t => String(t).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const nuovaCarta = (f, r, img) => ({ id: uid(), f, r, img: img || "", box: 1, ultima: -1 });
+const ESEMPI = [
+  { nome: "Le proprietà dei materiali", materia: "Tecnologia", carte: [
+    ["Che cos'è la duttilità?", "La capacità di un materiale di essere tirato in fili sottili senza rompersi (es. il rame)."],
+    ["Che cos'è la malleabilità?", "La capacità di un materiale di essere ridotto in lamine sottili (es. alluminio, oro)."],
+    ["Un materiale che lascia passare la corrente elettrica si dice…", "Conduttore."],
+    ["Che cos'è la durezza?", "La resistenza di un materiale a farsi scalfire o penetrare da un altro."],
+    ["Che cos'è l'elasticità?", "La capacità di riprendere la forma iniziale quando la forza smette di agire."],
+    ["Che cosa vuol dire fragile?", "Che si rompe facilmente in pezzi, senza deformarsi prima (es. il vetro)."],
+    ["Il legno conduce bene il calore?", "No: è un isolante termico."],
+    ["Da che cosa si ottiene la carta?", "Soprattutto dalle fibre di cellulosa del legno, e dalla carta riciclata."]] },
+  { nome: "Tabellina del 7", materia: "Matematica", carte: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => [`7 × ${n}`, String(7 * n)]) },
+  { nome: "Le parti del discorso", materia: "Italiano", carte: [
+    ["Quali sono le parti variabili del discorso?", "Articolo, nome, aggettivo, pronome, verbo."],
+    ["Quali sono le parti invariabili del discorso?", "Avverbio, preposizione, congiunzione, interiezione."],
+    ["Che cos'è un aggettivo?", "Una parola che aggiunge una qualità o un'informazione al nome."],
+    ["«Velocemente» che parte del discorso è?", "Un avverbio (di modo)."],
+    ["«Ahi!» che parte del discorso è?", "Un'interiezione (o esclamazione)."],
+    ["«Ma» che parte del discorso è?", "Una congiunzione."]] }
+];
+let dati;
+try { dati = JSON.parse(localStorage.getItem(KEY)); } catch (e) {}
+if (!dati || !Array.isArray(dati.mazzi)) dati = { mazzi: ESEMPI.map(m => ({ id: uid(), nome: m.nome, materia: m.materia, sessione: 0, esempio: true, carte: m.carte.map(([f, r]) => nuovaCarta(f, r)) })) };
+let avvisoSpazio = false;
+function salva() {
+  try { localStorage.setItem(KEY, JSON.stringify(dati)); }
+  catch (e) { if (!avvisoSpazio) { avvisoSpazio = true; alertBox("Spazio pieno su questo dispositivo: prova a togliere qualche immagine o a salvare i mazzi come file."); } }
+}
+function alertBox(t) { const m = $("crea-msg"); m.textContent = t; m.className = "feedback ko"; }
+const mazzo = id => dati.mazzi.find(m => m.id === id);
+const scaduta = (m, c) => c.ultima < 0 || (m.sessione + 1 - c.ultima) >= INTERVALLI[c.box];
+const contaBox = m => [1, 2, 3, 4, 5].map(b => m.carte.filter(c => c.box === b).length);
+
+/* ---------- Schede ---------- */
+const SEZ = ["mazzi", "studia", "crea", "come"];
+function vai(t) { SEZ.forEach(s => { $("s-" + s).hidden = s !== t; $("t-" + s).setAttribute("aria-selected", s === t); }); if (t === "mazzi") disegnaMazzi(); if (t === "crea") disegnaCrea(); if (t === "studia" && !sess) preparaStudio(corrente); }
+SEZ.forEach(s => $("t-" + s).addEventListener("click", () => vai(s)));
+
+/* ---------- Mazzi ---------- */
+let corrente = dati.mazzi[0] ? dati.mazzi[0].id : null;
+function disegnaMazzi() {
+  if (!dati.mazzi.length) { $("lista-mazzi").innerHTML = `<p class="vuoto">Nessun mazzo. Creane uno nuovo!</p>`; return; }
+  $("lista-mazzi").innerHTML = dati.mazzi.map(m => {
+    const cb = contaBox(m), max = Math.max(1, ...cb), daFare = m.carte.filter(c => scaduta(m, c)).length;
+    return `<article class="mazzo"><h3>${esc(m.nome)}</h3><span class="mat">${esc(m.materia || "")}${m.esempio ? " · esempio" : ""} · ${m.carte.length} carte</span>
+      <div class="mini-scatole" aria-label="Carte nelle 5 scatole: ${cb.join(", ")}">${cb.map((n, i) => `<div style="height:${n / max * 100}%;${i === 4 ? "background:var(--ok)" : ""}" title="Scatola ${i + 1}: ${n}"></div>`).join("")}</div>
+      <span class="nota">${daFare ? `<b>${daFare}</b> carte da ripassare oggi` : "Tutto ripassato! Torna domani 🎉"} · ${cb[4]} imparate</span>
+      <div class="row"><button class="btn primary" data-studia="${m.id}">🧠 Ripassa</button><button class="btn" data-modifica="${m.id}">✏️ Modifica</button></div></article>`;
+  }).join("");
+  $("lista-mazzi").querySelectorAll("[data-studia]").forEach(b => b.addEventListener("click", () => { corrente = b.dataset.studia; sess = null; vai("studia"); }));
+  $("lista-mazzi").querySelectorAll("[data-modifica]").forEach(b => b.addEventListener("click", () => { corrente = b.dataset.modifica; vai("crea"); }));
+}
+$("nuovo-mazzo").addEventListener("click", () => {
+  const m = { id: uid(), nome: "Nuovo mazzo", materia: "", sessione: 0, carte: [] };
+  dati.mazzi.unshift(m); corrente = m.id; salva(); vai("crea"); $("crea-nome").select();
+});
+$("importa-apri").addEventListener("click", () => { $("importa-box").hidden = !$("importa-box").hidden; });
+function importaTesto(t) {
+  let obj;
+  try { const s = t.trim(); obj = JSON.parse(s.startsWith("{") ? s : decodeURIComponent(escape(atob(s.replace(/^PTL1:/, ""))))); } catch (e) { return "Codice non valido: controlla di averlo copiato tutto."; }
+  if (!obj || !Array.isArray(obj.carte)) return "Codice non valido.";
+  const m = { id: uid(), nome: String(obj.nome || "Mazzo importato").slice(0, 60), materia: String(obj.materia || "").slice(0, 40), sessione: 0,
+    carte: obj.carte.filter(c => c && (c.f || c[0])).slice(0, 500).map(c => Array.isArray(c) ? nuovaCarta(String(c[0]), String(c[1] || "")) : nuovaCarta(String(c.f), String(c.r || ""), typeof c.img === "string" && c.img.startsWith("data:image/") ? c.img : "")) };
+  dati.mazzi.unshift(m); corrente = m.id; salva(); disegnaMazzi(); return null;
+}
+$("importa-ok").addEventListener("click", () => { const err = importaTesto($("importa-codice").value); $("importa-msg").textContent = err || "✔ Mazzo importato!"; $("importa-msg").className = "feedback " + (err ? "ko" : "ok"); if (!err) $("importa-codice").value = ""; });
+$("importa-file").addEventListener("change", e => { const f = e.target.files[0]; if (!f) return; const rd = new FileReader(); rd.onload = () => { const err = importaTesto(String(rd.result)); $("importa-msg").textContent = err || "✔ Mazzo importato!"; $("importa-msg").className = "feedback " + (err ? "ko" : "ok"); }; rd.readAsText(f); e.target.value = ""; });
+
+/* ---------- Ripasso ---------- */
+let sess = null;
+function disegnaScatole(m) {
+  const cb = contaBox(m);
+  $("scatole").innerHTML = cb.map((n, i) => `<div class="scatola${i === 4 ? " fine" : ""}"><b>${n}</b><span>Scatola ${i + 1}<br>${NOMI_SCATOLE[i]}</span></div>`).join("");
+}
+function preparaStudio(id) {
+  const m = mazzo(id) || dati.mazzi[0];
+  if (!m) { $("studia-titolo").textContent = ""; $("scatole").innerHTML = ""; $("area-carta").innerHTML = `<p class="vuoto">Crea un mazzo per iniziare.</p>`; return; }
+  corrente = m.id; $("studia-titolo").textContent = m.nome; disegnaScatole(m);
+  const daFare = m.carte.filter(c => scaduta(m, c));
+  if (!m.carte.length) { $("area-carta").innerHTML = `<p class="vuoto">Questo mazzo è vuoto: aggiungi delle carte in «Crea e modifica».</p>`; return; }
+  if (!daFare.length) { $("area-carta").innerHTML = `<p class="vuoto">Oggi niente da ripassare in questo mazzo. 🎉</p><button class="btn" id="ripassa-tutto">Ripassa lo stesso tutte le carte</button>`; $("ripassa-tutto").addEventListener("click", () => avvia(m, m.carte.slice())); return; }
+  $("area-carta").innerHTML = `<p class="consegna" style="text-align:center">Oggi ci sono <b>${daFare.length}</b> carte da ripassare.</p><button class="btn primary" id="avvia">▶ Inizia il ripasso</button>`;
+  $("avvia").addEventListener("click", () => avvia(m, daFare));
+}
+function avvia(m, carte) {
+  m.sessione++;
+  const coda = carte.slice().sort(() => Math.random() - .5).slice(0, 25);
+  sess = { m, coda, i: 0, totale: coda.length, sapute: 0, rivedere: new Set(), giaRimesse: new Set() };
+  salva(); mostraCarta(false);
+}
+function cartaHTML(c, retro) {
+  const testo = retro ? c.r : c.f;
+  return `<div class="carta${retro ? " retro" : ""}" aria-live="polite"><span class="lato">${retro ? "Risposta" : "Domanda"}</span><span class="scat">Scatola ${c.box}</span>
+    ${!retro && c.img ? `<img src="${c.img}" alt="">` : ""}<div class="testo">${esc(testo)}</div></div>`;
+}
+const normal = t => String(t).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+function mostraCarta(retro, scritta) {
+  const s = sess, c = s.coda[s.i];
+  if (!c) return fine();
+  const scrivi = $("modo-scrivi").checked;
+  let html = `<div class="progresso" aria-label="Avanzamento"><div style="width:${s.i / s.coda.length * 100}%"></div></div>` + cartaHTML(c, retro);
+  if (!retro) {
+    html += scrivi ? `<div class="row" style="justify-content:center"><input type="text" id="scritta" style="width:min(420px,80vw)" aria-label="La tua risposta" autocomplete="off"><button class="btn primary" id="gira">Controlla</button></div>`
+                   : `<div class="row" style="justify-content:center"><button class="btn" id="ascolta">🔊 Ascolta</button><button class="btn primary" id="gira">🔄 Gira la carta</button></div>`;
+  } else {
+    if (scritta !== undefined) {
+      const ok = normal(scritta) === normal(c.r);
+      html += `<p class="confronto">${ok ? "✔ Uguale alla risposta!" : `Hai scritto: <b>${esc(scritta || "—")}</b>`}</p>`;
+    }
+    html += `<p class="nota" style="text-align:center;margin:0">Sii onesto: la sapevi?</p><div class="risposte"><button class="btn" id="ascolta">🔊</button><button class="btn no" id="no">✘ Da ripassare</button><button class="btn si" id="si">✔ La sapevo</button></div>`;
+  }
+  $("area-carta").innerHTML = html;
+  const a = $("ascolta"); if (a) a.addEventListener("click", () => window.ptlParla && window.ptlParla(retro ? c.r : c.f));
+  if (!retro) {
+    $("gira").addEventListener("click", () => mostraCarta(true, scrivi ? $("scritta").value : undefined));
+    if (scrivi) { $("scritta").focus(); $("scritta").addEventListener("keydown", e => { if (e.key === "Enter") mostraCarta(true, $("scritta").value); }); }
+  } else {
+    $("si").addEventListener("click", () => giudica(true));
+    $("no").addEventListener("click", () => giudica(false));
+  }
+}
+function giudica(sapevo) {
+  const s = sess, c = s.coda[s.i];
+  if (sapevo) { if (!s.rivedere.has(c.id)) { c.box = Math.min(5, c.box + 1); s.sapute++; } }
+  else { c.box = 1; s.rivedere.add(c.id); if (!s.giaRimesse.has(c.id)) { s.giaRimesse.add(c.id); s.coda.push(c); } }
+  c.ultima = s.m.sessione; s.i++; salva(); disegnaScatole(s.m); mostraCarta(false);
+}
+function fine() {
+  const s = sess; sess = null;
+  $("area-carta").innerHTML = `<div class="carta"><div class="testo">🎉 Ripasso finito!</div><p style="margin:0;font-size:18px">Sapute al primo colpo: <b>${s.sapute}</b> su ${s.totale}<br>Da ripassare ancora: <b>${s.rivedere.size}</b></p></div>
+    <div class="row"><button class="btn" id="torna">📚 Torna ai mazzi</button></div>`;
+  $("torna").addEventListener("click", () => vai("mazzi"));
+}
+$("modo-scrivi").addEventListener("change", () => { if (sess) mostraCarta(false); });
+
+/* ---------- Crea e modifica ---------- */
+let imgNuova = "";
+function disegnaCrea() {
+  $("crea-mazzo").innerHTML = dati.mazzi.map(m => `<option value="${m.id}" ${m.id === corrente ? "selected" : ""}>${esc(m.nome)}</option>`).join("");
+  const m = mazzo(corrente) || dati.mazzi[0];
+  const dis = !m; ["crea-nome", "crea-materia", "crea-f", "crea-r", "crea-aggiungi"].forEach(id => $(id).disabled = dis);
+  if (!m) { $("crea-lista").innerHTML = `<p class="vuoto">Nessun mazzo: creane uno da «I miei mazzi».</p>`; $("crea-conta").textContent = ""; return; }
+  corrente = m.id; $("crea-nome").value = m.nome; $("crea-materia").value = m.materia || "";
+  $("crea-conta").textContent = `Carte nel mazzo: ${m.carte.length}`;
+  $("crea-lista").innerHTML = m.carte.map(c => `<div class="riga-carta"><span>${c.img ? "🖼️ " : ""}${esc(c.f)}</span><span class="r">${esc(c.r)}</span><button data-del="${c.id}" aria-label="Elimina la carta">🗑</button></div>`).join("") || `<p class="vuoto">Ancora nessuna carta.</p>`;
+  $("crea-lista").querySelectorAll("[data-del]").forEach(b => b.addEventListener("click", () => { m.carte = m.carte.filter(c => c.id !== b.dataset.del); salva(); disegnaCrea(); }));
+  $("codice-out").hidden = true;
+}
+$("crea-mazzo").addEventListener("change", () => { corrente = $("crea-mazzo").value; disegnaCrea(); });
+$("crea-nome").addEventListener("input", () => { const m = mazzo(corrente); if (m) { m.nome = $("crea-nome").value || "Senza nome"; delete m.esempio; salva(); } });
+$("crea-materia").addEventListener("input", () => { const m = mazzo(corrente); if (m) { m.materia = $("crea-materia").value; salva(); } });
+$("crea-img").addEventListener("change", e => {
+  const f = e.target.files[0]; if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => { const img = new Image(); img.onload = () => {
+    const k = Math.min(1, 480 / Math.max(img.width, img.height)), c = document.createElement("canvas");
+    c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+    imgNuova = c.toDataURL("image/jpeg", .72); $("crea-img-nota").textContent = "✔ Immagine pronta: verrà mostrata sul davanti della carta.";
+  }; img.src = rd.result; };
+  rd.readAsDataURL(f); e.target.value = "";
+});
+$("crea-aggiungi").addEventListener("click", () => {
+  const m = mazzo(corrente), f = $("crea-f").value.trim(), r = $("crea-r").value.trim();
+  if (!m) return;
+  if (!f || !r) { $("crea-msg").textContent = "Scrivi sia la domanda sia la risposta."; $("crea-msg").className = "feedback ko"; return; }
+  m.carte.push(nuovaCarta(f, r, imgNuova)); imgNuova = ""; $("crea-img-nota").textContent = "";
+  $("crea-f").value = ""; $("crea-r").value = ""; $("crea-f").focus(); salva();
+  $("crea-msg").textContent = "✔ Carta aggiunta."; $("crea-msg").className = "feedback ok"; disegnaCrea();
+});
+$("crea-tante-ok").addEventListener("click", () => {
+  const m = mazzo(corrente); if (!m) return; let n = 0;
+  $("crea-tante").value.split("\n").forEach(riga => { const p = riga.includes("\t") ? riga.split("\t") : riga.split(";"); if (p.length >= 2 && p[0].trim() && p.slice(1).join(";").trim()) { m.carte.push(nuovaCarta(p[0].trim(), p.slice(1).join(";").trim())); n++; } });
+  salva(); $("crea-tante").value = ""; $("crea-msg").textContent = n ? `✔ Aggiunte ${n} carte.` : "Nessuna riga valida: usa «domanda ; risposta»."; $("crea-msg").className = "feedback " + (n ? "ok" : "ko"); disegnaCrea();
+});
+function esporta(m, conImmagini) { return JSON.stringify({ nome: m.nome, materia: m.materia, carte: m.carte.map(c => conImmagini && c.img ? { f: c.f, r: c.r, img: c.img } : { f: c.f, r: c.r }) }); }
+$("crea-verifica").addEventListener("click", () => { const m = mazzo(corrente); if (!m) return; salva(); location.href = "verifiche.html#mazzo-" + m.id; });
+$("condividi-copia").addEventListener("click", async () => {
+  const m = mazzo(corrente); if (!m) return;
+  const codice = "PTL1:" + btoa(unescape(encodeURIComponent(esporta(m, false))));
+  try { await navigator.clipboard.writeText(codice); $("crea-msg").textContent = "✔ Codice copiato: incollalo in un messaggio. Chi lo riceve usa «Importa un mazzo»."; $("crea-msg").className = "feedback ok"; }
+  catch (e) { $("codice-out").hidden = false; $("codice-out").value = codice; $("codice-out").select(); $("crea-msg").textContent = "Copia il codice qui sotto."; $("crea-msg").className = "feedback"; }
+});
+$("condividi-file").addEventListener("click", async () => {
+  const m = mazzo(corrente); if (!m) return;
+  const nome = (m.nome.replace(/[^a-z0-9àèéìòù ]/gi, "").trim().replace(/\s+/g, "-") || "mazzo") + ".json";
+  let r = null;
+  try { if (window.parent !== window && typeof window.parent.ptlSalva === "function") r = await window.parent.ptlSalva(nome, esporta(m, true)); } catch (e) { r = e && e.code === "declined" ? "declined" : null; }
+  if (r === "saved") { $("crea-msg").textContent = "✔ File salvato."; $("crea-msg").className = "feedback ok"; }
+  else if (r === "declined") { $("crea-msg").textContent = "Salvataggio annullato."; $("crea-msg").className = "feedback"; }
+  else { $("crea-msg").textContent = "Il salvataggio come file non è disponibile qui: usa «Copia il codice»."; $("crea-msg").className = "feedback ko"; }
+});
+$("azzera-mazzo").addEventListener("click", () => { const m = mazzo(corrente); if (!m) return; m.carte.forEach(c => { c.box = 1; c.ultima = -1; }); m.sessione = 0; salva(); $("crea-msg").textContent = "✔ Tutte le carte sono tornate nella scatola 1."; $("crea-msg").className = "feedback ok"; });
+let confermaElimina = false;
+$("elimina-mazzo").addEventListener("click", () => {
+  const m = mazzo(corrente); if (!m) return;
+  if (!confermaElimina) { confermaElimina = true; $("elimina-mazzo").textContent = "Tocca ancora per confermare"; setTimeout(() => { confermaElimina = false; $("elimina-mazzo").textContent = "🗑 Elimina il mazzo"; }, 3000); return; }
+  dati.mazzi = dati.mazzi.filter(x => x.id !== m.id); corrente = dati.mazzi[0] ? dati.mazzi[0].id : null; salva(); confermaElimina = false; $("elimina-mazzo").textContent = "🗑 Elimina il mazzo"; vai("mazzi");
+});
+salva(); disegnaMazzi();
+</script>
+<script src="a11y.js"></script>
+</body>
+</html>

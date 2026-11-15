@@ -93,6 +93,22 @@ body {
 
 .quaderni { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 22px; }
 
+/* Raccoglitori delle materie */
+.raccoglitori { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 24px; }
+.raccoglitore { --c: var(--mat); position: relative; border: 3px solid var(--ink); border-radius: 6px 18px 18px 6px; background: var(--c); color: #fff; padding: 18px 16px 16px 40px; min-height: 190px; display: grid; gap: 8px; align-content: start; cursor: pointer; text-align: left; font: inherit; box-shadow: 6px 7px 0 rgba(31,42,68,.18); transition: transform .12s; }
+.raccoglitore:hover, .raccoglitore:focus-visible { transform: translateY(-3px) rotate(-.4deg); }
+.raccoglitore:focus-visible { outline: 3px solid var(--giallo, #f5d76e); outline-offset: 3px; }
+.raccoglitore::before { content: ""; position: absolute; left: 10px; top: 14px; bottom: 14px; width: 14px; background: radial-gradient(circle at 7px 7px, #f4f1e8 4px, #1f2a44 5px, transparent 6px) 0 0 / 14px 26px repeat-y; }
+.raccoglitore .bollo { width: 58px; height: 58px; border-radius: 50%; background: rgba(255,255,255,.95); color: var(--c); display: grid; place-items: center; border: 2px solid var(--ink); }
+.raccoglitore .bollo svg { width: 32px; height: 32px; }
+.raccoglitore .targhetta { background: #fffdf6; color: var(--ink); border: 2px solid var(--ink); border-radius: 8px; padding: 6px 10px; }
+.raccoglitore .targhetta b { display: block; font: 400 30px/1 var(--font-hand); }
+.raccoglitore .targhetta span { font: 400 18px var(--font-hand); color: var(--muted); }
+.raccoglitore .mini { display: flex; gap: 6px; flex-wrap: wrap; }
+.raccoglitore .mini span { width: 34px; height: 34px; background: rgba(255,255,255,.9); border-radius: 8px; display: grid; place-items: center; border: 1.5px solid var(--ink); }
+.raccoglitore .mini span svg { width: 26px; height: 26px; }
+.torna-materie { font: 400 22px var(--font-hand); border: 2px solid var(--ink); border-radius: 99px; background: #fff; color: var(--ink); padding: 3px 16px; cursor: pointer; justify-self: start; }
+
 /* Quaderno */
 .quaderno {
   --c: var(--mat);
@@ -142,6 +158,36 @@ body {
 
 footer { font-family: var(--font-hand); font-size: 19px; color: var(--muted); text-align: center; }
 
+/* Ingresso docente / studente */
+.ruolo-badge { grid-column: 1 / -1; justify-self: end; font: 400 20px var(--font-hand); background: rgba(244,241,232,.15); color: var(--chalk); border: 2px solid rgba(244,241,232,.5); border-radius: 99px; padding: 2px 14px; cursor: pointer; }
+.overlay { position: fixed; inset: 0; z-index: 45; background: rgba(15, 23, 38, .6); display: grid; place-items: center; padding: 14px; }
+.overlay .box { background: var(--paper); border: 3px solid var(--ink); border-radius: 18px; padding: 20px; width: min(620px, 100%); max-height: 92vh; overflow: auto; display: grid; gap: 14px; }
+.overlay h2 { margin: 0; font: 700 40px var(--font-chalk); line-height: 1; }
+.scegli-ruolo { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.scegli-ruolo button { border: 3px solid var(--ink); border-radius: 16px; background: #fff; padding: 18px 10px; cursor: pointer; display: grid; gap: 4px; justify-items: center; font: 400 26px var(--font-hand); color: var(--ink); }
+.scegli-ruolo button span { font-size: 54px; line-height: 1; }
+.scegli-ruolo button small { font: 400 14px var(--font-body); color: var(--muted); }
+.campo { font: 400 26px var(--font-hand); border: 3px solid var(--ink); border-radius: 12px; padding: 6px 12px; width: 100%; text-align: center; letter-spacing: .12em; }
+.azioni-ov { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+.azioni-ov button { font: 400 21px var(--font-hand); border: 2px solid var(--ink); border-radius: 10px; padding: 4px 16px; cursor: pointer; background: #fff; }
+.azioni-ov .ok { background: var(--tec); color: #fff; }
+.err { color: #d64545; font: 400 20px var(--font-hand); margin: 0; min-height: 26px; }
+.quaderno.bloccato .icona { filter: grayscale(.6); opacity: .8; }
+.lucchetto { position: absolute; top: 10px; right: 12px; font-size: 26px; }
+.tab-codici { width: 100%; border-collapse: collapse; background: #fff; font-size: 16px; }
+.tab-codici td { border-bottom: 1px solid #dfe6ee; padding: 6px 8px; }
+.tab-codici td.cod { font: 700 26px var(--font-body); letter-spacing: .12em; text-align: right; font-variant-numeric: tabular-nums; }
+.tab-codici button { font-size: 15px; border: 1.5px solid var(--ink); border-radius: 8px; background: #fff; padding: 2px 8px; cursor: pointer; }
+#codice-lim { position: fixed; inset: 0; z-index: 60; background: var(--board); color: var(--chalk); display: grid; place-content: center; text-align: center; gap: 10px; border: 16px solid var(--wood); }
+#codice-lim .nome { font: 700 clamp(36px, 6vw, 72px) var(--font-chalk); }
+#codice-lim .cod { font: 700 clamp(90px, 20vw, 240px) var(--font-body); letter-spacing: .15em; line-height: 1; }
+
+.lingue-riga { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 22px; border-top: 2px dashed #c9d3df; padding-top: 10px; }
+.lingue-btn { display: flex; gap: 6px; flex-wrap: wrap; }
+.lingue-btn button { font: 600 15px system-ui, sans-serif; border: 2px solid var(--ink); border-radius: 99px; background: #fff; color: var(--ink); padding: 3px 12px; cursor: pointer; }
+.lingue-btn.grande button { font-size: 19px; padding: 6px 16px; }
+.lingue-btn button[aria-pressed="true"] { background: var(--giallo); }
+
 /* Pannello accessibilità */
 html.in-app #ptl-voce-btn, html.in-app #ptl-righello { display: none !important; }
 .a11y-btn { grid-column: 1 / -1; justify-self: start; font: 400 22px var(--font-hand); background: var(--chalk); color: var(--ink); border: 0; border-radius: 10px; padding: 4px 14px; cursor: pointer; box-shadow: 0 3px 0 rgba(0,0,0,.3); }
@@ -185,10 +231,12 @@ html.in-app, html.in-app body { height: 100%; overflow: hidden; }
     <h1>Prof Tech Lab<small>le app della nostra scuola</small></h1>
     <p>Scegli il tuo <u>grado di scuola</u>, poi apri il quaderno della materia.</p>
     <button type="button" class="a11y-btn" id="a11y-apri" aria-haspopup="dialog">♿ Accessibilità</button>
+    <button type="button" class="a11y-btn" id="lingua-apri" aria-haspopup="dialog">🌍 Lingua</button>
+    <button type="button" class="ruolo-badge" id="ruolo-badge"></button>
     <span class="gesso g1"></span><span class="gesso g2"></span><span class="gesso g3"></span>
   </header>
 
-  <section class="cassetta" aria-labelledby="cass-t">
+  <section class="cassetta" id="cassetta" aria-labelledby="cass-t" hidden>
     <h2 id="cass-t">🧰 Cassetta del docente <small>pronti per la LIM, con un tocco</small></h2>
     <div class="attrezzi" id="attrezzi"></div>
   </section>
@@ -198,6 +246,59 @@ html.in-app, html.in-app body { height: 100%; overflow: hidden; }
   <main id="catalogo" style="display:grid;gap:30px"></main>
 
   <footer>Gratis, senza account, da tablet, computer e LIM.</footer>
+</div>
+
+<div class="overlay" id="ingresso" role="dialog" aria-modal="true" aria-labelledby="ing-t" hidden>
+  <div class="box">
+    <h2 id="ing-t">Benvenuto in Prof Tech Lab!</h2>
+    <p style="margin:0">Chi sei?</p>
+    <div class="scegli-ruolo">
+      <button type="button" id="sono-studente"><span>🎒</span>Sono uno studente<small>Le app si aprono con il codice che ti dà il docente</small></button>
+      <button type="button" id="sono-docente"><span>👩‍🏫</span>Sono un docente<small>Serve la password dei docenti</small></button>
+    </div>
+    <div class="lingue-riga" data-noi18n><span>🌍</span><div class="lingue-btn"></div></div>
+    <div id="login-docente" hidden style="display:grid;gap:10px">
+      <input type="password" class="campo" id="pw-docente" placeholder="Password dei docenti" autocomplete="current-password" aria-label="Password dei docenti">
+      <p class="err" id="pw-err" aria-live="polite"></p>
+      <div class="azioni-ov"><button type="button" id="pw-annulla">Indietro</button><button type="button" class="ok" id="pw-ok">Entra</button></div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="sblocco" role="dialog" aria-modal="true" aria-labelledby="sb-t" hidden>
+  <div class="box">
+    <h2 id="sb-t">🔒 <span id="sb-nome"></span></h2>
+    <p style="margin:0">Scrivi il codice che ti ha dato il docente.</p>
+    <input type="text" class="campo" id="sb-codice" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="0000" aria-label="Codice di 4 cifre">
+    <p class="err" id="sb-err" aria-live="polite"></p>
+    <div class="azioni-ov"><button type="button" id="sb-annulla">Annulla</button><button type="button" class="ok" id="sb-ok">Sblocca</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="codici" role="dialog" aria-modal="true" aria-labelledby="cod-t" hidden>
+  <div class="box" style="width:min(760px,100%)">
+    <h2 id="cod-t">🔑 Codici del giorno</h2>
+    <p style="margin:0;font-size:15px">Ogni app ha un codice di 4 cifre che <b>cambia ogni giorno</b>. Lo studente lo scrive una volta e l'app resta aperta su quel dispositivo fino a mezzanotte. Con il <b>codice per tutte le app</b> si sblocca tutto insieme.</p>
+    <div id="cod-lista"></div>
+    <details><summary style="cursor:pointer;font-weight:700">🔐 Cambia password docenti</summary>
+      <p style="font-size:14px;margin:6px 0">Scrivi la nuova password: genero la riga da sostituire nel file <code>config.js</code> del sito (su GitHub). Dopo il Commit, la nuova password vale per tutti.</p>
+      <div class="row"><input type="text" id="nuova-pw" placeholder="Nuova password" style="flex:1;font:400 18px var(--font-body);border:2px solid var(--ink);border-radius:8px;padding:4px 8px"><button type="button" class="btn" id="genera-pw">Genera</button></div>
+      <textarea id="riga-pw" readonly hidden style="width:100%;margin-top:6px;font:13px monospace;min-height:48px"></textarea>
+    </details>
+    <p style="font-size:13px;color:var(--muted);margin:0">È un lucchetto didattico per gestire le attività in classe, non una protezione informatica: uno studente esperto potrebbe aggirarlo.</p>
+    <div class="azioni-ov"><button type="button" id="esci-docente">Esci dal profilo docente</button><button type="button" class="ok" id="cod-chiudi">Chiudi</button></div>
+  </div>
+</div>
+<div id="codice-lim" hidden role="dialog" aria-label="Codice alla LIM"><div class="nome" id="lim-nome"></div><div class="cod" id="lim-cod"></div><div style="font:400 26px var(--font-hand)">Tocca per chiudere</div></div>
+
+<div class="overlay" id="lingua-pannello" role="dialog" aria-modal="true" aria-labelledby="lin-t" hidden>
+  <div class="box">
+    <h2 id="lin-t">🌍 Lingua di aiuto</h2>
+    <p style="margin:0">L'app resta in italiano: sotto ogni scritta compare la traduzione nella tua lingua. Così impari anche l'italiano.</p>
+    <div class="lingue-btn grande" data-noi18n></div>
+    <p style="margin:0;font-size:13px;color:var(--muted)" data-noi18n>Per ora la traduzione c'è nella home e nelle app del metodo di studio (Caccia alle parole chiave, Dal testo alla mappa, Ripasso furbo). Le traduzioni vanno verificate da un madrelingua.</p>
+    <div class="azioni-ov"><button type="button" class="ok" id="lin-chiudi">Fatto</button></div>
+  </div>
 </div>
 
 <div id="a11y-pannello" role="dialog" aria-modal="true" aria-labelledby="a11y-t" hidden>
@@ -225,9 +326,10 @@ html.in-app, html.in-app body { height: 100%; overflow: hidden; }
     <a href="#" id="v-full" class="hide-sm" target="_blank" rel="noopener">Apri da sola</a>
     <a href="#" id="v-fb" class="vfb" hidden>Lascia un feedback</a>
   </div>
-  <iframe id="frame" title="App" allow="fullscreen" src="about:blank"></iframe>
+  <iframe id="frame" title="App" allow="fullscreen; camera; microphone; clipboard-write" src="about:blank"></iframe>
 </div>
 
+<script src="config.js"></script>
 <script>
 /* ===== Configurazione: link del modulo Google per i feedback dei docenti (lascia vuoto per nascondere il pulsante) ===== */
 const MODULO_DOCENTI = "";
@@ -266,6 +368,20 @@ const ICONE = {
   circuito: `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M8 18V8h32v14M40 34v6H8V28" fill="none" stroke="#c9822b" stroke-width="3" stroke-linejoin="round"/><circle cx="40" cy="28" r="7" fill="#ffe066" stroke="#1f2a44" stroke-width="2"/><path d="M37 29q1.5-4 3 0q1.5-4 3 0" fill="none" stroke="#e67700" stroke-width="1.5"/><path d="M3 18h10M5.5 24h5" stroke="#1f2a44" stroke-width="2.5"/><path d="M3 28h10" stroke="#1f2a44" stroke-width="0"/></svg>`,
   scala: `<svg viewBox="0 0 48 48" aria-hidden="true"><rect x="6" y="6" width="36" height="28" fill="#fff" stroke="#1f2a44" stroke-width="2"/><rect x="10" y="10" width="8" height="5" fill="#f5d76e" stroke="#1f2a44"/><rect x="22" y="10" width="8" height="5" fill="#f5d76e" stroke="#1f2a44"/><rect x="26" y="24" width="12" height="6" fill="#c08552" stroke="#1f2a44"/><rect x="4" y="37" width="40" height="8" rx="1.5" fill="#f5d76e" stroke="#1f2a44" stroke-width="1.6"/><path d="M9 37v4M14 37v2.5M19 37v4M24 37v2.5M29 37v4M34 37v2.5M39 37v4" stroke="#1f2a44" stroke-width="1.2"/></svg>`,
   bolletta: `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M8 22L24 9l16 13v18H8z" fill="#fff" stroke="#1f2a44" stroke-width="2.5" stroke-linejoin="round"/><path d="M26 18l-6 10h5l-3 9 8-12h-5l3-7z" fill="#ffd43b" stroke="#1f2a44" stroke-width="1.5" stroke-linejoin="round"/></svg>`,
+  evidenziatore: `<svg viewBox="0 0 48 48" aria-hidden="true"><rect x="6" y="8" width="30" height="34" rx="3" fill="#fff" stroke="#1f2a44" stroke-width="2"/><path d="M11 17h20M11 24h20M11 31h14" stroke="#c9d3df" stroke-width="2.5" stroke-linecap="round"/><rect x="15" y="21" width="12" height="6" rx="1" fill="#ffe36e" opacity=".9"/><path d="M14 24h14" stroke="#1f2a44" stroke-width="1.5"/><path d="M33 12l8 8-12 12-6 1 1-6z" fill="#8e5bd0" stroke="#1f2a44" stroke-width="2" stroke-linejoin="round"/></svg>`,
+  mappa: `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 13L12 32M24 13l12 19M12 32h24" stroke="#1f2a44" stroke-width="2"/><rect x="15" y="5" width="18" height="11" rx="3" fill="#2f4b3d" stroke="#1f2a44" stroke-width="2"/><rect x="3" y="29" width="17" height="10" rx="3" fill="#fff" stroke="#1f2a44" stroke-width="2"/><rect x="28" y="29" width="17" height="10" rx="3" fill="#ffe36e" stroke="#1f2a44" stroke-width="2"/><rect x="20" y="20" width="9" height="5" rx="2" fill="#efe6fa" stroke="#8e5bd0" stroke-width="1.5"/></svg>`,
+  dialogo: `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M5 8h24a4 4 0 014 4v10a4 4 0 01-4 4H15l-7 6v-6H5a4 4 0 01-4-4V12a4 4 0 014-4z" fill="#f5d76e" stroke="#1f2a44" stroke-width="2"/><text x="17" y="22" text-anchor="middle" font-size="11" font-weight="700" font-family="sans-serif" fill="#1f2a44">¡Hola!</text><path d="M43 20H22a4 4 0 00-4 4v10a4 4 0 004 4h13l7 6v-6h1a4 4 0 004-4V24a4 4 0 00-4-4z" fill="#fff" stroke="#1f2a44" stroke-width="2"/><text x="32" y="34" text-anchor="middle" font-size="11" font-weight="700" font-family="sans-serif" fill="#d64545">Ciao!</text></svg>`,
+  mappaStorica: `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M4 10l13-4 14 4 13-4v32l-13 4-14-4-13 4z" fill="#f2ece0" stroke="#1f2a44" stroke-width="2" stroke-linejoin="round"/><path d="M17 6v32M31 10v32" stroke="#1f2a44" stroke-width="1.5"/><path d="M8 26c5-6 9-2 13-6s8-1 12-5" stroke="#b5361b" stroke-width="2.5" fill="none" stroke-dasharray="4 3"/><path d="M33 15l5-3-1 6z" fill="#b5361b"/><circle cx="12" cy="30" r="3" fill="#1d4f9a"/></svg>`,
+  ruotaColori: `<svg viewBox="0 0 48 48" aria-hidden="true"><g stroke="#1f2a44" stroke-width="1.5"><path d="M24 24 L24.0 4.0 A20 20 0 0 1 41.3 14.0Z" fill="#d62828"/><path d="M24 24 L41.3 14.0 A20 20 0 0 1 41.3 34.0Z" fill="#f77f00"/><path d="M24 24 L41.3 34.0 A20 20 0 0 1 24.0 44.0Z" fill="#fcbf49"/><path d="M24 24 L24.0 44.0 A20 20 0 0 1 6.7 34.0Z" fill="#52b788"/><path d="M24 24 L6.7 34.0 A20 20 0 0 1 6.7 14.0Z" fill="#1d4e89"/><path d="M24 24 L6.7 14.0 A20 20 0 0 1 24.0 4.0Z" fill="#7b2cbf"/></g><circle cx="24" cy="24" r="6" fill="#fff" stroke="#1f2a44" stroke-width="1.5"/></svg>`,
+  cubo3d: `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M2 18h44" stroke="#2563eb" stroke-width="2"/><circle cx="24" cy="18" r="3" fill="#dc2626"/><path d="M10 26h14v14H10z" fill="#f6f1ff" stroke="#1f2a44" stroke-width="2" stroke-linejoin="round"/><path d="M10 26l6 -4h6l2 4z" fill="#e9ddff" stroke="#1f2a44" stroke-width="2" stroke-linejoin="round"/><path d="M24 26l-2-4v14l2 4z" fill="#cdb8fa" stroke="#1f2a44" stroke-width="2" stroke-linejoin="round"/><path d="M10 26L24 18M10 40L24 18M24 40L24 18" stroke="#a78bfa" stroke-width="1" stroke-dasharray="2 2"/></svg>`,
+  volto: `<svg viewBox="0 0 48 48" aria-hidden="true"><ellipse cx="24" cy="25" rx="14" ry="18" fill="#f6d2b1" stroke="#1f2a44" stroke-width="2"/><path d="M8 25h32M24 7v36" stroke="#dc2626" stroke-width="1" stroke-dasharray="2 2"/><ellipse cx="18" cy="25" rx="3" ry="2" fill="#1f2a44"/><ellipse cx="30" cy="25" rx="3" ry="2" fill="#1f2a44"/><path d="M22 33q2 1 4 0M19 37q5 3 10 0" stroke="#1f2a44" stroke-width="1.8" fill="none"/></svg>`,
+  lente: `<svg viewBox="0 0 48 48" aria-hidden="true"><rect x="4" y="6" width="30" height="24" fill="#fff" stroke="#6b4423" stroke-width="4"/><path d="M8 26l7-9 5 6 4-4 6 7z" fill="#52b788"/><circle cx="26" cy="13" r="3" fill="#fcbf49"/><circle cx="31" cy="30" r="9" fill="rgba(255,255,255,.6)" stroke="#1f2a44" stroke-width="3"/><path d="M38 37l6 6" stroke="#1f2a44" stroke-width="4" stroke-linecap="round"/></svg>`,
+  timeline: `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M4 24h40" stroke="#1f2a44" stroke-width="3"/><circle cx="9" cy="24" r="4" fill="#a16207"/><circle cx="19" cy="24" r="4" fill="#2563eb"/><circle cx="29" cy="24" r="4" fill="#059669"/><circle cx="39" cy="24" r="4" fill="#dc2626"/><path d="M9 20v-8M29 20v-8M19 28v8M39 28v8" stroke="#1f2a44" stroke-width="1.5"/><rect x="4" y="6" width="10" height="7" rx="2" fill="#fff" stroke="#1f2a44"/><rect x="24" y="6" width="10" height="7" rx="2" fill="#fff" stroke="#1f2a44"/></svg>`,
+  fumetto: `<svg viewBox="0 0 48 48" aria-hidden="true"><rect x="3" y="5" width="20" height="17" fill="#fff" stroke="#1f2a44" stroke-width="2"/><rect x="25" y="5" width="20" height="17" fill="#fff" stroke="#1f2a44" stroke-width="2"/><rect x="3" y="25" width="42" height="18" fill="#bfe6ff" stroke="#1f2a44" stroke-width="2"/><ellipse cx="14" cy="12" rx="8" ry="4.5" fill="#fff" stroke="#e11d48" stroke-width="1.5"/><path d="M12 16l-2 4 5-4" fill="#fff" stroke="#e11d48" stroke-width="1.5"/><text x="34" y="18" text-anchor="middle" font-size="9" font-weight="900" fill="#e11d48" font-family="Arial">BOOM</text></svg>`,
+  pixel: `<svg viewBox="0 0 48 48" aria-hidden="true"><rect x="6" y="6" width="6" height="6" fill="#fff"/><rect x="12" y="6" width="6" height="6" fill="#d62828"/><rect x="18" y="6" width="6" height="6" fill="#d62828"/><rect x="24" y="6" width="6" height="6" fill="#fff"/><rect x="30" y="6" width="6" height="6" fill="#d62828"/><rect x="36" y="6" width="6" height="6" fill="#d62828"/><rect x="6" y="12" width="6" height="6" fill="#d62828"/><rect x="12" y="12" width="6" height="6" fill="#f77f00"/><rect x="18" y="12" width="6" height="6" fill="#d62828"/><rect x="24" y="12" width="6" height="6" fill="#d62828"/><rect x="30" y="12" width="6" height="6" fill="#d62828"/><rect x="36" y="12" width="6" height="6" fill="#d62828"/><rect x="6" y="18" width="6" height="6" fill="#d62828"/><rect x="12" y="18" width="6" height="6" fill="#d62828"/><rect x="18" y="18" width="6" height="6" fill="#d62828"/><rect x="24" y="18" width="6" height="6" fill="#d62828"/><rect x="30" y="18" width="6" height="6" fill="#d62828"/><rect x="36" y="18" width="6" height="6" fill="#d62828"/><rect x="6" y="24" width="6" height="6" fill="#fff"/><rect x="12" y="24" width="6" height="6" fill="#d62828"/><rect x="18" y="24" width="6" height="6" fill="#d62828"/><rect x="24" y="24" width="6" height="6" fill="#d62828"/><rect x="30" y="24" width="6" height="6" fill="#d62828"/><rect x="36" y="24" width="6" height="6" fill="#fff"/><rect x="6" y="30" width="6" height="6" fill="#fff"/><rect x="12" y="30" width="6" height="6" fill="#fff"/><rect x="18" y="30" width="6" height="6" fill="#d62828"/><rect x="24" y="30" width="6" height="6" fill="#d62828"/><rect x="30" y="30" width="6" height="6" fill="#fff"/><rect x="36" y="30" width="6" height="6" fill="#fff"/><rect x="6" y="36" width="6" height="6" fill="#fff"/><rect x="12" y="36" width="6" height="6" fill="#fff"/><rect x="18" y="36" width="6" height="6" fill="#fff"/><rect x="24" y="36" width="6" height="6" fill="#fff"/><rect x="30" y="36" width="6" height="6" fill="#fff"/><rect x="36" y="36" width="6" height="6" fill="#fff"/><rect x="6" y="6" width="36" height="36" fill="none" stroke="#1f2a44" stroke-width="2"/></svg>`,
+  rosone: `<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="20" fill="#eef2ff" stroke="#4338ca" stroke-width="2"/><ellipse cx="24" cy="13" rx="4" ry="9" fill="#4338ca" transform="rotate(0 24 24)"/><ellipse cx="24" cy="13" rx="4" ry="9" fill="#7b2cbf" transform="rotate(45 24 24)"/><ellipse cx="24" cy="13" rx="4" ry="9" fill="#4338ca" transform="rotate(90 24 24)"/><ellipse cx="24" cy="13" rx="4" ry="9" fill="#7b2cbf" transform="rotate(135 24 24)"/><ellipse cx="24" cy="13" rx="4" ry="9" fill="#4338ca" transform="rotate(180 24 24)"/><ellipse cx="24" cy="13" rx="4" ry="9" fill="#7b2cbf" transform="rotate(225 24 24)"/><ellipse cx="24" cy="13" rx="4" ry="9" fill="#4338ca" transform="rotate(270 24 24)"/><ellipse cx="24" cy="13" rx="4" ry="9" fill="#7b2cbf" transform="rotate(315 24 24)"/><circle cx="24" cy="24" r="4" fill="#fcbf49"/></svg>`,
+  mirino: `<svg viewBox="0 0 48 48" aria-hidden="true"><rect x="4" y="10" width="40" height="30" rx="4" fill="#1f2a44"/><rect x="16" y="6" width="14" height="6" rx="2" fill="#1f2a44"/><circle cx="24" cy="25" r="10" fill="#4ea8de" stroke="#fff" stroke-width="2"/><path d="M17.3 10v30M30.7 10v30M4 20h40M4 30h40" stroke="#f5d76e" stroke-width="1" opacity=".9"/></svg>`,
+  museo: `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M4 18l20-12 20 12z" fill="#e6d9c2" stroke="#1f2a44" stroke-width="2" stroke-linejoin="round"/><rect x="6" y="18" width="36" height="22" fill="#efe6d6" stroke="#1f2a44" stroke-width="2"/><rect x="10" y="22" width="12" height="10" fill="#fff" stroke="#6b4423" stroke-width="2.5"/><rect x="26" y="22" width="12" height="10" fill="#fff" stroke="#6b4423" stroke-width="2.5"/><path d="M12 30l4-4 4 4M28 30l3-5 4 5" stroke="#c2185b" stroke-width="1.5" fill="none"/><path d="M4 40h40" stroke="#1f2a44" stroke-width="3"/></svg>`,
   carte: `<svg viewBox="0 0 48 48" aria-hidden="true"><rect x="6" y="12" width="26" height="30" rx="3" fill="#e9dcf8" stroke="#1f2a44" stroke-width="2" transform="rotate(-10 19 27)"/><rect x="16" y="8" width="26" height="30" rx="3" fill="#fff" stroke="#1f2a44" stroke-width="2"/><text x="29" y="28" text-anchor="middle" font-family="Patrick Hand,cursive" font-size="16" fill="#8e5bd0">?</text><path d="M20 33h18" stroke="#8e5bd0" stroke-width="2" stroke-linecap="round"/></svg>`,
   pianeta: `<svg viewBox="0 0 48 48" aria-hidden="true"><ellipse cx="24" cy="24" rx="20" ry="11" fill="none" stroke="#1f2a44" stroke-width="2" stroke-dasharray="3 3"/><circle cx="17" cy="24" r="7" fill="#ffd43b" stroke="#e67700" stroke-width="2"/><circle cx="42" cy="22" r="4.5" fill="#4dabf7" stroke="#1f2a44" stroke-width="1.6"/></svg>`,
   leva: `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M4 30 L44 22" stroke="#c08552" stroke-width="5" stroke-linecap="round"/><polygon points="24,27 17,40 31,40" fill="#1f2a44"/><rect x="6" y="18" width="10" height="10" rx="2" fill="#d64545" stroke="#1f2a44" stroke-width="1.5"/><path d="M40 8v10" stroke="#2f6fd6" stroke-width="3"/><polygon points="40,21 36,14 44,14" fill="#2f6fd6"/><path d="M2 42h44" stroke="#c8b48a" stroke-width="3"/></svg>`,
@@ -281,9 +397,11 @@ const MATERIE = {
   Tecnologia: { colore: "var(--tec)", icona: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6"/></svg>` },
   "Metodo di studio": { colore: "#8e5bd0", icona: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.8.8 1 1.5 1 2.5h6c0-1 .2-1.7 1-2.5A6 6 0 0 0 12 3z"/></svg>` },
   STEM:       { colore: "#1f9bb0", icona: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.7 3h10.6a2 2 0 0 0 1.7-3l-5-9V3"/><path d="M7.5 15h9"/></svg>` },
+  Arte:       { colore: "#c2185b", icona: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.6-.8 1.3-1.8-.3-1-.1-2 1.2-2.2H17a4 4 0 0 0 4-4c0-5.5-4-10-9-10z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10.5" cy="7" r="1.2"/><circle cx="15" cy="8" r="1.2"/></svg>` },
+  Storia:     { colore: "#8a5a2b", icona: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-6 9 6M5 10v9M9 10v9M15 10v9M19 10v9M3 21h18"/></svg>` },
   Coding:     { colore: "var(--cod)", icona: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5"/></svg>` }
 };
-const ORDINE_MATERIE = ["STEM", "Metodo di studio", "Italiano", "Matematica", "Tecnologia", "Coding"];
+const ORDINE_MATERIE = ["STEM", "Metodo di studio", "Italiano", "Storia", "Arte", "Matematica", "Tecnologia", "Coding"];
 
 /* ===== Catalogo: solo le app pubblicate nell'ecosistema ===== */
 /* gradi: "primaria" e/o "medie" */
@@ -300,6 +418,12 @@ const APPS = [
   { id: "diario-bordo", nome: "Diario di bordo", materia: "STEM", icona: "diario",
     gradi: ["primaria", "medie"], classi: "progetti di laboratorio",
     desc: "Ogni gruppo documenta il progetto: idea, schizzo, costruzione, prove, miglioramenti. Con foto ed esportazione." },
+  { id: "parole-chiave", nome: "Caccia alle parole chiave", materia: "Metodo di studio", icona: "evidenziatore",
+    gradi: ["primaria", "medie"], classi: "dalla 4ª primaria, tutte le materie",
+    desc: "Il percorso di studio di un testo: leggi, sottolinea al massimo 5 parole chiave, segna le parole difficili, fai una domanda per paragrafo. Poi mappa e ripasso." },
+  { id: "mappa-concettuale", nome: "Dal testo alla mappa", materia: "Metodo di studio", icona: "mappa",
+    gradi: ["primaria", "medie"], classi: "dalla 4ª primaria, tutte le materie",
+    desc: "Le parole chiave diventano concetti da collegare con frecce e parole-legame. Ogni freccia è una frase da controllare. Si salva come immagine." },
   { id: "ripasso-furbo", nome: "Ripasso furbo", materia: "Metodo di studio", icona: "carte",
     gradi: ["primaria", "medie"], classi: "tutte le classi, tutte le materie",
     desc: "Flashcard con le 5 scatole: le carte sbagliate tornano spesso, quelle sapute sempre più di rado. Mazzi condivisibili." },
@@ -330,6 +454,42 @@ const APPS = [
   { id: "bolletta-di-casa", nome: "Bolletta di casa", materia: "Tecnologia", icona: "bolletta",
     gradi: ["medie"], classi: "2ª – 3ª media",
     desc: "Watt, kWh ed euro: quanto consuma casa tua e come risparmiare il 20%." },
+  { id: "colore", nome: "Laboratorio del colore", materia: "Arte", icona: "ruotaColori",
+    gradi: ["primaria", "medie"], classi: "dalla 3ª primaria",
+    desc: "Cerchio cromatico, primari e complementari, caldi e freddi. Mescola le tempere, accendi i faretti della luce e supera 12 sfide di colore." },
+  { id: "prospettiva", nome: "Prospettiva passo passo", materia: "Arte", icona: "cubo3d",
+    gradi: ["medie"], classi: "1ª–3ª media",
+    desc: "Linea d'orizzonte e punti di fuga: costruisci solidi in prospettiva centrale e accidentale, poi allenati a trovare il punto di fuga." },
+  { id: "volto", nome: "Il volto e le proporzioni", materia: "Arte", icona: "volto",
+    gradi: ["primaria", "medie"], classi: "dalla 4ª primaria",
+    desc: "Componi un volto rispettando le proporzioni (gli occhi stanno a metà della testa!) e scopri il corpo misurato in teste." },
+  { id: "lettura-opera", nome: "Detective dell'opera", materia: "Arte", icona: "lente",
+    gradi: ["primaria", "medie"], classi: "dalla 4ª primaria",
+    desc: "Lettura guidata di un'opera in 7 passi: impressione, cosa vedo, composizione, colori con il contagocce, luce, significato. Esce una scheda." },
+  { id: "linea-tempo-arte", nome: "La linea del tempo dell'arte", materia: "Arte", icona: "timeline",
+    gradi: ["medie"], classi: "1ª–3ª media",
+    desc: "Dalla preistoria all'arte contemporanea: 15 periodi con caratteristiche e opere. Mettili in ordine e indovina lo stile." },
+  { id: "fumetto", nome: "Il mio fumetto", materia: "Arte", icona: "fumetto",
+    gradi: ["primaria", "medie"], classi: "dalla 3ª primaria",
+    desc: "Crea una pagina a fumetti: vignette, sfondi, personaggi, balloon, didascalie e onomatopee. Cambia inquadratura dal campo lungo al dettaglio." },
+  { id: "mosaico", nome: "Dal mosaico al pixel", materia: "Arte", icona: "pixel",
+    gradi: ["primaria", "medie"], classi: "tutte le classi",
+    desc: "Disegna con tessere di mosaico o pixel, con simmetria e secchiello. Copia i modelli contando righe e colonne." },
+  { id: "simmetrie", nome: "Simmetrie e decorazioni", materia: "Arte", icona: "rosone",
+    gradi: ["primaria", "medie"], classi: "dalla 3ª primaria",
+    desc: "Disegna una volta e la geometria fa il resto: specchio, rosoni, fregi e tassellazioni come nell'arte islamica." },
+  { id: "inquadra", nome: "Inquadra!", materia: "Arte", icona: "mirino",
+    gradi: ["medie"], classi: "1ª–3ª media",
+    desc: "10 sfide di composizione fotografica con la fotocamera: regola dei terzi, punti di vista, linee guida, cornici, ripetizione." },
+  { id: "museo-classe", nome: "Il museo della classe", materia: "Arte", icona: "museo",
+    gradi: ["primaria", "medie"], classi: "tutte le classi",
+    desc: "Esponi le opere della classe con didascalia e audioguida registrata dai ragazzi. Visita guidata alla LIM, esporta e importa." },
+  { id: "grande-guerra", nome: "La Prima guerra mondiale", materia: "Storia", icona: "mappaStorica",
+    gradi: ["medie"], classi: "3ª media",
+    desc: "Mappa interattiva 1914–1918: schieramenti che cambiano, fronti, battaglie e 33 eventi con scheda, «Da ricordare» e domande per discutere. Serve internet per la cartina." },
+  { id: "spagnolo-italiano", nome: "Dallo spagnolo all'italiano", materia: "Italiano", icona: "dialogo",
+    gradi: ["primaria", "medie"], classi: "alfabetizzazione · ispanofoni",
+    desc: "Per chi parla spagnolo: le parole della scuola con disegni e voce, consegne, frasi utili, i suoni diversi e i falsi amici. Para hispanohablantes." },
   { id: "parolandia", nome: "Parolandia", materia: "Italiano", icona: "libro",
     gradi: ["primaria", "medie"], classi: "dalla 1ª primaria alla 3ª media",
     desc: "Grammatica italiana in 47 livelli, con schede illustrate ed esercizi che si correggono da soli." },
@@ -346,7 +506,7 @@ const APPS = [
 
 const STRUMENTI = [
   ["timer-lezione", "⏱", "Timer lezione"], ["timer", "⏳", "Timer"], ["voce", "🔊", "Livello di voce"],
-  ["estrai", "🎯", "Estrai un numero"], ["gruppi", "👥", "Crea gruppi"], ["consegna", "📝", "Consegna alla lavagna"], ["dadi", "🎲", "Dadi"], ["cronometro", "⏱️", "Cronometro"], ["voti", "✋", "Conta voti"], ["verifiche", "📄", "Genera verifiche"], ["banca", "🪙", "Banca di classe"]
+  ["estrai", "🎯", "Estrai un numero"], ["gruppi", "👥", "Crea gruppi"], ["consegna", "📝", "Consegna alla lavagna"], ["dadi", "🎲", "Dadi"], ["cronometro", "⏱️", "Cronometro"], ["voti", "✋", "Conta voti"], ["verifiche", "📄", "Genera verifiche"], ["banca", "🪙", "Banca di classe"], ["convertitore", "🔄", "PDF ⇄ Word"], ["editor-pdf", "📝", "Editor PDF"], ["codici", "🔑", "Codici studenti"]
 ];
 document.getElementById("attrezzi").innerHTML = STRUMENTI.map(([id, ico, nome]) => `<a class="attrezzo" href="#strumento-${id}"><span aria-hidden="true">${ico}</span>${nome}</a>`).join("");
 
@@ -374,33 +534,147 @@ GRADI.forEach(g => {
   const b = document.createElement("button");
   b.type = "button"; b.className = "grado"; b.id = "tab-" + g.id; b.setAttribute("role", "tab");
   b.textContent = g.nome;
-  b.addEventListener("click", () => { gradoAttivo = g.id; try { localStorage.setItem("ptl-grado", g.id); } catch (e) {} disegna(); });
+  b.addEventListener("click", () => { gradoAttivo = g.id; materiaAperta = null; try { localStorage.setItem("ptl-grado", g.id); localStorage.removeItem("ptl-materia"); } catch (e) {} disegna(); });
   nav.appendChild(b);
 });
 
+/* ===== Profili: docente (password) e studente (app sbloccate con il codice del giorno) ===== */
+const CFG = window.PTL_CONFIG || {};
+const oggi = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+const leggiLS = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } };
+const scriviLS = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+const ruolo = () => leggiLS("ptl-ruolo", null);
+const sbloccata = id => (leggiLS("ptl-sblocchi", {})[id] === oggi()) || leggiLS("ptl-sblocchi", {})["*"] === oggi();
+async function sha256(t) {
+  if (window.crypto && crypto.subtle) { const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(t)); return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, "0")).join(""); }
+  throw new Error("crypto non disponibile");
+}
+async function codiceDelGiorno(id, giorno) {
+  const h = await sha256(`${CFG.segretoCodici || "ptl"}|${id}|${giorno || oggi()}`);
+  return String(parseInt(h.slice(0, 8), 16) % 9000 + 1000);
+}
+function applicaRuolo() {
+  const r = ruolo();
+  document.getElementById("cassetta").hidden = r !== "docente";
+  document.getElementById("ruolo-badge").textContent = r === "docente" ? "👩‍🏫 Docente · cambia" : r === "studente" ? "🎒 Studente · cambia" : "Chi sei?";
+  document.getElementById("ingresso").hidden = !!r;
+  disegna();
+}
+document.getElementById("ruolo-badge").addEventListener("click", () => { document.getElementById("login-docente").hidden = true; document.getElementById("ingresso").hidden = false; });
+document.getElementById("sono-studente").addEventListener("click", () => { scriviLS("ptl-ruolo", "studente"); applicaRuolo(); if (location.hash.startsWith("#strumento-")) location.hash = ""; });
+document.getElementById("sono-docente").addEventListener("click", () => {
+  if (ruolo() === "docente") { document.getElementById("ingresso").hidden = true; return; }
+  document.getElementById("login-docente").hidden = false; document.getElementById("pw-err").textContent = ""; document.getElementById("pw-docente").focus();
+});
+document.getElementById("pw-annulla").addEventListener("click", () => { document.getElementById("login-docente").hidden = true; if (!ruolo()) return; document.getElementById("ingresso").hidden = true; });
+async function provaPassword() {
+  const v = document.getElementById("pw-docente").value;
+  let ok = false; try { ok = (await sha256(v)) === CFG.passwordDocentiSHA256; } catch (e) {}
+  if (!ok) { document.getElementById("pw-err").textContent = "Password non corretta."; return; }
+  document.getElementById("pw-docente").value = ""; scriviLS("ptl-ruolo", "docente"); applicaRuolo();
+}
+document.getElementById("pw-ok").addEventListener("click", provaPassword);
+document.getElementById("pw-docente").addEventListener("keydown", e => { if (e.key === "Enter") provaPassword(); });
+/* Sblocco da parte dello studente */
+let daSbloccare = null;
+function chiediCodice(app) {
+  daSbloccare = app; document.getElementById("sb-nome").textContent = app.nome;
+  document.getElementById("sb-codice").value = ""; document.getElementById("sb-err").textContent = "";
+  document.getElementById("sblocco").hidden = false; document.getElementById("sb-codice").focus();
+}
+async function provaCodice() {
+  const v = document.getElementById("sb-codice").value.trim();
+  if (!/^\d{4}$/.test(v)) { document.getElementById("sb-err").textContent = "Il codice ha 4 cifre."; return; }
+  const [c1, c2] = await Promise.all([codiceDelGiorno(daSbloccare.id), codiceDelGiorno("*")]);
+  if (v !== c1 && v !== c2) { document.getElementById("sb-err").textContent = "Codice non valido. Controlla con il docente."; return; }
+  const s = leggiLS("ptl-sblocchi", {}); Object.keys(s).forEach(k => { if (s[k] !== oggi()) delete s[k]; });
+  s[v === c2 ? "*" : daSbloccare.id] = oggi(); scriviLS("ptl-sblocchi", s);
+  document.getElementById("sblocco").hidden = true; disegna();
+  const id = daSbloccare.id; daSbloccare = null; location.hash = id; window.dispatchEvent(new HashChangeEvent("hashchange"));
+}
+document.getElementById("sb-ok").addEventListener("click", provaCodice);
+document.getElementById("sb-codice").addEventListener("keydown", e => { if (e.key === "Enter") provaCodice(); });
+document.getElementById("sb-annulla").addEventListener("click", () => { document.getElementById("sblocco").hidden = true; });
+/* Pannello dei codici per il docente */
+async function apriCodici() {
+  const righe = [{ id: "*", nome: "⭐ Codice per tutte le app" }, ...APPS.map(a => ({ id: a.id, nome: a.nome }))];
+  const codici = await Promise.all(righe.map(r => codiceDelGiorno(r.id)));
+  document.getElementById("cod-lista").innerHTML = `<table class="tab-codici"><tbody>${righe.map((r, i) => `<tr><td>${esc(r.nome)}</td><td class="cod">${codici[i]}</td><td><button type="button" data-i="${i}">📺 LIM</button></td></tr>`).join("")}</tbody></table>`;
+  document.getElementById("cod-lista").querySelectorAll("[data-i]").forEach(b => b.addEventListener("click", () => {
+    const i = +b.dataset.i; document.getElementById("lim-nome").textContent = righe[i].nome; document.getElementById("lim-cod").textContent = codici[i]; document.getElementById("codice-lim").hidden = false;
+  }));
+  document.getElementById("codici").hidden = false;
+}
+document.getElementById("codice-lim").addEventListener("click", () => document.getElementById("codice-lim").hidden = true);
+document.getElementById("cod-chiudi").addEventListener("click", () => { document.getElementById("codici").hidden = true; if (location.hash === "#strumento-codici") location.hash = ""; });
+document.getElementById("esci-docente").addEventListener("click", () => { try { localStorage.removeItem("ptl-ruolo"); } catch (e) {} document.getElementById("codici").hidden = true; location.hash = ""; applicaRuolo(); });
+document.getElementById("genera-pw").addEventListener("click", async () => {
+  const v = document.getElementById("nuova-pw").value; if (v.length < 6) { alertPw("Usa almeno 6 caratteri."); return; }
+  const h = await sha256(v); const t = document.getElementById("riga-pw"); t.hidden = false; t.value = `  passwordDocentiSHA256: "${h}",`; t.select();
+});
+function alertPw(m) { const t = document.getElementById("riga-pw"); t.hidden = false; t.value = m; }
+
 function quaderno(a) {
-  return `<article class="quaderno" style="--c:${MATERIE[a.materia].colore}">
+  const chiuso = ruolo() === "studente" && !sbloccata(a.id);
+  return `<article class="quaderno${chiuso ? " bloccato" : ""}" style="--c:${MATERIE[a.materia].colore}">${chiuso ? '<span class="lucchetto" aria-hidden="true">🔒</span>' : ""}
     <div class="copertina-top"><div class="icona">${ICONE[a.icona]}</div><span class="classi">${esc(a.classi)}</span></div>
     <div class="etichetta"><h3>${esc(a.nome)}</h3><p>${esc(a.desc)}</p></div>
-    <a class="apri" href="#${esc(a.id)}">Apri il quaderno →</a>
+    <a class="apri" href="#${esc(a.id)}">${chiuso ? "🔒 Inserisci il codice" : "Apri il quaderno →"}</a>
   </article>`;
 }
 
+/* Prima i raccoglitori delle materie, poi (toccandone uno) le app di quella materia */
+let materiaAperta = null;
+try { materiaAperta = localStorage.getItem("ptl-materia") || null; } catch (e) {}
+function apriMateria(m) { materiaAperta = m; try { m ? localStorage.setItem("ptl-materia", m) : localStorage.removeItem("ptl-materia"); } catch (e) {} disegna(); document.getElementById("catalogo").scrollIntoView({ block: "start", behavior: "smooth" }); }
+function sezioneMateria(m, lista, conRitorno) {
+  return `<section class="materia" aria-labelledby="m-${m.replace(/\s/g, "-")}">
+    ${conRitorno ? `<button type="button" class="torna-materie" data-torna>⬅ Tutte le materie</button>` : ""}
+    <div class="materia-head"><span class="bollino" style="background:${MATERIE[m].colore}">${MATERIE[m].icona}</span>
+    <h2 id="m-${m.replace(/\s/g, "-")}">${m}</h2><span class="sotto">${lista.length === 1 ? "1 app" : lista.length + " app"}</span></div>
+    <div class="quaderni">${lista.map(quaderno).join("")}</div></section>`;
+}
 function disegna() {
   nav.querySelectorAll(".grado").forEach(b => b.setAttribute("aria-selected", b.id === "tab-" + gradoAttivo ? "true" : "false"));
   const visibili = APPS.filter(a => gradoAttivo === "tutti" || (gradoAttivo === "stem" ? a.materia === "STEM" : a.gradi.includes(gradoAttivo)));
+  const materie = ORDINE_MATERIE.filter(m => visibili.some(a => a.materia === m));
+  const cat = document.getElementById("catalogo");
   let html = "";
-  ORDINE_MATERIE.forEach(m => {
-    const lista = visibili.filter(a => a.materia === m);
-    if (!lista.length) return;
-    html += `<section class="materia" aria-labelledby="m-${m.replace(/\s/g, "-")}">
-      <div class="materia-head"><span class="bollino" style="background:${MATERIE[m].colore}">${MATERIE[m].icona}</span>
-      <h2 id="m-${m.replace(/\s/g, "-")}">${m}</h2><span class="sotto">${lista.length === 1 ? "1 app" : lista.length + " app"}</span></div>
-      <div class="quaderni">${lista.map(quaderno).join("")}</div></section>`;
-  });
-  document.getElementById("catalogo").innerHTML = html || `<p class="vuoto">Ancora nessuna app per questo grado: arriveranno presto!</p>`;
+  if (!materie.length) html = `<p class="vuoto">Ancora nessuna app per questo grado: arriveranno presto!</p>`;
+  else if (materie.length === 1) html = sezioneMateria(materie[0], visibili.filter(a => a.materia === materie[0]), false);
+  else if (materiaAperta && materie.includes(materiaAperta)) html = sezioneMateria(materiaAperta, visibili.filter(a => a.materia === materiaAperta), true);
+  else {
+    html = `<div class="raccoglitori">${materie.map(m => {
+      const lista = visibili.filter(a => a.materia === m);
+      return `<button type="button" class="raccoglitore" style="--c:${MATERIE[m].colore}" data-materia="${esc(m)}" aria-label="${esc(m)}, ${lista.length} app">
+        <span class="bollo">${MATERIE[m].icona}</span>
+        <span class="targhetta"><b>${esc(m)}</b><span>${lista.length === 1 ? "1 app" : lista.length + " app"}</span></span>
+        <span class="mini" aria-hidden="true">${lista.slice(0, 5).map(a => `<span>${ICONE[a.icona] || ""}</span>`).join("")}</span>
+      </button>`;
+    }).join("")}</div>`;
+  }
+  cat.innerHTML = html;
+  cat.querySelectorAll("[data-materia]").forEach(b => b.addEventListener("click", () => apriMateria(b.dataset.materia)));
+  cat.querySelectorAll("[data-torna]").forEach(b => b.addEventListener("click", () => apriMateria(null)));
 }
-disegna();
+applicaRuolo();
+/* Lingua di aiuto (modalità bilingue) */
+const LINGUE_UI = [["", "Solo italiano"], ["en", "English"], ["es", "Español"], ["ar", "العربية"], ["ro", "Română"], ["sq", "Shqip"], ["uk", "Українська"], ["zh", "中文"]];
+function linguaAttuale() { try { return JSON.parse(localStorage.getItem("ptl-lingua")) || ""; } catch (e) { return ""; } }
+function disegnaLingue() {
+  const att = linguaAttuale();
+  document.querySelectorAll(".lingue-btn").forEach(box => {
+    box.innerHTML = LINGUE_UI.map(([c, n]) => `<button type="button" data-l="${c}" aria-pressed="${c === att}" ${c === "ar" ? 'dir="rtl"' : ""}>${n}</button>`).join("");
+    box.querySelectorAll("[data-l]").forEach(b => b.addEventListener("click", () => {
+      if (window.ptlLingua) window.ptlLingua.imposta(b.dataset.l || null);
+      else { try { b.dataset.l ? localStorage.setItem("ptl-lingua", JSON.stringify(b.dataset.l)) : localStorage.removeItem("ptl-lingua"); } catch (e) {} }
+      disegnaLingue();
+    }));
+  });
+}
+disegnaLingue();
+document.getElementById("lingua-apri").addEventListener("click", () => { disegnaLingue(); document.getElementById("lingua-pannello").hidden = false; });
+document.getElementById("lin-chiudi").addEventListener("click", () => document.getElementById("lingua-pannello").hidden = true);
 
 /* Navigazione: #id-app apre l'app, senza hash torna al catalogo */
 (function () {
@@ -412,7 +686,10 @@ disegna();
     let app = APPS.find(a => a.id === id), src;
     if (app) src = "apps/" + app.id + ".html";
     const stru = id.startsWith("strumento-") && STRUMENTI.find(x => "strumento-" + x[0] === id);
-    if (stru) { app = { nome: stru[2] }; src = { verifiche: "apps/verifiche.html", banca: "apps/banca-classe.html" }[stru[0]] || "apps/strumenti.html#" + stru[0]; }
+    if (stru && ruolo() !== "docente") { location.hash = ""; return; }
+    if (stru && stru[0] === "codici") { apriCodici(); history.replaceState(null, "", location.pathname); return; }
+    if (app && ruolo() !== "docente" && !sbloccata(app.id)) { if (!ruolo()) { document.getElementById("ingresso").hidden = false; } else chiediCodice(app); history.replaceState(null, "", location.pathname); app = null; }
+    if (stru) { app = { nome: stru[2] }; src = { verifiche: "apps/verifiche.html", banca: "apps/banca-classe.html", convertitore: "apps/convertitore.html", "editor-pdf": "apps/editor-pdf.html" }[stru[0]] || "apps/strumenti.html#" + stru[0]; }
     if (app) {
       if (viewer.hidden) scrollY = window.scrollY;
       if (frame.getAttribute("src") !== src) frame.setAttribute("src", src);

@@ -1,6 +1,13 @@
 /* Prof Tech Lab · Accessibilità condivisa da tutte le app.
    Le impostazioni stanno in localStorage ("ptl-a11y") e valgono per tutto l'ecosistema.
    Si cambiano dal pannello ♿ della home; ogni app si aggiorna da sola. */
+/* Lingua di aiuto: carica lingue.js dalla stessa cartella di questo file */
+(function () {
+  if (window.ptlLingua || document.getElementById("ptl-lingue-js")) return;
+  const me = document.currentScript && document.currentScript.src;
+  const s = document.createElement("script"); s.id = "ptl-lingue-js"; s.src = me ? new URL("lingue.js", me).href : "apps/lingue.js";
+  document.head.appendChild(s);
+})();
 (function () {
   const KEY = "ptl-a11y";
   const DEF = { leggibile: false, testo: 100, interlinea: false, contrasto: false, animazioni: false, righello: false, voce: false, velocita: 1 };
@@ -78,7 +85,8 @@ html.ptl-voce #ptl-voce-btn { display: inline-flex; }
     if (!attesaTocco || e.target === btn || btn.contains(e.target)) return;
     const el = e.target.closest("p, h1, h2, h3, h4, li, label, button, td, th, .consegna, span, div, text");
     if (!el) return;
-    const testo = (el.innerText || el.textContent || "").trim();
+    const copia = el.cloneNode(true); copia.querySelectorAll(".ptl-tr").forEach(x => x.remove());
+    const testo = (copia.innerText || copia.textContent || "").trim();
     if (!testo) return;
     e.preventDefault(); e.stopPropagation();
     attesaTocco = false; btn.classList.remove("attivo"); btn.innerHTML = '⏹ Ferma';
@@ -104,4 +112,32 @@ html.ptl-voce #ptl-voce-btn { display: inline-flex; }
   function monta() { if (!document.body) return; document.body.appendChild(righello); document.body.appendChild(btn); applica(); }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", monta); else monta();
   window.addEventListener("storage", e => { if (e.key === KEY) applica(); });
+})();
+
+/* Prof Tech Lab · Profilo studente: le app si aprono solo con il codice del giorno,
+   gli strumenti del docente non sono disponibili. Lucchetto didattico, non sicurezza. */
+(function () {
+  let ruolo = null, sb = {};
+  try { ruolo = JSON.parse(localStorage.getItem("ptl-ruolo")); sb = JSON.parse(localStorage.getItem("ptl-sblocchi")) || {}; } catch (e) {}
+  if (ruolo !== "studente" || !/\/apps\//.test(location.pathname)) return;
+  const f = (location.pathname.split("/").pop() || "").replace(/\.html$/, "");
+  const id = { "pista-base": "pista-codice", "pista-pro": "pista-codice" }[f] || f;
+  const d = new Date(), oggi = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const docenti = ["strumenti", "banca-classe", "verifiche", "convertitore", "editor-pdf"].includes(id);
+  if (!docenti && (sb[id] === oggi || sb["*"] === oggi || ((id === "mappa-concettuale" || id === "ripasso-furbo") && sb["parole-chiave"] === oggi))) {
+    if (id === "ripasso-furbo") { const s = document.createElement("style"); s.textContent = "#crea-verifica, .solo-docenti { display: none !important; }"; document.head.appendChild(s); }
+    return;
+  }
+  const blocca = () => {
+    const o = document.createElement("div");
+    o.setAttribute("role", "alertdialog");
+    o.style.cssText = "position:fixed;inset:0;z-index:2147483646;background:#2f4b3d;color:#f4f1e8;display:grid;place-content:center;text-align:center;gap:12px;padding:24px;font:400 22px system-ui,sans-serif";
+    o.innerHTML = docenti
+      ? '<div style="font-size:64px">👩‍🏫</div><b style="font-size:30px">Strumento riservato ai docenti</b><span>Torna alla home per usare le app della tua classe.</span>'
+      : '<div style="font-size:64px">🔒</div><b style="font-size:30px">App bloccata</b><span>Torna alla home e scrivi il codice che ti dà il docente.</span>';
+    const a = document.createElement("a"); a.textContent = "⬅ Vai alla home"; a.href = location.pathname.includes("/apps/") ? "../index.html" : "index.html"; a.target = "_top";
+    a.style.cssText = "justify-self:center;background:#f5d76e;color:#1f2a44;padding:8px 20px;border-radius:99px;font-weight:700;text-decoration:none";
+    o.appendChild(a); document.body.appendChild(o);
+  };
+  if (document.body) blocca(); else document.addEventListener("DOMContentLoaded", blocca);
 })();

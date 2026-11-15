@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dal testo alla mappa</title>
+<link rel="stylesheet" href="ptl.css">
+<style>
+:root { --accent: #8e5bd0; --viola: #8e5bd0; }
+.mappe { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+.scheda { background: var(--label); border: 3px solid var(--ink); border-radius: 14px; padding: 14px; display: grid; gap: 6px; box-shadow: 4px 5px 0 rgba(31,42,68,.15); align-content: start; }
+.scheda h3 { margin: 0; font: 400 24px/1.1 var(--font-hand); }
+.scheda .info { font-size: 14px; color: var(--muted); }
+.scheda .btn { font-size: 18px; padding: 3px 12px; }
+.fonti { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+.fonti .card { display: grid; gap: 8px; align-content: start; }
+.fonti h3 { margin: 0; font: 400 24px var(--font-hand); }
+textarea.grande, input.grande { width: 100%; font: 400 20px var(--font-hand); border: 2px solid var(--ink); border-radius: 8px; padding: 6px 10px; background: #fff; }
+textarea.grande { min-height: 110px; }
+.barra { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.barra .btn { font-size: 19px; padding: 4px 12px; }
+.btn.on { background: var(--giallo); }
+.tela-wrap { background: #fff; border: 3px solid var(--ink); border-radius: 14px; overflow: hidden; box-shadow: 4px 5px 0 rgba(31,42,68,.15); }
+#tela { display: block; width: 100%; height: auto; touch-action: none; user-select: none; -webkit-user-select: none;
+  background-image: radial-gradient(#dbe4ee 1.2px, transparent 1.2px); background-size: 25px 25px; }
+#tela .nodo { cursor: grab; }
+#tela .nodo text { font-family: "Atkinson Hyperlegible", system-ui, sans-serif; font-size: 21px; pointer-events: none; }
+#tela .nodo.sel rect { stroke: #e07b1a; stroke-width: 5; }
+#tela .nodo.da rect { stroke: var(--viola); stroke-width: 5; stroke-dasharray: 8 5; }
+#tela .nodo.isolato rect { stroke: #d64545; stroke-dasharray: 6 4; }
+#tela .freccia line { stroke: #1f2a44; stroke-width: 3; }
+#tela .freccia.vuota line { stroke: #d64545; stroke-dasharray: 8 6; }
+#tela .freccia .et { cursor: pointer; }
+#tela .freccia .et text { font-family: "Patrick Hand", "Comic Sans MS", cursive; font-size: 21px; fill: #5d3a91; pointer-events: none; }
+#tela .freccia.sel .et rect { stroke: #e07b1a; stroke-width: 3; }
+.pannello { background: #f5f0fc; border: 2px solid #cdb6ec; border-radius: 12px; padding: 10px 12px; display: grid; gap: 8px; }
+.verbi { display: flex; gap: 6px; flex-wrap: wrap; }
+.verbi button { font: 400 19px var(--font-hand); border: 2px solid #8e5bd0; color: #5d3a91; background: #fff; border-radius: 99px; padding: 1px 12px; cursor: pointer; }
+.tipi { display: flex; gap: 6px; flex-wrap: wrap; }
+.tipi button { font-size: 15px; border: 2px solid var(--ink); border-radius: 8px; padding: 3px 10px; cursor: pointer; background: #fff; }
+.tipi button[aria-pressed="true"] { background: var(--giallo); }
+.frasi { display: grid; gap: 6px; margin: 0; padding-left: 1.3em; font-size: 18px; }
+.frasi .v { color: #5d3a91; font-family: var(--font-hand); font-size: 21px; }
+.frasi .mancante { color: var(--ko); font-weight: 700; }
+.vuoto { font: 400 22px var(--font-hand); color: var(--muted); text-align: center; }
+.aiuto { font-size: 15px; color: var(--muted); margin: 0; }
+</style>
+</head>
+<body>
+<header class="app-bar"><h1>Dal testo alla mappa</h1><span class="sub">Le parole chiave diventano una mappa concettuale</span></header>
+<div class="container">
+  <div class="tabs" role="tablist">
+    <button class="tab" id="t-nuova" aria-selected="true">✨ Nuova mappa</button>
+    <button class="tab" id="t-mappa" aria-selected="false">🗺️ Mappa</button>
+    <button class="tab" id="t-mie" aria-selected="false">📂 Le mie mappe</button>
+    <button class="tab" id="t-come" aria-selected="false">❓ Come si fa</button>
+  </div>
+
+  <!-- NUOVA -->
+  <section id="s-nuova" style="display:grid;gap:14px">
+    <p class="consegna">Una mappa concettuale è fatta di <b>concetti</b> (le parole chiave) uniti da <b>frecce con una parola-legame</b>. Ogni freccia, letta ad alta voce, forma una <b>frase vera</b>.</p>
+    <div class="fonti">
+      <div class="card"><h3>🔎 Dalle parole chiave</h3><p class="aiuto">Usa un testo che hai già lavorato in «Caccia alle parole chiave».</p><div id="da-caccia"></div></div>
+      <div class="card"><h3>✍️ Scrivo io i concetti</h3>
+        <input class="grande" id="n-titolo" placeholder="Argomento (es. Il legno)">
+        <textarea class="grande" id="n-parole" placeholder="Un concetto per riga, oppure separati da virgole"></textarea>
+        <button class="btn primary" id="n-ok">Crea la mappa</button><p class="feedback" id="n-msg" style="font-size:19px"></p></div>
+      <div class="card"><h3>📄 Mappa vuota</h3><p class="aiuto">Parti solo dall'argomento al centro e aggiungi i concetti uno alla volta.</p>
+        <input class="grande" id="v-titolo" placeholder="Argomento"><button class="btn primary" id="v-ok">Inizia</button></div>
+    </div>
+  </section>
+
+  <!-- MAPPA -->
+  <section id="s-mappa" hidden style="display:grid;gap:10px">
+    <div id="nessuna" class="vuoto">Prima crea una mappa nella scheda «✨ Nuova mappa».</div>
+    <div id="lavoro" hidden style="display:grid;gap:10px">
+      <div class="barra">
+        <input class="grande" id="m-titolo" style="flex:1;min-width:180px;font-size:24px" aria-label="Titolo della mappa">
+        <button class="btn" id="b-aggiungi">➕ Concetto</button>
+        <button class="btn" id="b-collega" aria-pressed="false">🔗 Collega</button>
+        <button class="btn" id="b-ordina">🧹 Riordina</button>
+        <button class="btn primary" id="b-controlla">✅ Controlla</button>
+      </div>
+      <p class="aiuto" id="suggerimento"></p>
+      <div class="tela-wrap"><svg id="tela" viewBox="0 0 1000 680" role="img" aria-label="Mappa concettuale">
+        <defs><marker id="punta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#1f2a44"/></marker>
+        <marker id="punta-r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#d64545"/></marker></defs>
+        <g id="g-frecce"></g><g id="g-nodi"></g>
+      </svg></div>
+
+      <div class="pannello" id="p-nodo" hidden>
+        <div class="row"><b>Concetto:</b><input class="grande" id="nodo-testo" style="flex:1" maxlength="40"></div>
+        <div class="tipi" id="nodo-tipo"><button data-t="centro">⭐ Argomento</button><button data-t="concetto">⬜ Concetto</button><button data-t="esempio">💡 Esempio</button></div>
+        <div class="row"><button class="btn" id="nodo-collega">🔗 Collega da qui</button><button class="btn" id="nodo-elimina">🗑 Elimina</button><button class="btn" id="nodo-chiudi" style="margin-left:auto">Fatto</button></div>
+      </div>
+      <div class="pannello" id="p-freccia" hidden>
+        <div><b id="fr-titolo"></b></div>
+        <div class="row"><b>Parola-legame:</b><input class="grande" id="fr-verbo" style="flex:1" maxlength="30" placeholder="es. è formato da"></div>
+        <div class="verbi" id="verbi"></div>
+        <div class="row"><button class="btn" id="fr-inverti">⇄ Inverti</button><button class="btn" id="fr-elimina">🗑 Elimina freccia</button><button class="btn primary" id="fr-chiudi" style="margin-left:auto">Fatto</button></div>
+      </div>
+
+      <div class="card" id="p-controllo" hidden style="display:grid;gap:8px">
+        <p class="feedback" id="ck-esito"></p>
+        <div><b>Le frasi della tua mappa</b> <span class="aiuto">— leggile ad alta voce: sono vere? hanno senso?</span></div>
+        <ol class="frasi" id="ck-frasi"></ol>
+        <div class="row"><button class="btn" id="ck-copia">📋 Copia le frasi</button><button class="btn" id="ck-chiudi" style="margin-left:auto">Chiudi</button></div>
+      </div>
+
+      <div class="row">
+        <button class="btn" id="b-png">🖼 Salva come immagine</button>
+        <button class="btn" id="b-stampa">🖨 Stampa</button>
+        <button class="btn primary" id="b-carte">📚 Flashcard dalla mappa</button>
+        <button class="btn" id="b-scheda" hidden>🧭 Scheda del testo</button>
+        <span class="feedback" id="m-msg" style="font-size:19px"></span>
+      </div>
+      <img id="m-img" alt="Immagine della mappa da tenere premuta per salvarla" hidden style="max-width:100%;border:2px solid var(--ink);border-radius:10px">
+    </div>
+  </section>
+
+  <!-- MIE -->
+  <section id="s-mie" hidden style="display:grid;gap:14px"><div class="mappe" id="lista"></div></section>
+
+  <!-- COME -->
+  <section id="s-come" hidden>
+    <div class="card" style="font-size:17px">
+      <p class="consegna" style="margin-bottom:8px">Come si costruisce una mappa concettuale</p>
+      <ol style="display:grid;gap:6px">
+        <li><b>L'argomento</b> va al centro o in alto: è il concetto più generale.</li>
+        <li><b>Dal generale al particolare</b>: vicino all'argomento i concetti più importanti, più lontano i dettagli e gli esempi.</li>
+        <li><b>Tocca un concetto</b> per modificarlo; <b>trascinalo</b> per spostarlo.</li>
+        <li><b>Per collegare</b>: «🔗 Collega», tocca il primo concetto e poi il secondo. La freccia va <b>dal primo al secondo</b>.</li>
+        <li><b>Ogni freccia ha una parola-legame</b> (di solito un verbo): «è formato da», «serve a», «produce»… Le frecce senza parola restano rosse.</li>
+        <li><b>La prova della frase</b>: concetto + parola-legame + concetto deve formare una frase vera. «Legno — si ricava dal — tronco» ✔</li>
+        <li>Pochi concetti ben collegati valgono più di tanti concetti sparsi.</li>
+      </ol>
+    </div>
+  </section>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const KEY = "mappeConcetti", W = 1000, H = 680;
+const VERBI = ["è", "è formato da", "contiene", "si divide in", "è un tipo di", "serve a", "si usa per", "produce", "causa", "dipende da", "si trova in", "per esempio"];
+let S = { mappe: [], corrente: null };
+try { const v = JSON.parse(localStorage.getItem(KEY)); if (v && v.mappe) S = Object.assign(S, v); } catch (e) {}
+const salva = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+const M = () => S.mappe.find(m => m.id === S.corrente);
+const uid = () => Math.random().toString(36).slice(2, 9);
+
+/* ---------- Schede ---------- */
+const TAB = ["nuova", "mappa", "mie", "come"];
+function vai(n) { TAB.forEach(t => { $("t-" + t).setAttribute("aria-selected", t === n); $("s-" + t).hidden = t !== n; }); if (n === "nuova") disegnaFonti(); if (n === "mie") disegnaLista(); if (n === "mappa") apriTela(); }
+TAB.forEach(t => $("t-" + t).addEventListener("click", () => vai(t)));
+
+/* ---------- Creazione ---------- */
+function schemiCaccia() { try { const v = JSON.parse(localStorage.getItem("paroleChiave")); return v && v.schemi ? Object.values(v.schemi) : []; } catch (e) { return []; } }
+function disegnaFonti() {
+  const sc = schemiCaccia();
+  $("da-caccia").innerHTML = sc.length ? sc.map(s => `<div class="row" style="justify-content:space-between;border-bottom:1px solid #e3e3e3;padding:4px 0"><span>${esc(s.titolo)}</span><button class="btn" data-sc="${esc(s.id)}" style="font-size:17px;padding:2px 10px">Usa</button></div>`).join("")
+    : '<p class="aiuto">Ancora nessun testo finito. Completa un testo in «Caccia alle parole chiave»: alla fine troverai il bottone «🗺️ Trasforma in mappa».</p>';
+  $("da-caccia").querySelectorAll("[data-sc]").forEach(b => b.addEventListener("click", () => daSchema(sc.find(s => s.id === b.dataset.sc))));
+}
+function nuova(titolo, nodi, link, fonte, fonteId) {
+  const m = { id: uid(), titolo, nodi, link: link || [], fonte: fonte || "", fonteId: fonteId || "", data: Date.now() };
+  S.mappe.unshift(m); S.corrente = m.id; salva(); vai("mappa");
+}
+function daSchema(s) {
+  if (!s) return;
+  const c = { id: uid(), t: s.titolo, tipo: "centro", x: W / 2, y: 70 };
+  const nodi = [c], visti = new Set([s.titolo.toLowerCase()]);
+  const n = s.par.length, col = W / n;
+  s.par.forEach((p, i) => {
+    const x = col * (i + .5);
+    let y = 210;
+    if (p.sint) { const k = p.sint.toLowerCase(); if (!visti.has(k)) { visti.add(k); nodi.push({ id: uid(), t: p.sint.slice(0, 40), tipo: "concetto", x, y }); y += 100; } }
+    p.parole.forEach(w => { const k = w.toLowerCase(); if (visti.has(k)) return; visti.add(k); nodi.push({ id: uid(), t: w, tipo: "concetto", x: x + ((nodi.length % 2) ? -1 : 1) * Math.min(60, col / 5), y: Math.min(y, H - 40) }); y += 78; });
+  });
+  nodi.forEach(nd => tieniDentro(nd));
+  nuova(s.titolo, nodi, [], "Caccia alle parole chiave", s.id);
+  suggerisci("I concetti sono pronti ma non sono ancora collegati: spostali (il più generale in alto) e uniscili con le frecce.");
+}
+$("n-ok").addEventListener("click", () => {
+  const titolo = $("n-titolo").value.trim(), parole = [...new Set($("n-parole").value.split(/[\n,;]+/).map(s => s.trim()).filter(Boolean))].slice(0, 30);
+  if (!titolo || parole.length < 2) { $("n-msg").className = "feedback ko"; $("n-msg").textContent = "Scrivi l'argomento e almeno 2 concetti."; return; }
+  const nodi = [{ id: uid(), t: titolo, tipo: "centro", x: W / 2, y: 70 }];
+  parole.forEach((p, i) => { const per = 6, r = Math.floor(i / per), c = i % per, nr = Math.min(per, parole.length - r * per); nodi.push({ id: uid(), t: p.slice(0, 40), tipo: "concetto", x: W * (c + .5) / nr, y: 220 + r * 110 }); });
+  nodi.forEach(tieniDentro); $("n-titolo").value = ""; $("n-parole").value = ""; $("n-msg").textContent = "";
+  nuova(titolo, nodi);
+  suggerisci("Ora sposta i concetti (dal più generale al più particolare) e collegali con le frecce.");
+});
+$("v-ok").addEventListener("click", () => { const t = $("v-titolo").value.trim() || "Argomento"; $("v-titolo").value = ""; nuova(t, [{ id: uid(), t, tipo: "centro", x: W / 2, y: 70 }]); suggerisci("Tocca «➕ Concetto» per aggiungere i concetti."); });
+
+function disegnaLista() {
+  $("lista").innerHTML = S.mappe.length ? S.mappe.map(m => `<article class="scheda"><h3>${esc(m.titolo)}</h3><div class="info">${m.nodi.length} concetti · ${m.link.length} frecce${m.fonte ? " · da " + esc(m.fonte) : ""}</div>
+    <div class="row"><button class="btn primary" data-apri="${m.id}">Apri</button><button class="btn" data-del="${m.id}" aria-label="Elimina">🗑</button></div></article>`).join("") : '<p class="vuoto">Non hai ancora mappe.</p>';
+  $("lista").querySelectorAll("[data-apri]").forEach(b => b.addEventListener("click", () => { S.corrente = b.dataset.apri; salva(); vai("mappa"); }));
+  $("lista").querySelectorAll("[data-del]").forEach(b => b.addEventListener("click", () => {
+    if (b.dataset.conf !== "1") { b.dataset.conf = "1"; b.textContent = "Sicuro?"; setTimeout(() => { b.dataset.conf = ""; b.textContent = "🗑"; }, 3000); return; }
+    S.mappe = S.mappe.filter(m => m.id !== b.dataset.del); if (S.corrente === b.dataset.del) S.corrente = null; salva(); disegnaLista();
+  }));
+}
+
+/* ---------- Disegno ---------- */
+function righe(t) {
+  const parole = String(t).split(/\s+/), out = []; let cur = "";
+  parole.forEach(p => { if (cur && (cur + " " + p).length > 16) { out.push(cur); cur = p; } else cur = cur ? cur + " " + p : p; });
+  if (cur) out.push(cur); return out.slice(0, 3);
+}
+function misura(n) { const r = righe(n.t); const w = Math.max(90, Math.max(...r.map(x => x.length)) * 11.5 + 30); return { r, w, h: r.length * 26 + 22 }; }
+function tieniDentro(n) { const { w, h } = misura(n); n.x = Math.max(w / 2 + 4, Math.min(W - w / 2 - 4, n.x)); n.y = Math.max(h / 2 + 4, Math.min(H - h / 2 - 4, n.y)); }
+const STILE = { centro: ["#2f4b3d", "#f4f1e8", 16], concetto: ["#fff", "#1f2a44", 12], esempio: ["#fff4c2", "#1f2a44", 26] };
+let sel = null, selF = null, collegaDa = null, modoCollega = false, controllo = null;
+function bordo(n, verso) { // punto sul bordo del riquadro nella direzione di "verso"
+  const { w, h } = misura(n), dx = verso.x - n.x, dy = verso.y - n.y;
+  if (!dx && !dy) return { x: n.x, y: n.y };
+  const k = Math.min(Math.abs((w / 2 + 3) / (dx || 1e-9)), Math.abs((h / 2 + 3) / (dy || 1e-9)));
+  return { x: n.x + dx * k, y: n.y + dy * k };
+}
+function disegna() {
+  const m = M(); if (!m) return;
+  const isolati = controllo ? controllo.isolati : new Set();
+  $("g-frecce").innerHTML = m.link.map(l => {
+    const a = m.nodi.find(n => n.id === l.a), b = m.nodi.find(n => n.id === l.b); if (!a || !b) return "";
+    const p1 = bordo(a, b), p2 = bordo(b, a), mx = (p1.x + p2.x) / 2, my = (p1.y + p2.y) / 2;
+    const v = l.v || "?", lw = Math.max(34, v.length * 9.5 + 18), vuota = !l.v;
+    return `<g class="freccia${vuota ? " vuota" : ""}${selF === l.id ? " sel" : ""}" data-l="${l.id}"><line x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}" marker-end="url(#${vuota ? "punta-r" : "punta"})"/>
+      <g class="et" data-l="${l.id}"><rect x="${mx - lw / 2}" y="${my - 15}" width="${lw}" height="30" rx="8" fill="#fff" stroke="${vuota ? "#d64545" : "#cdb6ec"}" stroke-width="2"/><text x="${mx}" y="${my + 7}" text-anchor="middle">${esc(v)}</text></g></g>`;
+  }).join("");
+  $("g-nodi").innerHTML = m.nodi.map(n => {
+    const { r, w, h } = misura(n), [bg, fg, rx] = STILE[n.tipo] || STILE.concetto;
+    const cl = "nodo" + (sel === n.id ? " sel" : "") + (collegaDa === n.id ? " da" : "") + (isolati.has(n.id) ? " isolato" : "");
+    return `<g class="${cl}" data-n="${n.id}" transform="translate(${n.x} ${n.y})"><rect x="${-w / 2}" y="${-h / 2}" width="${w}" height="${h}" rx="${rx}" fill="${bg}" stroke="#1f2a44" stroke-width="${n.tipo === "centro" ? 4 : 2.5}"/>
+      ${r.map((x, i) => `<text x="0" y="${-h / 2 + 30 + i * 26}" text-anchor="middle" fill="${fg}" font-weight="${n.tipo === "centro" ? 700 : 400}">${esc(x)}</text>`).join("")}</g>`;
+  }).join("");
+}
+function apriTela() {
+  const m = M(); $("nessuna").hidden = !!m; $("lavoro").hidden = !m; if (!m) return;
+  $("b-scheda").hidden = !m.fonteId; $("m-msg").textContent = ""; $("m-img").hidden = true;
+  $("m-titolo").value = m.titolo; sel = selF = collegaDa = null; controllo = null; $("p-controllo").hidden = true; aggiornaPannelli(); disegna();
+}
+function suggerisci(t) { $("suggerimento").textContent = t || ""; }
+$("m-titolo").addEventListener("input", () => { const m = M(); m.titolo = $("m-titolo").value; const c = m.nodi.find(n => n.tipo === "centro"); salva(); });
+
+/* ---------- Trascinamento e tocchi ---------- */
+const svg = $("tela");
+function pt(e) { const p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY; return p.matrixTransform(svg.getScreenCTM().inverse()); }
+let drag = null;
+svg.addEventListener("pointerdown", e => {
+  const g = e.target.closest("[data-n]"), et = e.target.closest(".et");
+  if (et) { e.preventDefault(); tocca({ freccia: et.dataset.l }); return; }
+  if (!g) { if (!modoCollega) { sel = selF = null; aggiornaPannelli(); disegna(); } return; }
+  e.preventDefault();
+  const n = M().nodi.find(x => x.id === g.dataset.n), p = pt(e);
+  drag = { n, dx: n.x - p.x, dy: n.y - p.y, x0: e.clientX, y0: e.clientY, mosso: false };
+  svg.setPointerCapture(e.pointerId);
+});
+svg.addEventListener("pointermove", e => {
+  if (!drag) return;
+  if (!drag.mosso && Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < 6) return;
+  drag.mosso = true; const p = pt(e); drag.n.x = p.x + drag.dx; drag.n.y = p.y + drag.dy; tieniDentro(drag.n); disegna();
+});
+svg.addEventListener("pointerup", () => { if (!drag) return; const d = drag; drag = null; if (d.mosso) salva(); else tocca({ nodo: d.n.id }); });
+svg.addEventListener("pointercancel", () => { drag = null; });
+
+function tocca(o) {
+  const m = M();
+  if (o.nodo && (modoCollega || collegaDa)) {
+    if (!collegaDa) { collegaDa = o.nodo; suggerisci("Ora tocca il concetto a cui arriva la freccia."); disegna(); return; }
+    if (collegaDa === o.nodo) { collegaDa = null; suggerisci("Tocca il concetto da cui parte la freccia."); disegna(); return; }
+    let l = m.link.find(x => (x.a === collegaDa && x.b === o.nodo) || (x.a === o.nodo && x.b === collegaDa));
+    if (!l) { l = { id: uid(), a: collegaDa, b: o.nodo, v: "" }; m.link.push(l); salva(); }
+    collegaDa = null; modoCollega = false; $("b-collega").classList.remove("on"); $("b-collega").setAttribute("aria-pressed", "false");
+    sel = null; selF = l.id; suggerisci(""); aggiornaPannelli(); disegna(); $("fr-verbo").focus(); return;
+  }
+  if (o.nodo) { sel = o.nodo; selF = null; } else { selF = o.freccia; sel = null; }
+  aggiornaPannelli(); disegna();
+}
+function aggiornaPannelli() {
+  const m = M();
+  const n = sel && m.nodi.find(x => x.id === sel), l = selF && m.link.find(x => x.id === selF);
+  $("p-nodo").hidden = !n; $("p-freccia").hidden = !l;
+  if (n) { $("nodo-testo").value = n.t; [...$("nodo-tipo").children].forEach(b => b.setAttribute("aria-pressed", b.dataset.t === n.tipo)); }
+  if (l) { const a = m.nodi.find(x => x.id === l.a), b = m.nodi.find(x => x.id === l.b); $("fr-titolo").textContent = `«${a.t}» ➜ ? ➜ «${b.t}»`; $("fr-verbo").value = l.v; }
+}
+$("nodo-testo").addEventListener("input", () => { const n = M().nodi.find(x => x.id === sel); if (!n) return; n.t = $("nodo-testo").value; tieniDentro(n); salva(); disegna(); });
+$("nodo-tipo").querySelectorAll("button").forEach(b => b.addEventListener("click", () => { const n = M().nodi.find(x => x.id === sel); if (!n) return; n.tipo = b.dataset.t; salva(); aggiornaPannelli(); disegna(); }));
+$("nodo-collega").addEventListener("click", () => { collegaDa = sel; sel = null; aggiornaPannelli(); suggerisci("Ora tocca il concetto a cui arriva la freccia."); disegna(); });
+$("nodo-elimina").addEventListener("click", () => { const m = M(); m.nodi = m.nodi.filter(x => x.id !== sel); m.link = m.link.filter(l => l.a !== sel && l.b !== sel); sel = null; salva(); aggiornaPannelli(); disegna(); });
+$("nodo-chiudi").addEventListener("click", () => { sel = null; aggiornaPannelli(); disegna(); });
+$("verbi").innerHTML = VERBI.map(v => `<button type="button" data-v="${esc(v)}">${esc(v)}</button>`).join("");
+$("verbi").querySelectorAll("button").forEach(b => b.addEventListener("click", () => { $("fr-verbo").value = b.dataset.v; $("fr-verbo").dispatchEvent(new Event("input")); }));
+$("fr-verbo").addEventListener("input", () => { const l = M().link.find(x => x.id === selF); if (!l) return; l.v = $("fr-verbo").value.trim(); salva(); disegna(); if (controllo) verifica(); });
+$("fr-verbo").addEventListener("keydown", e => { if (e.key === "Enter") $("fr-chiudi").click(); });
+$("fr-inverti").addEventListener("click", () => { const l = M().link.find(x => x.id === selF); if (!l) return; [l.a, l.b] = [l.b, l.a]; salva(); aggiornaPannelli(); disegna(); });
+$("fr-elimina").addEventListener("click", () => { const m = M(); m.link = m.link.filter(x => x.id !== selF); selF = null; salva(); aggiornaPannelli(); disegna(); });
+$("fr-chiudi").addEventListener("click", () => { selF = null; aggiornaPannelli(); disegna(); });
+$("b-aggiungi").addEventListener("click", () => {
+  const m = M(), n = { id: uid(), t: "Nuovo concetto", tipo: "concetto", x: W / 2 + (Math.random() - .5) * 300, y: H / 2 + (Math.random() - .5) * 200 };
+  tieniDentro(n); m.nodi.push(n); salva(); sel = n.id; selF = null; aggiornaPannelli(); disegna(); $("nodo-testo").select();
+});
+$("b-collega").addEventListener("click", () => {
+  modoCollega = !modoCollega; collegaDa = null; sel = selF = null; aggiornaPannelli();
+  $("b-collega").classList.toggle("on", modoCollega); $("b-collega").setAttribute("aria-pressed", modoCollega);
+  suggerisci(modoCollega ? "Tocca il concetto da cui parte la freccia." : ""); disegna();
+});
+/* Riordina: argomento in alto, poi i concetti per distanza (in frecce); gruppi staccati e concetti soli in fondo */
+$("b-ordina").addEventListener("click", () => {
+  const m = M(); if (!m.nodi.length) return;
+  const c = m.nodi.find(n => n.tipo === "centro") || m.nodi[0];
+  const vicini = id => m.link.map(l => l.a === id ? l.b : l.b === id ? l.a : null).filter(Boolean);
+  const fatti = new Set(), livelli = [];
+  const bfs = start => { const lv = [[start]]; fatti.add(start); for (;;) { const nx = []; lv[lv.length - 1].forEach(id => vicini(id).forEach(o => { if (!fatti.has(o)) { fatti.add(o); nx.push(o); } })); if (!nx.length) break; lv.push(nx); } return lv; };
+  livelli.push(...bfs(c.id));
+  let staccati = false;
+  m.nodi.forEach(n => { if (!fatti.has(n.id) && vicini(n.id).length) { livelli.push(...bfs(n.id)); staccati = true; } });
+  const soli = m.nodi.filter(n => !fatti.has(n.id)).map(n => n.id);
+  if (soli.length) livelli.push(soli);
+  /* spezza le righe troppo larghe */
+  const per = id => m.nodi.find(n => n.id === id), righeOut = [];
+  livelli.forEach(r => { let cur = [], w = 0; r.forEach(id => { const ww = misura(per(id)).w + 24; if (cur.length && w + ww > W - 10) { righeOut.push(cur); cur = []; w = 0; } cur.push(id); w += ww; }); if (cur.length) righeOut.push(cur); });
+  const passo = righeOut.length > 1 ? Math.min(140, (H - 110) / (righeOut.length - 1)) : 0;
+  righeOut.forEach((r, i) => { r.forEach((id, j) => { const n = per(id); n.x = W * (j + .5) / r.length; n.y = 55 + i * passo; tieniDentro(n); }); });
+  salva(); disegna();
+  suggerisci(soli.length || staccati ? "Più in basso trovi i concetti (o i gruppi) non ancora collegati all'argomento." : "");
+});
+
+/* ---------- Controllo ---------- */
+function verifica() {
+  const m = M(), usati = new Set(); m.link.forEach(l => { usati.add(l.a); usati.add(l.b); });
+  const isolati = new Set(m.nodi.length > 1 ? m.nodi.filter(n => !usati.has(n.id)).map(n => n.id) : []);
+  const senza = m.link.filter(l => !l.v).length;
+  controllo = { isolati };
+  const nome = id => (m.nodi.find(n => n.id === id) || {}).t || "?";
+  $("ck-frasi").innerHTML = m.link.length ? m.link.map(l => `<li>${esc(nome(l.a))} <span class="${l.v ? "v" : "mancante"}">${l.v ? esc(l.v) : "[manca la parola-legame]"}</span> ${esc(nome(l.b))}</li>`).join("") : "<li>Ancora nessuna freccia.</li>";
+  const prob = [];
+  if (senza) prob.push(`${senza} ${senza === 1 ? "freccia senza" : "frecce senza"} parola-legame (in rosso)`);
+  if (isolati.size) prob.push(`${isolati.size} ${isolati.size === 1 ? "concetto non collegato" : "concetti non collegati"} (bordo rosso)`);
+  const e = $("ck-esito");
+  if (!m.link.length) { e.className = "feedback ko"; e.textContent = "Collega i concetti con le frecce: una mappa senza frecce è solo un elenco."; }
+  else if (prob.length) { e.className = "feedback ko"; e.textContent = "Quasi! Manca: " + prob.join(" e ") + "."; }
+  else { e.className = "feedback ok"; e.textContent = `Ottimo: ${m.nodi.length} concetti tutti collegati e ${m.link.length} frasi complete. Ora leggile: sono tutte vere?`; }
+  $("p-controllo").hidden = false; disegna();
+}
+$("b-controlla").addEventListener("click", () => { verifica(); $("p-controllo").scrollIntoView({ block: "nearest" }); });
+$("ck-chiudi").addEventListener("click", () => { controllo = null; $("p-controllo").hidden = true; disegna(); });
+$("ck-copia").addEventListener("click", async () => {
+  const m = M(), nome = id => (m.nodi.find(n => n.id === id) || {}).t || "?";
+  const t = m.titolo + "\n" + m.link.map(l => `- ${nome(l.a)} ${l.v || "…"} ${nome(l.b)}`).join("\n");
+  try { await navigator.clipboard.writeText(t); $("m-msg").className = "feedback ok"; $("m-msg").textContent = "✔ Frasi copiate."; } catch (e) { $("m-msg").className = "feedback"; $("m-msg").textContent = "Copia non disponibile qui."; }
+});
+
+/* ---------- Flashcard per Ripasso furbo: ogni frase diventa una carta da completare ---------- */
+function aggiornaMazzo(fonte, nome, materia, carte, orig) {
+  let d; try { d = JSON.parse(localStorage.getItem("ripassoFurbo")); } catch (e) {}
+  if (!d || !Array.isArray(d.mazzi)) d = { mazzi: [] };
+  let m = d.mazzi.find(x => x.fonte === fonte);
+  if (!m) { m = { id: uid(), nome, materia: materia || "", sessione: 0, fonte, carte: [] }; d.mazzi.unshift(m); }
+  const nuove = new Set(carte.map(c => c[0]));
+  m.carte = m.carte.filter(c => c.orig !== orig || nuove.has(c.f));
+  carte.forEach(([f, r]) => { const c = m.carte.find(x => x.f === f); if (c) c.r = r; else m.carte.push({ id: uid(), f, r, img: "", box: 1, ultima: -1, orig }); });
+  try { localStorage.setItem("ripassoFurbo", JSON.stringify(d)); } catch (e) { return null; }
+  return m;
+}
+$("b-carte").addEventListener("click", () => {
+  const m = M(), nome = id => (m.nodi.find(n => n.id === id) || {}).t || "?";
+  const carte = m.link.filter(l => l.v).map(l => [`${nome(l.a)} ${l.v} …`, nome(l.b)]);
+  if (!carte.length) { $("m-msg").className = "feedback ko"; $("m-msg").textContent = "Servono frecce con la parola-legame: ogni frase diventa una carta."; return; }
+  const z = aggiornaMazzo(m.fonteId ? "testo-" + m.fonteId : "mappa-" + m.id, m.titolo, "", carte, "mappa");
+  if (!z) { $("m-msg").className = "feedback ko"; $("m-msg").textContent = "Spazio pieno: non sono riuscito a creare le carte."; return; }
+  $("m-msg").className = "feedback ok"; $("m-msg").innerHTML = `✔ ${carte.length} carte nel mazzo «${esc(z.nome)}». <a href="ripasso-furbo.html#studia-${encodeURIComponent(z.id)}">Ripassa ora ➜</a>`;
+});
+$("b-scheda").addEventListener("click", () => { location.href = "parole-chiave.html#scheda-" + encodeURIComponent(M().fonteId); });
+
+/* ---------- Immagine e stampa ---------- */
+function svgCompleto() {
+  const c = controllo; controllo = null; const s0 = sel, f0 = selF, d0 = collegaDa; sel = selF = collegaDa = null; disegna();
+  const css = `text{font-family:"Atkinson Hyperlegible",Verdana,sans-serif;font-size:21px}.et text{font-family:"Patrick Hand","Comic Sans MS",cursive;fill:#5d3a91}line{stroke:#1f2a44;stroke-width:3}.vuota line{stroke:#d64545;stroke-dasharray:8 6}`;
+  const titolo = `<text x="16" y="${H - 14}" font-size="18" fill="#5b6478">${esc(M().titolo)} · Prof Tech Lab</text>`;
+  const out = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W * 2}" height="${H * 2}"><style>${css}</style><rect width="${W}" height="${H}" fill="#fff"/>${svg.querySelector("defs").outerHTML}${$("g-frecce").outerHTML}${$("g-nodi").outerHTML}${titolo}</svg>`;
+  controllo = c; sel = s0; selF = f0; collegaDa = d0; disegna(); return out;
+}
+function png() {
+  return new Promise((res, rej) => {
+    const img = new Image();
+    img.onload = () => { const c = document.createElement("canvas"); c.width = W * 2; c.height = H * 2; const x = c.getContext("2d"); x.drawImage(img, 0, 0, c.width, c.height); c.toBlob(b => b ? res({ blob: b, url: c.toDataURL("image/png") }) : rej(), "image/png"); };
+    img.onerror = rej; img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svgCompleto());
+  });
+}
+$("b-png").addEventListener("click", async () => {
+  let out; try { out = await png(); } catch (e) { $("m-msg").className = "feedback ko"; $("m-msg").textContent = "Non sono riuscito a creare l'immagine."; return; }
+  const nome = "mappa-" + (M().titolo.replace(/[^a-z0-9àèéìòù ]/gi, "").trim().replace(/\s+/g, "-") || "concetti") + ".png";
+  let r = null;
+  try { if (window.parent !== window && typeof window.parent.ptlSalva === "function") r = await window.parent.ptlSalva(nome, out.blob); } catch (e) { r = e && e.code === "declined" ? "declined" : null; }
+  if (r === "saved") { $("m-msg").className = "feedback ok"; $("m-msg").textContent = "✔ Immagine salvata."; return; }
+  if (r === "declined") { $("m-msg").className = "feedback"; $("m-msg").textContent = "Salvataggio annullato."; return; }
+  $("m-img").src = out.url; $("m-img").hidden = false; $("m-msg").className = "feedback"; $("m-msg").textContent = "Tieni premuta l'immagine qui sotto e scegli «Salva immagine».";
+});
+$("b-stampa").addEventListener("click", () => {
+  const w = window.open("", "_blank"); if (!w) { window.print(); return; }
+  w.document.write(`<!DOCTYPE html><title>${esc(M().titolo)}</title><style>@page{size:landscape;margin:10mm}body{margin:0}svg{width:100%;height:auto}</style>${svgCompleto()}<script>onload=()=>print()<\/script>`); w.document.close();
+});
+
+/* ---------- Avvio: arrivo da Caccia alle parole chiave ---------- */
+const h = decodeURIComponent(location.hash.slice(1));
+if (h.startsWith("da-")) {
+  const id = h.slice(3), gia = S.mappe.find(m => m.fonteId === id), s = schemiCaccia().find(x => x.id === id);
+  history.replaceState(null, "", location.pathname);
+  if (gia) { S.corrente = gia.id; salva(); vai("mappa"); } else if (s) daSchema(s); else vai("nuova");
+}
+else if (M()) vai("mappa"); else vai("nuova");
+</script>
+<script src="a11y.js"></script>
+</body>
+</html>

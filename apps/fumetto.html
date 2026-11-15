@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Il mio fumetto</title>
+<link rel="stylesheet" href="ptl.css">
+<style>
+:root { --accent: #e11d48; }
+.layout { display: grid; grid-template-columns: minmax(300px, 560px) 1fr; gap: 16px; align-items: start; }
+@media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+#pagina { width: 100%; background: #fff; border: 3px solid var(--ink); border-radius: 6px; touch-action: none; user-select: none; display: block; box-shadow: 6px 7px 0 rgba(31,42,68,.18); }
+.strumenti { display: grid; gap: 12px; }
+.gruppo { background: var(--label); border: 2px solid var(--ink); border-radius: 12px; padding: 10px 12px; display: grid; gap: 8px; }
+.gruppo h3 { margin: 0; font: 400 22px var(--font-hand); }
+.scelte { display: flex; gap: 6px; flex-wrap: wrap; }
+.scelte button { font: 400 18px var(--font-hand); border: 2px solid var(--ink); border-radius: 10px; background: #fff; padding: 2px 10px; cursor: pointer; }
+.scelte button[aria-pressed="true"] { background: var(--giallo); }
+.adesivi button { font-size: 28px; width: 46px; height: 46px; padding: 0; }
+.campo { display: grid; gap: 4px; }
+.campo input, .campo textarea { font: 400 20px var(--font-hand); border: 2px solid var(--ink); border-radius: 8px; padding: 4px 8px; }
+.guida dt { font: 400 22px var(--font-hand); color: var(--accent); margin-top: 8px; }
+.guida dd { margin: 0; }
+</style>
+</head>
+<body>
+<header class="app-bar"><h1>Il mio fumetto</h1><span class="sub">Vignette, inquadrature e balloon</span></header>
+<div class="container">
+  <div class="tabs" role="tablist"><button class="tab" id="t-crea" aria-selected="true">✏️ Crea</button><button class="tab" id="t-guida" aria-selected="false">📖 Il linguaggio del fumetto</button></div>
+  <section id="s-crea" class="layout">
+    <div style="display:grid;gap:8px">
+      <svg id="pagina" viewBox="0 0 800 1100" role="img" aria-label="Pagina del fumetto"></svg>
+      <div class="row"><button class="btn primary" id="b-png">🖼 Salva immagine</button><button class="btn" id="b-stampa">🖨 Stampa</button><button class="btn" id="b-nuovo">✨ Nuova pagina</button></div>
+      <p class="feedback" id="fb" style="font-size:19px"></p><img id="img-out" hidden alt="Il fumetto" style="max-width:100%;border:2px solid var(--ink)">
+    </div>
+    <div class="strumenti">
+      <div class="gruppo"><h3>📄 La pagina</h3>
+        <label class="campo">Titolo<input id="titolo" maxlength="40"></label>
+        <div><b>Vignette:</b> <div class="scelte" id="layout"></div></div></div>
+      <div class="gruppo"><h3 id="v-tit">🎬 Vignetta 1</h3>
+        <div><b>Sfondo:</b><div class="scelte" id="sfondi"></div></div>
+        <div><b>Inquadratura:</b><div class="scelte" id="inquadr"></div></div>
+        <div><b>Aggiungi un personaggio o un oggetto:</b><div class="scelte adesivi" id="adesivi"></div></div>
+        <div><b>Aggiungi testo:</b><div class="scelte" id="testi"></div></div></div>
+      <div class="gruppo" id="sel-box" hidden><h3>✋ Elemento selezionato</h3>
+        <label class="campo" id="sel-testo-lab">Testo<textarea id="sel-testo" maxlength="120" rows="2"></textarea></label>
+        <div class="scelte"><button id="s-piu">➕ Più grande</button><button id="s-meno">➖ Più piccolo</button><button id="s-coda" hidden>↔ Gira la coda</button><button id="s-su">⬆ Davanti</button><button id="s-del">🗑 Elimina</button></div></div>
+      <p class="nota">Tocca una vignetta per sceglierla. Trascina personaggi e balloon con il dito. L'inquadratura avvicina la «telecamera» al primo personaggio della vignetta.</p>
+    </div>
+  </section>
+  <section id="s-guida" hidden class="card guida"><dl>
+    <dt>La vignetta</dt><dd>È il riquadro che contiene una scena. Si legge da sinistra a destra e dall'alto in basso, come un libro.</dd>
+    <dt>Le inquadrature</dt><dd><b>Campo lungo</b>: tutto l'ambiente, i personaggi sono piccoli (dove siamo?). <b>Campo medio</b>: i personaggi interi nell'ambiente. <b>Piano americano</b>: il personaggio dalle ginocchia in su. <b>Primo piano</b>: il volto, per mostrare le emozioni. <b>Dettaglio</b>: un particolare importante.</dd>
+    <dt>Il balloon (o nuvoletta)</dt><dd>Contiene le parole. La <b>coda</b> indica chi parla. Bordo normale = parla; a <b>nuvola</b> = pensa; a <b>punte</b> = urla.</dd>
+    <dt>La didascalia</dt><dd>Il riquadro con la voce del narratore: «Il giorno dopo…», «Intanto, a scuola…».</dd>
+    <dt>Le onomatopee</dt><dd>Parole che imitano i suoni: BOOM!, SPLASH, DRIIIN, ZZZ… Sono disegnate grandi e colorate.</dd>
+    <dt>Un consiglio</dt><dd>Prima scrivi la storia in 4–6 momenti (lo storyboard), poi scegli per ogni momento l'inquadratura che racconta meglio.</dd></dl></section>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const KEY = "fumetto";
+const SW = 1000, SH = 600; // scena
+const SFONDI = {
+  bianco: { n: "Bianco", s: `<rect width="1000" height="600" fill="#fff"/>` },
+  aula: { n: "Aula", s: `<rect width="1000" height="600" fill="#fdf3dc"/><rect y="430" width="1000" height="170" fill="#c8a679"/><rect x="250" y="70" width="500" height="230" fill="#2f4b3d" stroke="#8b5a2b" stroke-width="14"/><path d="M300 140h180M300 190h260" stroke="#f4f1e8" stroke-width="6" stroke-linecap="round"/><rect x="60" y="80" width="130" height="170" fill="#bfe3f5" stroke="#8b5a2b" stroke-width="10"/><rect x="760" y="360" width="200" height="22" fill="#a0703f"/><rect x="780" y="382" width="14" height="80" fill="#6b4a2a"/><rect x="926" y="382" width="14" height="80" fill="#6b4a2a"/>` },
+  parco: { n: "Parco", s: `<rect width="1000" height="600" fill="#bfe6ff"/><circle cx="860" cy="110" r="60" fill="#ffd84d"/><path d="M0 420 Q250 360 500 420 T1000 410 V600 H0Z" fill="#7cc46b"/><rect x="140" y="250" width="34" height="190" fill="#7a5230"/><circle cx="157" cy="230" r="95" fill="#3f9b4a"/><ellipse cx="620" cy="120" rx="80" ry="30" fill="#fff"/>` },
+  citta: { n: "Città", s: `<rect width="1000" height="600" fill="#ffd9b0"/><g fill="#7b8794"><rect x="20" y="180" width="140" height="300"/><rect x="180" y="100" width="120" height="380"/><rect x="320" y="220" width="160" height="260"/><rect x="700" y="140" width="130" height="340"/><rect x="850" y="230" width="130" height="250"/></g><g fill="#ffe9a8">${Array.from({ length: 18 }, (_, i) => `<rect x="${40 + (i % 6) * 160 + (i % 2) * 20}" y="${200 + Math.floor(i / 6) * 70}" width="24" height="30"/>`).join("")}</g><rect y="480" width="1000" height="120" fill="#555"/><path d="M0 540h1000" stroke="#fff" stroke-width="8" stroke-dasharray="50 40"/>` },
+  spazio: { n: "Spazio", s: `<rect width="1000" height="600" fill="#0b1030"/><g fill="#fff">${Array.from({ length: 60 }, (_, i) => `<circle cx="${(i * 137) % 1000}" cy="${(i * 89) % 600}" r="${1 + i % 3}"/>`).join("")}</g><circle cx="800" cy="460" r="170" fill="#e07a3f"/><path d="M630 470 Q800 400 970 450" stroke="#b5532a" stroke-width="18" fill="none"/>` },
+  laboratorio: { n: "Laboratorio", s: `<rect width="1000" height="600" fill="#e6f2f0"/><rect y="400" width="1000" height="40" fill="#5b6478"/><rect y="440" width="1000" height="160" fill="#8a93a6"/><g stroke="#1f2a44" stroke-width="4"><path d="M200 300 v60 l-40 40 h100 l-40 -40 v-60z" fill="#7ee0c3"/><rect x="420" y="300" width="40" height="100" fill="#ffd166"/><circle cx="700" cy="350" r="45" fill="#ef476f"/></g><rect x="60" y="60" width="300" height="160" fill="#fff" stroke="#1f2a44" stroke-width="5"/><path d="M90 180 l60 -60 l50 40 l70 -80" stroke="#2563eb" stroke-width="6" fill="none"/>` }
+};
+const INQ = [["lungo", "Campo lungo", 1], ["medio", "Campo medio", 1.6], ["americano", "Piano americano", 2.3], ["primo", "Primo piano", 3.4], ["dettaglio", "Dettaglio", 5.5]];
+const ADESIVI = ["🧒", "👧", "🧑", "👩‍🏫", "🧓", "🤖", "🐶", "🐱", "🦖", "👽", "🚀", "⚽", "📚", "💡", "🔬", "🌳", "🏠", "🚲", "📱", "🎁"];
+const TESTI = [["fumetto", "💬 Fumetto"], ["pensiero", "💭 Pensiero"], ["urlo", "🗯 Urlo"], ["didascalia", "▭ Didascalia"], ["onomatopea", "💥 Onomatopea"]];
+const LAYOUT = { 1: [[0, 0, 1, 1]], 2: [[0, 0, 1, .5], [0, .5, 1, .5]], 3: [[0, 0, 1, .34], [0, .34, 1, .33], [0, .67, 1, .33]], 4: [[0, 0, .5, .5], [.5, 0, .5, .5], [0, .5, .5, .5], [.5, .5, .5, .5]], 6: [[0, 0, .5, .34], [.5, 0, .5, .34], [0, .34, .5, .33], [.5, .34, .5, .33], [0, .67, .5, .33], [.5, .67, .5, .33]] };
+const nuovaVignetta = i => ({ sfondo: ["parco", "aula", "citta", "laboratorio", "spazio", "parco"][i % 6], inq: "medio", el: [], txt: [] });
+let S = null;
+try { S = JSON.parse(localStorage.getItem(KEY)); } catch (e) {}
+if (!S || !S.v) S = { titolo: "La mia storia", n: 4, v: Array.from({ length: 6 }, (_, i) => nuovaVignetta(i)), cur: 0 };
+const salva = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+let sel = null; // {tipo:"el"|"txt", v, i}
+const PX = 30, PY = 90, PW = 740, PH = 980, G = 16;
+function rettangolo(k) { const [x, y, w, h] = LAYOUT[S.n][k]; return { x: PX + x * PW + G / 2, y: PY + y * PH + G / 2, w: w * PW - G, h: h * PH - G }; }
+function viewBox(v, r) {
+  const z = INQ.find(q => q[0] === v.inq)[2], f = v.el[0] ? { x: v.el[0].x, y: v.el[0].y - (v.inq === "dettaglio" ? 0 : v.el[0].s * .15) } : { x: SW / 2, y: SH / 2 };
+  let w = SW / z, h = w * r.h / r.w; if (h > SH / z * 1.6) { h = SH / z * 1.6; w = h * r.w / r.h; }
+  const x = Math.max(-w * .25, Math.min(SW - w * .75, f.x - w / 2)), y = Math.max(-h * .25, Math.min(SH - h * .75, f.y - h / 2));
+  return `${x.toFixed(1)} ${y.toFixed(1)} ${w.toFixed(1)} ${h.toFixed(1)}`;
+}
+function righe(t, max) { const out = []; let r = ""; String(t).split(/\s+/).forEach(p => { if ((r + " " + p).trim().length > max && r) { out.push(r); r = p; } else r = (r + " " + p).trim(); }); if (r) out.push(r); return out.length ? out : [""]; }
+function svgTesto(t, r, scelto) {
+  const x = r.x + t.x * r.w, y = r.y + t.y * r.h, fs = t.s || 22;
+  if (t.tipo === "onomatopea") return `<text x="${x}" y="${y}" text-anchor="middle" font-family="Impact, 'Arial Black', sans-serif" font-size="${fs * 2}" fill="#facc15" stroke="#b91c1c" stroke-width="${fs / 6}" paint-order="stroke" transform="rotate(-8 ${x} ${y})">${esc(t.testo)}</text>${scelto ? `<circle cx="${x}" cy="${y}" r="6" fill="#e11d48"/>` : ""}`;
+  const L = righe(t.testo, t.tipo === "didascalia" ? 26 : 18), w = Math.max(...L.map(l => l.length)) * fs * .56 + 30, h = L.length * fs * 1.2 + 22;
+  let forma = "";
+  if (t.tipo === "didascalia") forma = `<rect x="${x - w / 2}" y="${y - h / 2}" width="${w}" height="${h}" fill="#fff6c2" stroke="#1f2a44" stroke-width="3"/>`;
+  else if (t.tipo === "pensiero") forma = `<g fill="#fff" stroke="#1f2a44" stroke-width="3">${Array.from({ length: 10 }, (_, i) => { const a = i / 10 * Math.PI * 2; return `<circle cx="${x + Math.cos(a) * w * .42}" cy="${y + Math.sin(a) * h * .4}" r="${h * .32}"/>`; }).join("")}<circle cx="${x + (t.coda || -1) * w * .3}" cy="${y + h * .75}" r="8"/><circle cx="${x + (t.coda || -1) * w * .38}" cy="${y + h * .95}" r="5"/></g><ellipse cx="${x}" cy="${y}" rx="${w * .46}" ry="${h * .44}" fill="#fff"/>`;
+  else if (t.tipo === "urlo") forma = `<polygon points="${Array.from({ length: 18 }, (_, i) => { const a = i / 18 * Math.PI * 2, k = i % 2 ? .62 : .78; return `${x + Math.cos(a) * w * k},${y + Math.sin(a) * h * k * 1.05}`; }).join(" ")}" fill="#fff" stroke="#1f2a44" stroke-width="3"/>`;
+  else { const cx = x + (t.coda || -1) * w * .22; forma = `<path d="M${cx - 12} ${y + h / 2 - 6} L${cx + (t.coda || -1) * 30} ${y + h / 2 + 34} L${cx + 14} ${y + h / 2 - 6}Z" fill="#fff" stroke="#1f2a44" stroke-width="3"/><rect x="${x - w / 2}" y="${y - h / 2}" width="${w}" height="${h}" rx="${h / 2.2}" fill="#fff" stroke="#1f2a44" stroke-width="3"/><path d="M${cx - 10} ${y + h / 2 - 1.5} L${cx + 12} ${y + h / 2 - 1.5}" stroke="#fff" stroke-width="5"/>`; }
+  const testo = L.map((l, i) => `<text x="${x}" y="${y - (L.length - 1) * fs * .6 + i * fs * 1.2 + fs * .35}" text-anchor="middle" font-family="'Comic Sans MS', 'Patrick Hand', cursive" font-size="${fs}" font-weight="${t.tipo === "urlo" ? 700 : 400}" fill="#1f2a44">${esc(l)}</text>`).join("");
+  return forma + testo + (scelto ? `<rect x="${x - w / 2 - 6}" y="${y - h / 2 - 6}" width="${w + 12}" height="${h + 12}" fill="none" stroke="#e11d48" stroke-width="3" stroke-dasharray="8 5"/>` : "");
+}
+function disegna(perImmagine) {
+  let h = `<rect width="800" height="1100" fill="#fff"/><text x="400" y="62" text-anchor="middle" font-family="Impact, 'Arial Black', sans-serif" font-size="46" fill="#1f2a44" letter-spacing="2">${esc(S.titolo || "")}</text>`;
+  for (let k = 0; k < S.n; k++) {
+    const r = rettangolo(k), v = S.v[k], vb = viewBox(v, r);
+    h += `<svg class="vignetta" data-v="${k}" x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" viewBox="${vb}" preserveAspectRatio="xMidYMid slice">${SFONDI[v.sfondo].s}${v.el.map((e, i) => `<text class="el" data-v="${k}" data-i="${i}" x="${e.x}" y="${e.y}" font-size="${e.s}" text-anchor="middle" dominant-baseline="central" style="cursor:grab">${e.e}</text>${!perImmagine && sel && sel.tipo === "el" && sel.v === k && sel.i === i ? `<circle cx="${e.x}" cy="${e.y}" r="${e.s * .62}" fill="none" stroke="#e11d48" stroke-width="${e.s / 30}" stroke-dasharray="${e.s / 12} ${e.s / 18}"/>` : ""}`).join("")}</svg>`;
+    h += `<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" fill="none" stroke="${!perImmagine && k === S.cur ? "#e11d48" : "#1f2a44"}" stroke-width="${!perImmagine && k === S.cur ? 6 : 4}"/>`;
+    h += `<g clip-path="url(#cl${k})">${v.txt.map((t, i) => `<g class="tx" data-v="${k}" data-i="${i}" style="cursor:grab">${svgTesto(t, r, !perImmagine && sel && sel.tipo === "txt" && sel.v === k && sel.i === i)}</g>`).join("")}</g><clipPath id="cl${k}"><rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}"/></clipPath>`;
+    if (!perImmagine) h += `<text x="${r.x + 10}" y="${r.y + 24}" font-family="Arial" font-size="18" font-weight="bold" fill="#1f2a44" opacity=".55">${k + 1}</text>`;
+  }
+  if (perImmagine) return h;
+  $("pagina").innerHTML = h; pannello();
+}
+function pannello() {
+  const v = S.v[S.cur];
+  $("v-tit").textContent = `🎬 Vignetta ${S.cur + 1}`; $("titolo").value = S.titolo;
+  $("layout").innerHTML = [1, 2, 3, 4, 6].map(n => `<button data-n="${n}" aria-pressed="${S.n === n}">${n}</button>`).join("");
+  $("sfondi").innerHTML = Object.entries(SFONDI).map(([k, s]) => `<button data-s="${k}" aria-pressed="${v.sfondo === k}">${s.n}</button>`).join("");
+  $("inquadr").innerHTML = INQ.map(([k, n]) => `<button data-q="${k}" aria-pressed="${v.inq === k}">${n}</button>`).join("");
+  $("layout").querySelectorAll("button").forEach(b => b.onclick = () => { S.n = +b.dataset.n; S.cur = Math.min(S.cur, S.n - 1); sel = null; salva(); disegna(); });
+  $("sfondi").querySelectorAll("button").forEach(b => b.onclick = () => { v.sfondo = b.dataset.s; salva(); disegna(); });
+  $("inquadr").querySelectorAll("button").forEach(b => b.onclick = () => { v.inq = b.dataset.q; salva(); disegna(); });
+  const s = selezionato(); $("sel-box").hidden = !s;
+  if (s) { const tx = sel.tipo === "txt"; $("sel-testo-lab").hidden = !tx; if (tx && document.activeElement !== $("sel-testo")) $("sel-testo").value = s.testo; $("s-coda").hidden = !(tx && ["fumetto", "pensiero"].includes(s.tipo)); }
+}
+$("adesivi").innerHTML = ADESIVI.map(e => `<button data-e="${e}" aria-label="Aggiungi ${e}">${e}</button>`).join("");
+$("adesivi").querySelectorAll("button").forEach(b => b.addEventListener("click", () => { const v = S.v[S.cur]; v.el.push({ e: b.dataset.e, x: 300 + Math.random() * 400, y: 330 + Math.random() * 100, s: 170 }); sel = { tipo: "el", v: S.cur, i: v.el.length - 1 }; salva(); disegna(); }));
+const DEF = { fumetto: "Ciao!", pensiero: "Hmm…", urlo: "AIUTO!", didascalia: "Intanto, a scuola…", onomatopea: "BOOM!" };
+$("testi").innerHTML = TESTI.map(([k, n]) => `<button data-t="${k}">${n}</button>`).join("");
+$("testi").querySelectorAll("button").forEach(b => b.addEventListener("click", () => { const v = S.v[S.cur], k = b.dataset.t; v.txt.push({ tipo: k, testo: DEF[k], x: k === "didascalia" ? .5 : .35 + Math.random() * .3, y: k === "didascalia" ? .1 : .25, s: 22, coda: -1 }); sel = { tipo: "txt", v: S.cur, i: v.txt.length - 1 }; salva(); disegna(); $("sel-testo").focus(); $("sel-testo").select(); }));
+const selezionato = () => sel && S.v[sel.v] && (sel.tipo === "el" ? S.v[sel.v].el[sel.i] : S.v[sel.v].txt[sel.i]);
+$("sel-testo").addEventListener("input", () => { const s = selezionato(); if (s && sel.tipo === "txt") { s.testo = $("sel-testo").value; salva(); disegna(); } });
+$("s-piu").onclick = () => { const s = selezionato(); if (!s) return; s.s = Math.min(sel.tipo === "el" ? 600 : 44, s.s * 1.2); salva(); disegna(); };
+$("s-meno").onclick = () => { const s = selezionato(); if (!s) return; s.s = Math.max(sel.tipo === "el" ? 40 : 12, s.s / 1.2); salva(); disegna(); };
+$("s-coda").onclick = () => { const s = selezionato(); if (!s) return; s.coda = -(s.coda || -1); salva(); disegna(); };
+$("s-su").onclick = () => { const s = selezionato(); if (!s) return; const a = sel.tipo === "el" ? S.v[sel.v].el : S.v[sel.v].txt; a.splice(sel.i, 1); a.push(s); sel.i = a.length - 1; salva(); disegna(); };
+$("s-del").onclick = () => { if (!selezionato()) return; (sel.tipo === "el" ? S.v[sel.v].el : S.v[sel.v].txt).splice(sel.i, 1); sel = null; salva(); disegna(); };
+$("titolo").addEventListener("input", () => { S.titolo = $("titolo").value; salva(); disegna(); });
+/* ---- Trascinamento ---- */
+const pag = $("pagina");
+const ptIn = (el, e) => { const p = pag.createSVGPoint(); p.x = e.clientX; p.y = e.clientY; return p.matrixTransform(el.getScreenCTM().inverse()); };
+let drag = null;
+pag.addEventListener("pointerdown", e => {
+  const tx = e.target.closest(".tx"), el = e.target.closest(".el"), vg = e.target.closest(".vignetta");
+  if (tx) { const k = +tx.dataset.v, i = +tx.dataset.i; S.cur = k; sel = { tipo: "txt", v: k, i }; const r = rettangolo(k), p = ptIn(pag, e), t = S.v[k].txt[i]; drag = { tipo: "txt", r, dx: p.x - (r.x + t.x * r.w), dy: p.y - (r.y + t.y * r.h) }; }
+  else if (el) { const k = +el.dataset.v, i = +el.dataset.i; S.cur = k; sel = { tipo: "el", v: k, i }; const svgV = el.ownerSVGElement, p = ptIn(svgV, e), o = S.v[k].el[i]; drag = { tipo: "el", svgV, dx: p.x - o.x, dy: p.y - o.y }; }
+  else if (vg) { S.cur = +vg.dataset.v; sel = null; }
+  else return;
+  pag.setPointerCapture(e.pointerId); disegna();
+  if (drag && drag.tipo === "el") drag.svgV = pag.querySelector(`.vignetta[data-v="${sel.v}"]`);
+});
+pag.addEventListener("pointermove", e => {
+  if (!drag || !sel) return; const s = selezionato(); if (!s) return;
+  if (drag.tipo === "txt") { const p = ptIn(pag, e); s.x = Math.max(0, Math.min(1, (p.x - drag.dx - drag.r.x) / drag.r.w)); s.y = Math.max(0, Math.min(1, (p.y - drag.dy - drag.r.y) / drag.r.h)); }
+  else { const p = ptIn(drag.svgV, e); s.x = p.x - drag.dx; s.y = p.y - drag.dy; }
+  disegna(); if (drag.tipo === "el") drag.svgV = pag.querySelector(`.vignetta[data-v="${sel.v}"]`);
+});
+pag.addEventListener("pointerup", () => { if (drag) { drag = null; salva(); } });
+/* ---- Esporta ---- */
+function png() { return new Promise((res, rej) => { const xml = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1100" width="1600" height="2200">${disegna(true)}</svg>`; const im = new Image(); im.onload = () => { const c = document.createElement("canvas"); c.width = 1600; c.height = 2200; c.getContext("2d").drawImage(im, 0, 0, 1600, 2200); c.toBlob(b => b ? res({ b, u: c.toDataURL("image/png") }) : rej(), "image/png"); }; im.onerror = rej; im.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(xml); }); }
+$("b-png").addEventListener("click", async () => {
+  let o; try { o = await png(); } catch (e) { $("fb").className = "feedback ko"; $("fb").textContent = "Non sono riuscito a creare l'immagine."; return; }
+  let r = null; try { if (window.parent !== window && typeof window.parent.ptlSalva === "function") r = await window.parent.ptlSalva("fumetto.png", o.b); } catch (e) {}
+  if (r === "saved") { $("fb").className = "feedback ok"; $("fb").textContent = "✔ Fumetto salvato."; return; }
+  $("img-out").src = o.u; $("img-out").hidden = false; $("fb").className = "feedback"; $("fb").textContent = "Tieni premuta l'immagine qui sotto e scegli «Salva immagine».";
+});
+$("b-stampa").addEventListener("click", () => { const w = window.open("", "_blank"); if (!w) { window.print(); return; } w.document.write(`<!DOCTYPE html><title>${esc(S.titolo)}</title><style>@page{size:A4 portrait;margin:8mm}body{margin:0}svg{width:100%;height:auto}</style><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1100">${disegna(true)}</svg><script>onload=()=>print()<\/script>`); w.document.close(); });
+let conf = false;
+$("b-nuovo").addEventListener("click", () => { if (!conf) { conf = true; $("b-nuovo").textContent = "Sicuro? Tocca ancora"; setTimeout(() => { conf = false; $("b-nuovo").textContent = "✨ Nuova pagina"; }, 3000); return; } conf = false; $("b-nuovo").textContent = "✨ Nuova pagina"; S = { titolo: "La mia storia", n: 4, v: Array.from({ length: 6 }, (_, i) => nuovaVignetta(i)), cur: 0 }; sel = null; salva(); disegna(); });
+["crea", "guida"].forEach(t => $("t-" + t).addEventListener("click", () => ["crea", "guida"].forEach(x => { $("t-" + x).setAttribute("aria-selected", x === t); $("s-" + x).hidden = x !== t; })));
+disegna();
+</script>
+<script src="a11y.js"></script>
+</body>
+</html>

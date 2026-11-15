@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Caccia alle parole chiave</title>
+<link rel="stylesheet" href="ptl.css">
+<style>
+:root { --accent: #8e5bd0; --viola: #8e5bd0; --marker: #ffe36e; }
+.brani { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; }
+.brano { background: var(--label); border: 3px solid var(--ink); border-radius: 14px; padding: 14px; display: grid; gap: 6px; box-shadow: 4px 5px 0 rgba(31,42,68,.15); align-content: start; }
+.brano h3 { margin: 0; font: 400 25px/1.1 var(--font-hand); }
+.brano .info { font-size: 14px; color: var(--muted); }
+.brano .row .btn { font-size: 18px; padding: 3px 12px; }
+.etichetta { display: inline-block; font-size: 13px; border-radius: 99px; padding: 1px 8px; background: #efe6fa; color: #5d3a91; }
+.etichetta.verde { background: #e2f3ea; color: #1f6b41; }
+.tipi-liv button { font: 400 18px var(--font-hand); border: 2px solid var(--ink); border-radius: 10px; background: #fff; padding: 3px 12px; cursor: pointer; }
+.tipi-liv button[aria-pressed="true"] { background: var(--giallo); }
+.passi { display: flex; gap: 6px; flex-wrap: wrap; }
+.passi > span { font: 400 18px var(--font-hand); border: 2px solid var(--ink); border-radius: 99px; padding: 1px 12px; background: #fff; opacity: .5; }
+.passi > span.attivo { background: var(--giallo); opacity: 1; }
+.passi > span.fatto { opacity: .85; }
+.puntini { display: flex; gap: 5px; align-items: center; font-size: 15px; color: var(--muted); }
+.puntini i { width: 13px; height: 13px; border-radius: 50%; border: 2px solid var(--ink); display: inline-block; }
+.puntini i.ok { background: var(--viola); } .puntini i.qui { background: var(--giallo); }
+.foglio { background: #fff; border: 3px solid var(--ink); border-radius: 16px; padding: 20px 22px; box-shadow: 5px 6px 0 rgba(31,42,68,.16);
+  font-size: clamp(20px, 2.4vw, 25px); line-height: 2.05; background-image: repeating-linear-gradient(transparent 0 calc(2.05em - 1px), #e3ebf4 calc(2.05em - 1px) 2.05em); }
+.foglio .w { font: inherit; color: inherit; background: none; border: 0; padding: 0 1px; margin: 0; border-radius: 4px; line-height: inherit; }
+.foglio.clic .w { cursor: pointer; }
+.foglio.clic .w:hover { background: #f4efe0; }
+.foglio .w.sel { background: linear-gradient(transparent 18%, var(--marker) 18% 88%, transparent 88%); font-weight: 700; }
+.foglio .w.ok { background: linear-gradient(transparent 18%, #9fe0bb 18% 88%, transparent 88%); font-weight: 700; }
+.foglio .w.extra { background: linear-gradient(transparent 18%, #e2e2e2 18% 88%, transparent 88%); }
+.foglio .w.manca { outline: 3px dashed #e07b1a; outline-offset: 1px; font-weight: 700; }
+.foglio .w.no { animation: no .35s; }
+.foglio.prof .w.colla { color: #8a93a6; }
+@keyframes no { 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } }
+.foglio.focus .frase { opacity: .18; transition: opacity .2s; }
+.foglio.focus .frase.ora { opacity: 1; }
+.frase.voce { background: #fff4c2; border-radius: 6px; }
+.conta { font: 700 28px var(--font-chalk); }
+.conta.pieno { color: var(--ko); }
+.domande { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.domande div { background: #f5f0fc; border: 2px solid #cdb6ec; border-radius: 10px; padding: 6px 10px; font: 400 19px/1.15 var(--font-hand); }
+.telegramma { font: 400 26px/1.25 var(--font-hand); background: #fffbe6; border: 2px dashed var(--ink); border-radius: 10px; padding: 8px 12px; min-height: 48px; }
+.leg { display: flex; gap: 14px; flex-wrap: wrap; font-size: 15px; }
+.leg > span::before { content: ""; display: inline-block; width: 26px; height: 14px; margin-right: 5px; vertical-align: -2px; border-radius: 3px; }
+.leg .l-ok::before { background: #9fe0bb; } .leg .l-ex::before { background: #e2e2e2; } .leg .l-ma::before { outline: 3px dashed #e07b1a; outline-offset: -3px; }
+.schema { display: grid; gap: 10px; }
+.schema .blocco { background: #fff; border: 2px solid var(--ink); border-left: 8px solid var(--viola); border-radius: 10px; padding: 8px 12px; }
+.schema h4 { margin: 0 0 4px; font: 400 23px var(--font-hand); }
+.chip { display: inline-block; background: var(--marker); border-radius: 6px; padding: 0 8px; margin: 2px 4px 2px 0; font-weight: 700; }
+.chip.manca { background: #fff; outline: 2px dashed #e07b1a; font-weight: 400; }
+textarea.grande, input.grande { width: 100%; font: 400 21px var(--font-hand); border: 2px solid var(--ink); border-radius: 8px; padding: 6px 10px; background: #fff; }
+textarea.grande { min-height: 170px; font: 400 17px/1.5 var(--font-body); }
+label.campo { display: grid; gap: 4px; font-weight: 700; }
+.vuoto { font: 400 22px var(--font-hand); color: var(--muted); text-align: center; }
+.par-prof { display: grid; gap: 4px; }
+.par-prof .testa { font-size: 14px; color: var(--muted); display: flex; justify-content: space-between; }
+.guida li { margin-bottom: 6px; }
+.importa { display: grid; gap: 8px; }
+.importa .row .btn { font-size: 19px; }
+.stato-imp { display: grid; gap: 4px; }
+.stato-imp progress { width: 100%; height: 14px; accent-color: var(--viola); }
+.pagine-pdf { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: #f5f0fc; border: 2px solid #cdb6ec; border-radius: 10px; padding: 8px 12px; }
+.pagine-pdf input { width: 80px; }
+.ipad ol { margin: 6px 0 0; padding-left: 1.3em; font-size: 16px; }
+textarea.appena { outline: 4px solid var(--giallo); outline-offset: 2px; }
+.foglio .w.dif { border-bottom: 3px dotted #2f6fd6; }
+.foglio.glos .w { cursor: pointer; }
+.glos-box { background: #eaf2fd; border: 2px solid #9cc0ef; border-radius: 12px; padding: 10px 12px; display: grid; gap: 8px; }
+.glos-box .voce { display: grid; grid-template-columns: minmax(90px, auto) 1fr auto; gap: 8px; align-items: center; }
+.glos-box .voce b { font-size: 18px; }
+.glos-box input, .dom input { width: 100%; font: 400 19px var(--font-hand); border: 2px solid var(--ink); border-radius: 8px; padding: 3px 8px; background: #fff; }
+.glos-box button.x { border: 0; background: none; font-size: 20px; cursor: pointer; color: var(--ko); }
+.avvii { display: flex; gap: 6px; flex-wrap: wrap; }
+.avvii button { font: 400 17px var(--font-hand); border: 2px solid #8e5bd0; color: #5d3a91; background: #fff; border-radius: 99px; padding: 0 10px; cursor: pointer; }
+.percorso { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
+.tappa { background: #fff; border: 3px solid var(--ink); border-radius: 14px; padding: 10px 12px; display: grid; gap: 4px; align-content: start; }
+.tappa .n { font: 700 30px/1 var(--font-chalk); }
+.tappa b { font-size: 17px; }
+.tappa .st { font-size: 14px; color: var(--muted); min-height: 2.4em; }
+.tappa.fatto { border-color: var(--ok); background: #eefaf3; }
+.tappa.corso { border-color: #e0a51a; background: #fffaea; }
+.tappa .btn { font-size: 17px; padding: 2px 10px; justify-self: start; }
+.mini-percorso { display: flex; gap: 4px; align-items: center; font-size: 13px; color: var(--muted); }
+.mini-percorso i { width: 14px; height: 14px; border-radius: 4px; border: 2px solid var(--ink); display: inline-block; background: #fff; }
+.mini-percorso i.fatto { background: var(--ok); } .mini-percorso i.corso { background: var(--giallo); }
+.dom { display: grid; gap: 6px; background: #fff; border: 2px solid var(--ink); border-left: 8px solid #e0a51a; border-radius: 10px; padding: 8px 12px; }
+.sezione-h { margin: 6px 0 0; font: 400 26px var(--font-hand); }
+@media print {
+  body { background: #fff; } .app-bar, .tabs, .no-stampa, section:not(#s-lavora) { display: none !important; }
+  #s-lavora > :not(#fine) { display: none !important; } .percorso, .dom input { display: none !important; }
+}
+</style>
+</head>
+<body>
+<header class="app-bar"><h1>Caccia alle parole chiave</h1><span class="sub">Leggi un paragrafo alla volta e trova ciò che conta</span></header>
+<div class="container">
+  <div class="tabs" role="tablist">
+    <button class="tab" id="t-brani" aria-selected="true">📚 Testi</button>
+    <button class="tab" id="t-lavora" aria-selected="false">🔎 Lavora</button>
+    <button class="tab" id="t-prepara" aria-selected="false">👩‍🏫 Prepara un testo</button>
+    <button class="tab" id="t-come" aria-selected="false">❓ Come si trovano</button>
+  </div>
+
+  <!-- TESTI -->
+  <section id="s-brani" style="display:grid;gap:14px">
+    <p class="consegna">Scegli un testo. Lo leggerai <b>un paragrafo alla volta</b> e in ognuno sottolineerai <b>poche parole</b>: quelle che bastano per ricordare tutto.</p>
+    <div class="card" style="display:grid;gap:8px;padding:10px 14px">
+      <div class="row"><b>🧭 Il mio percorso:</b><div class="tipi-liv row" id="liv-scelta"></div></div>
+      <span class="nota">Il docente ti dice quale percorso usare.</span>
+    </div>
+    <div class="brani" id="lista"></div>
+    <details class="card">
+      <summary style="cursor:pointer;font:400 22px var(--font-hand)">📋 Usa un testo tuo: incollalo, carica un PDF o fai una foto</summary>
+      <div style="display:grid;gap:10px;margin-top:10px">
+        <div class="importa" data-per="mio-testo"></div>
+        <label class="campo">Titolo<input class="grande" id="mio-titolo" placeholder="Es. La Rivoluzione industriale"></label>
+        <label class="campo">Testo<textarea class="grande" id="mio-testo" placeholder="Incolla qui il testo. Lascia una riga vuota tra un paragrafo e l'altro."></textarea></label>
+        <p class="nota" style="margin:0">Il PDF e le foto vengono letti sul tuo dispositivo e non vengono inviati a nessuno. Senza le parole scelte dal docente, il controllo lo fai tu: alla fine leggerai solo le tue parole e vedrai se bastano per capire.</p>
+        <div class="row"><button class="btn primary" id="mio-ok">Inizia con questo testo</button><span class="feedback" id="mio-msg"></span></div>
+      </div>
+    </details>
+    <details class="card">
+      <summary style="cursor:pointer;font:400 22px var(--font-hand)">🔑 Ho un codice dal docente</summary>
+      <div style="display:grid;gap:10px;margin-top:10px">
+        <textarea class="grande" id="imp-codice" style="min-height:70px" placeholder="Incolla qui il codice che inizia con PTLPC1:"></textarea>
+        <div class="row"><button class="btn primary" id="imp-ok">Aggiungi il testo</button><span class="feedback" id="imp-msg"></span></div>
+      </div>
+    </details>
+  </section>
+
+  <!-- LAVORA -->
+  <section id="s-lavora" hidden style="display:grid;gap:14px">
+    <div id="nessuno" class="vuoto">Prima scegli un testo nella scheda «📚 Testi».</div>
+    <div id="lavoro" hidden style="display:grid;gap:12px">
+      <div class="row" style="justify-content:space-between">
+        <div><b id="l-titolo" style="font:400 26px var(--font-hand)"></b></div>
+        <div class="puntini" id="l-punti"></div>
+      </div>
+      <div class="passi" id="l-passi" aria-hidden="true"><span>① Leggi</span><span>② Sottolinea</span><span>③ Controlla</span><span>④ Sintesi e domanda</span></div>
+      <p class="consegna" id="l-consegna"></p>
+      <div class="foglio" id="foglio" aria-live="off"></div>
+
+      <div id="c-leggi" class="row no-stampa">
+        <button class="btn" id="b-frase" aria-pressed="false">👆 Una frase alla volta</button>
+        <button class="btn" id="b-prec" hidden>◀</button><button class="btn" id="b-succ" hidden>▶ Frase dopo</button>
+        <button class="btn" id="b-voce" hidden>🔊 Ascolta</button>
+        <button class="btn" id="b-glos" aria-pressed="false">📕 Parole difficili</button>
+        <button class="btn primary" id="b-letto" style="margin-left:auto">Ho letto ➜ Sottolineo</button>
+        <p class="feedback" id="voce-msg" style="flex-basis:100%;font-size:19px"></p>
+      </div>
+      <div class="glos-box no-stampa" id="glos-box" hidden>
+        <p class="nota" id="glos-aiuto" style="margin:0"></p>
+        <div id="glos-lista" style="display:grid;gap:6px"></div>
+      </div>
+
+      <div id="c-sottolinea" class="no-stampa" style="display:grid;gap:10px">
+        <div class="row"><span>Parole sottolineate:</span><span class="conta" id="conta"></span><span class="feedback" id="s-msg" style="font-size:20px"></span></div>
+        <details class="card" style="padding:10px 14px">
+          <summary style="cursor:pointer;font:400 21px var(--font-hand)">💡 Non sai quali scegliere? Fatti queste domande</summary>
+          <div class="domande" style="margin-top:8px">
+            <div>🧑 <b>Di chi</b> o <b>di che cosa</b> parla?</div><div>⚙️ <b>Che cosa fa</b> o <b>che cosa succede</b>?</div>
+            <div>📍 <b>Dove</b>? ⏰ <b>Quando</b>?</div><div>❓ <b>Perché</b>? <b>A che cosa serve</b>?</div>
+            <div>🆕 C'è una parola <b>nuova o difficile</b> che il testo spiega?</div>
+          </div>
+          <p class="nota" style="margin:8px 0 0">Le parole chiave sono quasi sempre <b>nomi</b> (cose, persone, luoghi) e <b>verbi</b> che dicono cosa succede. Articoli, preposizioni e «che», «e», «di»… sono <b>parole-colla</b>: uniscono le altre ma da sole non dicono niente.</p>
+        </details>
+        <div><span class="nota">Se leggi solo le tue parole:</span><div class="telegramma" id="tele1"></div></div>
+        <div class="row"><button class="btn" id="b-rileggi">⬅ Rileggi</button><button class="btn" id="b-cancella">Cancella tutto</button><button class="btn primary" id="b-controlla" style="margin-left:auto">Controlla ➜</button></div>
+      </div>
+
+      <div id="c-controlla" class="no-stampa" style="display:grid;gap:10px">
+        <p class="feedback" id="k-esito"></p>
+        <div class="leg" id="k-leg"><span class="l-ok">trovata</span><span class="l-ma">ti è sfuggita</span><span class="l-ex">non sbagliata, ma meno importante</span></div>
+        <div><span class="nota">La prova del telegramma: leggi solo le tue parole. Si capisce di che cosa parla il paragrafo?</span><div class="telegramma" id="tele2"></div></div>
+        <div class="row"><button class="btn" id="b-correggo">⬅ Voglio correggere</button><button class="btn primary" id="b-sintesi" style="margin-left:auto">Avanti ➜</button></div>
+      </div>
+
+      <div id="c-sintesi" class="no-stampa" style="display:grid;gap:10px">
+        <div class="row" id="sint-chip"></div>
+        <input class="grande" id="sint" maxlength="90" placeholder="Es. Il Sole fa evaporare l'acqua" aria-label="Di che cosa parla il paragrafo, in poche parole">
+        <div class="dom" id="dom-box" style="border-left-color:#8e5bd0">
+          <b>❓ Fai una domanda su questo paragrafo</b>
+          <span class="nota">Una domanda la cui risposta si trova nel paragrafo. Diventerà una carta per il ripasso.</span>
+          <div class="avvii" id="avvii"></div>
+          <input id="dom-d" maxlength="140" placeholder="Domanda (es. Che cos'è la stagionatura?)" aria-label="Domanda">
+          <input id="dom-r" maxlength="200" placeholder="Risposta, con parole tue" aria-label="Risposta">
+        </div>
+        <p class="feedback" id="sint-msg" style="font-size:20px"></p>
+        <div class="row"><button class="btn" id="b-salta">Salta</button><button class="btn primary" id="b-avanti" style="margin-left:auto">Paragrafo dopo ➜</button></div>
+      </div>
+
+      <div id="fine" style="display:grid;gap:12px">
+        <p class="feedback ok" id="f-esito"></p>
+        <div class="percorso no-stampa" id="percorso"></div>
+        <div class="schema" id="schema"></div>
+        <h3 class="sezione-h">❓ Le mie domande</h3>
+        <div id="f-domande" style="display:grid;gap:8px"></div>
+        <div id="f-glos-wrap"><h3 class="sezione-h">📕 Le mie parole difficili</h3><div id="f-glos" class="glos-box"></div></div>
+        <div id="f-mappa-wrap"><h3 class="sezione-h">🗺️ Le frasi della mia mappa</h3><ol id="f-mappa-frasi" style="margin:0;font-size:18px"></ol></div>
+        <div class="row no-stampa">
+          <button class="btn" id="f-copia">📋 Copia la scheda</button><button class="btn" id="f-salva">💾 Salva</button><button class="btn" id="f-stampa">🖨 Stampa</button>
+          <button class="btn" id="f-rifai" style="margin-left:auto">↺ Rifai il testo</button>
+        </div>
+        <p class="feedback" id="f-msg" style="font-size:19px"></p>
+        <textarea id="f-out" readonly hidden class="grande" style="min-height:120px"></textarea>
+      </div>
+    </div>
+  </section>
+
+  <!-- PREPARA -->
+  <section id="s-prepara" hidden style="display:grid;gap:14px">
+    <div class="card" style="display:grid;gap:10px">
+      <p style="margin:0">Incolla il brano, poi <b>tocca le parole chiave</b> che ti aspetti in ogni paragrafo. Gli studenti vedranno le loro scelte confrontate con le tue. Condividi il testo con un codice da incollare sui tablet.</p>
+      <label class="campo">Titolo<input class="grande" id="p-titolo"></label>
+      <div class="row">
+        <label class="campo" style="flex:1">Materia<input class="grande" id="p-materia" placeholder="Es. Tecnologia"></label>
+        <label class="campo">Percorso per gli studenti<select id="p-liv"><option value="0">Lo sceglie lo studente</option><option value="1">Base (1ª media)</option><option value="2">Medio (2ª media)</option><option value="3">Completo (3ª media)</option></select></label>
+        <label class="campo">Parole al massimo per paragrafo<select id="p-max"><option>3</option><option>4</option><option selected>5</option><option>6</option><option>7</option><option>8</option></select></label>
+      </div>
+      <div class="importa" data-per="p-testo"></div>
+      <label class="campo">Testo<textarea class="grande" id="p-testo" placeholder="Lascia una riga vuota tra un paragrafo e l'altro. Paragrafi di 2–4 frasi funzionano meglio."></textarea></label>
+      <div class="row"><button class="btn primary" id="p-dividi">Dividi in paragrafi ➜ segna le parole</button></div>
+    </div>
+    <div id="p-segna" hidden style="display:grid;gap:12px">
+      <p class="consegna">Tocca le parole chiave (in grigio le parole-colla).</p>
+      <div id="p-par" style="display:grid;gap:12px"></div>
+      <div class="row"><button class="btn primary" id="p-salva">💾 Salva il testo</button><span class="feedback" id="p-msg"></span></div>
+      <textarea class="grande" id="p-codice" readonly hidden style="min-height:80px"></textarea>
+    </div>
+  </section>
+
+  <!-- COME -->
+  <section id="s-come" hidden>
+    <div class="card guida" style="font-size:17px">
+      <p class="consegna" style="margin-bottom:10px">Come si trova una parola chiave</p>
+      <ol>
+        <li><b>Prima leggi tutto il paragrafo</b> senza sottolineare. Se vuoi, usa «Una frase alla volta»: le altre frasi si spengono e ti concentri su una sola.</li>
+        <li><b>Chiediti di che cosa parla.</b> La risposta è quasi sempre una parola chiave.</li>
+        <li><b>Usa le domande</b>: chi o che cosa? che cosa fa o succede? dove? quando? perché? a che cosa serve?</li>
+        <li><b>Poche parole</b>: al massimo 5 per paragrafo. Se sottolinei tutto, non hai scelto niente.</li>
+        <li><b>Niente parole-colla</b>: «il», «di», «che», «e», «è»… collegano le altre, ma da sole non dicono niente. L'app non le fa sottolineare.</li>
+        <li><b>Parole difficili</b>: mentre leggi, tocca «📕 Parole difficili» e segna quelle che non conosci; scrivi il significato con parole tue.</li>
+        <li><b>Fai una domanda</b> su ogni paragrafo, con la risposta: diventerà una carta di Ripasso furbo. Farsi domande e rispondere a memoria è uno dei modi più efficaci di studiare.</li>
+        <li><b>Il percorso</b>: ① leggi e sottolinea → ② domande → ③ mappa → ④ ripassa nei giorni seguenti.</li>
+        <li><b>La prova del telegramma</b>: leggi solo le parole che hai sottolineato. Se si capisce di che cosa parla il paragrafo, hai scelto bene.</li>
+      </ol>
+      <p class="nota">La voce è facoltativa: tutto si può fare leggendo da soli. Le parole del docente sono un modello, non l'unica risposta possibile: le parole grigie non sono errori.</p>
+    </div>
+  </section>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const KEY = "paroleChiave";
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const STUDENTE = (() => { try { return JSON.parse(localStorage.getItem("ptl-ruolo")) === "studente"; } catch (e) { return false; } })();
+
+/* Parole-colla: articoli, preposizioni, congiunzioni, pronomi e ausiliari */
+const COLLA = new Set(("il lo la i gli le l un uno una un di a da in con su per tra fra del dello della dei degli delle dell al allo alla ai agli alle all dal dallo dalla dai dagli dalle dall nel nello nella nei negli nelle nell col coi sul sullo sulla sui sugli sulle sull d " +
+  "e ed o od ma però anche se che chi cui non né ne ci si mi ti vi c è e' sono era erano sia siano essere stato stata stati state ha hanno ho hai abbiamo avete aveva avevano viene vengono " +
+  "come più meno molto molti molta molte poco questo questa questi queste quello quella quelli quelle quel suo sua suoi sue loro lui lei noi voi io tu esso essa essi esse egli " +
+  "quindi poi ancora già così cioè dove quando perché mentre tutto tutti tutte tutta altro altri altra altre ogni ad invece infatti inoltre oppure").split(/\s+/));
+
+const ESEMPI = [
+  { id: "es-acqua", titolo: "Il ciclo dell'acqua", materia: "Scienze", max: 5, esempio: true, par: [
+    "L'acqua sulla Terra si muove continuamente e cambia stato. Il calore del Sole riscalda l'acqua di mari, laghi e fiumi, che evapora e sale nell'aria sotto forma di vapore acqueo.",
+    "Salendo, il vapore incontra aria più fredda e si raffredda. Le minuscole goccioline che si formano si uniscono e danno origine alle nuvole: questo passaggio si chiama condensazione.",
+    "Quando le gocce diventano troppo pesanti, cadono a terra come pioggia, neve o grandine: sono le precipitazioni. L'acqua scorre nei fiumi o penetra nel terreno e torna al mare, dove il ciclo ricomincia."],
+    chiavi: [["calore", "sole", "evapora", "vapore"], ["raffredda", "goccioline", "nuvole", "condensazione"], ["pesanti", "precipitazioni", "mare", "ricomincia"]] },
+  { id: "es-legno", titolo: "Il legno", materia: "Tecnologia", max: 5, esempio: true, par: [
+    "Il legno è un materiale naturale che si ricava dal tronco degli alberi. Gli alberi vengono abbattuti, privati dei rami e della corteccia e poi tagliati in tavole nelle segherie.",
+    "Prima di essere lavorato, il legno deve perdere gran parte dell'acqua che contiene: questa fase si chiama stagionatura. Un legno ben stagionato si deforma meno e dura più a lungo.",
+    "Il legno è leggero, resistente e facile da lavorare, ma brucia e può essere attaccato da funghi e insetti. Per proteggerlo si usano vernici e impregnanti."],
+    chiavi: [["naturale", "tronco", "alberi", "tavole", "segherie"], ["acqua", "stagionatura", "deforma", "dura"], ["leggero", "resistente", "brucia", "insetti", "vernici"]] },
+  { id: "es-energia", titolo: "Le fonti rinnovabili", materia: "Tecnologia", max: 5, esempio: true, par: [
+    "Le fonti di energia rinnovabili sono quelle che la natura ricostituisce in tempi brevi, come il Sole, il vento e l'acqua. Le fonti non rinnovabili, come il petrolio e il carbone, si sono formate in milioni di anni e prima o poi si esauriranno.",
+    "I pannelli fotovoltaici trasformano la luce del Sole direttamente in energia elettrica. Le pale eoliche, invece, sfruttano il vento per far girare un generatore.",
+    "Le centrali idroelettriche usano la forza dell'acqua che scende da un dislivello. Le fonti rinnovabili inquinano poco durante il funzionamento, ma non sono sempre disponibili: di notte il Sole non c'è e il vento non soffia sempre."],
+    chiavi: [["rinnovabili", "ricostituisce", "brevi", "milioni", "esauriranno"], ["fotovoltaici", "luce", "elettrica", "eoliche", "vento"], ["idroelettriche", "acqua", "dislivello", "inquinano", "disponibili"]] }
+];
+
+let S = { brani: [], prog: {}, corrente: null };
+try { const v = JSON.parse(localStorage.getItem(KEY)); if (v && v.brani) S = Object.assign(S, v); } catch (e) {}
+const salva = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+const tutti = () => [...ESEMPI, ...S.brani];
+const brano = id => tutti().find(b => b.id === id);
+/* Livello del percorso: 1 = base (1ª media), 2 = medio (2ª), 3 = completo (3ª) */
+const livello = b => (b && b.liv) || S.livello || 3;
+const maxDi = b => livello(b) === 1 ? Math.min(3, b.max || 5) : (b.max || 5);
+const linguaAiuto = () => { try { return JSON.parse(localStorage.getItem("ptl-lingua")) || ""; } catch (e) { return ""; } };
+
+/* ---------- Testo: paragrafi, parole, frasi ---------- */
+function dividi(testo) {
+  let t = testo.replace(/\r/g, "").replace(/(\p{L})-\n(\p{Ll})/gu, "$1$2").trim();
+  let par = /\n\s*\n/.test(t) ? t.split(/\n\s*\n/) : [t];
+  par = par.map(p => p.replace(/\s*\n\s*/g, " ").replace(/\s{2,}/g, " ").trim()).filter(Boolean);
+  const out = [];
+  par.forEach(p => {
+    const parole = p.split(" ").length;
+    if (parole <= 75) { out.push(p); return; }
+    const frasi = p.match(/[^.!?]+[.!?]+["»”)]*\s*|[^.!?]+$/g) || [p];
+    let cur = "";
+    frasi.forEach(f => { if (cur && (cur + f).split(" ").length > 60) { out.push(cur.trim()); cur = ""; } cur += f; });
+    if (cur.trim()) out.push(cur.trim());
+  });
+  return out;
+}
+function tokens(p) {
+  const pezzi = p.match(/[\p{L}\p{N}]+|[^\p{L}\p{N}]+/gu) || [];
+  let s = 0; const out = [];
+  pezzi.forEach((t, i) => {
+    const w = /[\p{L}\p{N}]/u.test(t);
+    out.push({ t, w, s, f: w ? t.toLowerCase() : "" });
+    if (!w && /[.!?]/.test(t) && (/\s/.test(t) || i === pezzi.length - 1)) s++;
+  });
+  return out;
+}
+const isColla = f => COLLA.has(f) || (f.length === 1 && !/\d/.test(f));
+
+/* ---------- Schede ---------- */
+const TAB = ["brani", "lavora", "prepara", "come"];
+function vai(n) { TAB.forEach(t => { $("t-" + t).setAttribute("aria-selected", t === n); $("s-" + t).hidden = t !== n; }); if (n === "brani") disegnaLista(); if (n === "lavora") mostra(); }
+TAB.forEach(t => $("t-" + t).addEventListener("click", () => vai(t)));
+if (STUDENTE) $("t-prepara").hidden = true;
+
+const LIVELLI = [[1, "Base: parole chiave e sintesi"], [2, "Medio: + domande e ripasso"], [3, "Completo: + mappa"]];
+function disegnaLivelli() {
+  $("liv-scelta").innerHTML = LIVELLI.map(([n, t]) => `<button type="button" data-liv="${n}" aria-pressed="${(S.livello || 3) === n}">${t}</button>`).join("");
+  $("liv-scelta").querySelectorAll("[data-liv]").forEach(x => x.addEventListener("click", () => { S.livello = +x.dataset.liv; salva(); disegnaLista(); }));
+}
+function disegnaLista() {
+  disegnaLivelli();
+  $("lista").innerHTML = tutti().map(b => {
+    const pr = S.prog[b.id]; const fatto = pr && pr.fine;
+    return `<article class="brano"><h3>${esc(b.titolo)}</h3>
+      <div class="info">${esc(b.materia || "")} · ${b.par.length} paragrafi</div>
+      <div>${b.chiavi ? '<span class="etichetta verde">con le parole del docente</span>' : '<span class="etichetta">controllo da solo</span>'} ${b.liv ? `<span class="etichetta">percorso: ${["", "Base", "Medio", "Completo"][b.liv]}</span>` : ""}</div>
+      ${pr ? `<div class="mini-percorso" title="Percorso: leggi, domande, mappa, ripassa">${statoPercorso(b.id).map(t => `<i class="${t.st}"></i>`).join("")}<span>&nbsp;percorso</span></div>` : ""}
+      <div class="row"><button class="btn primary" data-apri="${esc(b.id)}">${fatto ? "🧭 Scheda" : pr ? "Continua" : "Inizia"}</button>
+      ${!b.esempio && !STUDENTE && b.chiavi ? `<button class="btn" data-mod="${esc(b.id)}">✏️</button>` : ""}
+      ${!b.esempio ? `<button class="btn" data-del="${esc(b.id)}" aria-label="Elimina">🗑</button>` : ""}</div></article>`;
+  }).join("");
+  $("lista").querySelectorAll("[data-apri]").forEach(x => x.addEventListener("click", () => apri(x.dataset.apri)));
+  $("lista").querySelectorAll("[data-mod]").forEach(x => x.addEventListener("click", () => modifica(x.dataset.mod)));
+  $("lista").querySelectorAll("[data-del]").forEach(x => x.addEventListener("click", () => {
+    if (x.dataset.conf !== "1") { x.dataset.conf = "1"; x.textContent = "Sicuro?"; setTimeout(() => { x.dataset.conf = ""; x.textContent = "🗑"; }, 3000); return; }
+    S.brani = S.brani.filter(b => b.id !== x.dataset.del); delete S.prog[x.dataset.del]; if (S.corrente === x.dataset.del) S.corrente = null; salva(); disegnaLista();
+  }));
+}
+function apri(id) {
+  S.corrente = id;
+  const p = S.prog[id];
+  if (!p) S.prog[id] = { p: 0, fase: "leggi", sel: {}, sint: {}, dom: {}, glos: {}, fine: false };
+  salva(); vai("lavora");
+}
+
+/* ---------- Lavoro su un paragrafo ---------- */
+let focusOn = false, fraseOra = 0, voceAttiva = false;
+const B = () => brano(S.corrente), P = () => S.prog[S.corrente];
+const selDi = i => (P().sel[i] = P().sel[i] || []);
+function mostra() {
+  const b = B();
+  $("nessuno").hidden = !!b; $("lavoro").hidden = !b; if (!b) return;
+  const pr = P(); pr.dom = pr.dom || {}; pr.glos = pr.glos || {};
+  $("l-titolo").textContent = b.titolo;
+  $("l-punti").innerHTML = b.par.map((_, i) => `<i class="${pr.fine || i < pr.p ? "ok" : i === pr.p ? "qui" : ""}"></i>`).join("") + `<span>&nbsp;${pr.fine ? "finito" : `paragrafo ${pr.p + 1} di ${b.par.length}`}</span>`;
+  const fasi = ["leggi", "sottolinea", "controlla", "sintesi"];
+  [...$("l-passi").children].forEach((s, i) => { s.className = fasi[i] === pr.fase ? "attivo" : fasi.indexOf(pr.fase) > i ? "fatto" : ""; });
+  $("l-passi").hidden = pr.fine;
+  ["leggi", "sottolinea", "controlla", "sintesi"].forEach(f => $("c-" + f).hidden = pr.fine || pr.fase !== f);
+  $("fine").hidden = !pr.fine; $("foglio").hidden = pr.fine;
+  if (pr.fine) { fermaVoce(); disegnaFine(); $("l-consegna").innerHTML = "<b>La scheda del testo</b>: il tuo percorso di studio e tutto quello che hai costruito. Continua con le tappe che mancano."; return; }
+  $("l-consegna").innerHTML = {
+    leggi: "<b>Leggi</b> il paragrafo con calma, fino in fondo. Per ora non sottolineare.",
+    sottolinea: `Tocca le <b>parole chiave</b>: al massimo <b>${maxDi(b)}</b>. Tocca di nuovo una parola per toglierla.`,
+    controlla: b.chiavi ? "Ecco il confronto con le parole scelte dal docente." : "<b>Controlla da solo</b> con la prova del telegramma.",
+    sintesi: "Scrivi <b>di che cosa parla</b> il paragrafo, in poche parole. Prova a usare le tue parole chiave."
+  }[pr.fase];
+  disegnaFoglio();
+  $("glos-box").hidden = true;
+  if (pr.fase === "leggi") { $("b-glos").setAttribute("aria-pressed", glMode); $("b-glos").classList.toggle("giallo", glMode); disegnaGlos(); }
+  if (pr.fase === "leggi") { $("b-frase").setAttribute("aria-pressed", focusOn); $("b-prec").hidden = $("b-succ").hidden = !focusOn; $("b-voce").hidden = !("speechSynthesis" in window); }
+  if (pr.fase === "sottolinea") aggiornaConta();
+  if (pr.fase === "controlla") controlla();
+  $("dom-box").hidden = livello(b) === 1;
+  $("l-passi").lastElementChild.textContent = livello(b) === 1 ? "④ In poche parole" : "④ Sintesi e domanda";
+  if (pr.fase === "sintesi") { const dd = pr.dom[pr.p] || {}; $("dom-d").value = dd.d || ""; $("dom-r").value = dd.r || "";
+    $("sint").value = pr.sint[pr.p] || ""; $("sint-msg").textContent = ""; $("sint-chip").innerHTML = '<span class="nota">Le tue parole:</span> ' + paroleSel(pr.p).map(w => `<span class="chip">${esc(w)}</span>`).join(""); $("b-avanti").textContent = pr.p === b.par.length - 1 ? "Vedi lo schema ➜" : "Paragrafo dopo ➜"; }
+}
+function paroleSel(i) { const tk = tokens(B().par[i]); return (P().sel[i] || []).slice().sort((a, b) => a - b).map(k => tk[k] && tk[k].t).filter(Boolean); }
+function disegnaFoglio() {
+  const b = B(), pr = P(), tk = tokens(b.par[pr.p]), sel = new Set(selDi(pr.p));
+  const chiavi = b.chiavi ? new Set(b.chiavi[pr.p] || []) : null;
+  const trovate = new Set([...sel].map(k => tk[k].f));
+  const segnate = new Set();
+  let html = "", sCur = -1;
+  tk.forEach((x, k) => {
+    if (x.s !== sCur) { if (sCur >= 0) html += "</span>"; sCur = x.s; html += `<span class="frase" data-s="${x.s}">`; }
+    if (!x.w) { html += esc(x.t); return; }
+    let c = "w";
+    if (pr.fase === "controlla") {
+      if (sel.has(k)) c += chiavi ? (chiavi.has(x.f) ? " ok" : " extra") : " sel";
+      else if (chiavi && chiavi.has(x.f) && !trovate.has(x.f) && !segnate.has(x.f)) { c += " manca"; segnate.add(x.f); }
+    } else if (sel.has(k)) c += " sel";
+    if (pr.glos && pr.glos[x.f]) c += " dif";
+    if (pr.fase === "leggi" && glMode) { html += `<button type="button" class="${c}" data-g="${k}">${esc(x.t)}</button>`; return; }
+    html += pr.fase === "sottolinea" ? `<button type="button" class="${c}" data-k="${k}" aria-pressed="${sel.has(k)}">${esc(x.t)}</button>` : `<span class="${c}">${esc(x.t)}</span>`;
+  });
+  html += "</span>";
+  $("foglio").innerHTML = html;
+  $("foglio").className = "foglio" + (pr.fase === "sottolinea" ? " clic" : "") + (pr.fase === "leggi" && focusOn ? " focus" : "");
+  if (pr.fase === "leggi" && focusOn) evidenziaFrase();
+  if (glMode && pr.fase === "leggi") { $("foglio").classList.add("glos"); $("foglio").querySelectorAll("[data-g]").forEach(el => el.addEventListener("click", () => toccaDifficile(+el.dataset.g, el))); }
+  if (pr.fase === "sottolinea") $("foglio").querySelectorAll("[data-k]").forEach(el => el.addEventListener("click", () => tocca(+el.dataset.k, el)));
+}
+function tocca(k, el) {
+  const b = B(), pr = P(), tk = tokens(b.par[pr.p]), sel = selDi(pr.p), max = maxDi(b);
+  const i = sel.indexOf(k);
+  if (i >= 0) sel.splice(i, 1);
+  else if (isColla(tk[k].f)) { scuoti(el); $("s-msg").className = "feedback ko"; $("s-msg").textContent = `«${tk[k].t}» è una parola-colla: unisce le altre, ma da sola non dice niente.`; return; }
+  else if (sel.length >= max) { scuoti(el); $("s-msg").className = "feedback ko"; $("s-msg").textContent = `Massimo ${max}! Per sceglierne un'altra, togline una.`; return; }
+  else sel.push(k);
+  $("s-msg").textContent = ""; salva();
+  el.classList.toggle("sel", sel.includes(k)); el.setAttribute("aria-pressed", sel.includes(k));
+  aggiornaConta();
+}
+function scuoti(el) { el.classList.remove("no"); void el.offsetWidth; el.classList.add("no"); }
+function aggiornaConta() {
+  const pr = P(), n = selDi(pr.p).length, max = maxDi(B());
+  $("conta").textContent = `${n} / ${max}`; $("conta").className = "conta" + (n >= max ? " pieno" : "");
+  $("tele1").textContent = paroleSel(pr.p).join(" · ") || "…";
+  $("b-controlla").disabled = n === 0;
+}
+function controlla() {
+  const b = B(), pr = P(), tk = tokens(b.par[pr.p]), sel = selDi(pr.p);
+  $("tele2").textContent = paroleSel(pr.p).join(" · ");
+  const e = $("k-esito");
+  if (!b.chiavi) {
+    $("k-leg").hidden = true;
+    e.className = "feedback"; e.textContent = sel.length < 2 ? "Con una parola sola è difficile ricordare il paragrafo: prova ad aggiungerne un'altra." : "Se dal telegramma si capisce il paragrafo, hai scelto bene. Se manca qualcosa, torna a correggere.";
+    return;
+  }
+  $("k-leg").hidden = false;
+  const chiavi = new Set(b.chiavi[pr.p] || []), forme = new Set(sel.map(k => tk[k].f));
+  const trovate = [...chiavi].filter(f => forme.has(f)).length, extra = [...forme].filter(f => !chiavi.has(f)).length;
+  pr.punti = pr.punti || {}; pr.punti[pr.p] = [trovate, chiavi.size]; salva();
+  let m = trovate === chiavi.size ? (extra ? `Hai trovato tutte le ${chiavi.size} parole chiave del docente!` : "Perfetto: proprio le parole del docente!") :
+    trovate * 2 >= chiavi.size ? `Bene: hai trovato ${trovate} parole chiave su ${chiavi.size}.` : `Hai trovato ${trovate} parole chiave su ${chiavi.size}. Guarda quelle tratteggiate: a quale domanda rispondono?`;
+  e.className = "feedback " + (trovate * 2 >= chiavi.size ? "ok" : "ko"); e.textContent = m;
+}
+/* Una frase alla volta (senza voce) */
+const nFrasi = () => tokens(B().par[P().p]).reduce((m, x) => Math.max(m, x.s), 0) + 1;
+function evidenziaFrase() { $("foglio").querySelectorAll(".frase").forEach(f => f.classList.toggle("ora", +f.dataset.s === fraseOra)); $("b-succ").disabled = fraseOra >= nFrasi() - 1 || nonVuote() <= fraseOra + 1; $("b-prec").disabled = fraseOra === 0; }
+const nonVuote = () => [...$("foglio").querySelectorAll(".frase")].filter(f => f.textContent.trim()).length;
+$("b-frase").addEventListener("click", () => { focusOn = !focusOn; fraseOra = 0; mostra(); });
+$("b-succ").addEventListener("click", () => { fraseOra++; evidenziaFrase(); });
+$("b-prec").addEventListener("click", () => { fraseOra = Math.max(0, fraseOra - 1); evidenziaFrase(); });
+/* Voce facoltativa: legge una frase alla volta e la evidenzia */
+function fermaVoce() { voceAttiva = false; try { speechSynthesis.cancel(); } catch (e) {} $("b-voce").textContent = "🔊 Ascolta"; document.querySelectorAll(".frase.voce").forEach(f => f.classList.remove("voce")); }
+$("b-voce").addEventListener("click", () => {
+  if (voceAttiva) { fermaVoce(); return; }
+  const frasi = [...$("foglio").querySelectorAll(".frase")].filter(f => f.textContent.trim());
+  const voci = speechSynthesis.getVoices(), it = voci.find(v => /^it/i.test(v.lang));
+  let vel = 1; try { vel = (JSON.parse(localStorage.getItem("ptl-a11y")) || {}).velocita || 1; } catch (e) {}
+  voceAttiva = true; $("b-voce").textContent = "⏹ Ferma"; $("voce-msg").textContent = "";
+  let partita = false; setTimeout(() => { if (voceAttiva && !partita) { fermaVoce(); $("voce-msg").textContent = "La voce non è disponibile su questo dispositivo: usa «Una frase alla volta» e leggi da solo."; } }, 2500);
+  const leggi = i => {
+    frasi.forEach(f => f.classList.remove("voce"));
+    if (!voceAttiva || i >= frasi.length) { fermaVoce(); return; }
+    frasi[i].classList.add("voce");
+    const u = new SpeechSynthesisUtterance(frasi[i].textContent); u.lang = "it-IT"; if (it) u.voice = it; u.rate = vel;
+    u.onstart = () => { partita = true; }; u.onend = () => leggi(i + 1); u.onerror = () => fermaVoce();
+    speechSynthesis.speak(u);
+  };
+  speechSynthesis.cancel(); leggi(0);
+});
+/* Passaggi */
+const fase = f => { P().fase = f; salva(); mostra(); window.scrollTo({ top: 0 }); };
+$("b-letto").addEventListener("click", () => { fermaVoce(); focusOn = false; glMode = false; fase("sottolinea"); });
+$("b-rileggi").addEventListener("click", () => fase("leggi"));
+$("b-cancella").addEventListener("click", () => { P().sel[P().p] = []; salva(); disegnaFoglio(); aggiornaConta(); });
+$("b-controlla").addEventListener("click", () => fase("controlla"));
+$("b-correggo").addEventListener("click", () => fase("sottolinea"));
+$("b-sintesi").addEventListener("click", () => fase("sintesi"));
+function prossimo() {
+  const pr = P();
+  if (pr.p >= B().par.length - 1) { pr.fine = true; pr.fase = "fine"; } else { pr.p++; pr.fase = "leggi"; }
+  salva(); mostra(); window.scrollTo({ top: 0 });
+}
+$("b-salta").addEventListener("click", prossimo);
+$("b-avanti").addEventListener("click", () => {
+  const v = $("sint").value.trim(), pr = P();
+  const errD = livello(B()) === 1 ? "" : salvaDomanda(pr.p, $("dom-d").value, $("dom-r").value);
+  if (errD) { $("sint-msg").className = "feedback ko"; $("sint-msg").textContent = errD; return; }
+  if (v) {
+    const n = v.split(/\s+/).length;
+    if (n > 12) { $("sint-msg").className = "feedback ko"; $("sint-msg").textContent = `Sono ${n} parole: prova a dirlo con meno (massimo 12).`; return; }
+    pr.sint[pr.p] = v; salva();
+  }
+  prossimo();
+});
+$("dom-r").addEventListener("keydown", e => { if (e.key === "Enter") $("b-avanti").click(); });
+/* ---------- Parole difficili (glossario personale) ---------- */
+let glMode = false;
+$("b-glos").addEventListener("click", () => { glMode = !glMode; if (glMode) { focusOn = false; fermaVoce(); } mostra(); });
+function toccaDifficile(k, el) {
+  const pr = P(), x = tokens(B().par[pr.p])[k];
+  if (pr.glos[x.f]) delete pr.glos[x.f];
+  else if (isColla(x.f)) { scuoti(el); return; }
+  else pr.glos[x.f] = { p: x.t, d: "", par: pr.p };
+  salva(); disegnaFoglio(); disegnaGlos();
+}
+function disegnaGlos() {
+  const pr = P(), voci = Object.entries(pr.glos).filter(([, v]) => v.par === pr.p);
+  $("glos-box").hidden = !glMode && !voci.length;
+  $("glos-aiuto").innerHTML = glMode ? "Tocca le parole che <b>non conosci</b>. Poi scrivi qui sotto che cosa vogliono dire, <b>con parole tue</b> (chiedi al docente o usa il dizionario). Ritocca una parola per toglierla." : "📕 Le tue parole difficili di questo paragrafo:";
+  campiGlos($("glos-lista"), voci);
+}
+function campiGlos(box, voci) {
+  const pr = P();
+  const lin = linguaAiuto();
+  box.innerHTML = voci.length ? voci.map(([f, v]) => `<div class="voce"><b data-noi18n>${esc(v.p)}</b><div style="display:grid;gap:4px"><input data-f="${esc(f)}" value="${esc(v.d)}" maxlength="160" placeholder="Che cosa vuol dire?" aria-label="Significato di ${esc(v.p)}">${lin || v.t ? `<input data-t="${esc(f)}" value="${esc(v.t || "")}" maxlength="120" placeholder="Nella mia lingua" ${lin === "ar" ? 'dir="auto"' : ""} aria-label="Traduzione di ${esc(v.p)}">` : ""}</div><button class="x" data-x="${esc(f)}" aria-label="Togli">✕</button></div>`).join("") : '<span class="nota">Nessuna parola ancora.</span>';
+  box.querySelectorAll("input[data-f]").forEach(i => i.addEventListener("input", () => { pr.glos[i.dataset.f].d = i.value.trim(); salva(); }));
+  box.querySelectorAll("input[data-t]").forEach(i => i.addEventListener("input", () => { pr.glos[i.dataset.t].t = i.value.trim(); salva(); }));
+  box.querySelectorAll("[data-x]").forEach(x => x.addEventListener("click", () => { delete pr.glos[x.dataset.x]; salva(); if (pr.fine) disegnaFine(); else { disegnaFoglio(); disegnaGlos(); } }));
+}
+/* ---------- Domande ---------- */
+const AVVII = ["Che cos'è", "Perché", "Come", "A che cosa serve", "Quando", "Dove", "Che differenza c'è tra"];
+$("avvii").innerHTML = AVVII.map(a => `<button type="button" data-a="${esc(a)}">${esc(a)}…</button>`).join("");
+$("avvii").querySelectorAll("button").forEach(b => b.addEventListener("click", () => { $("dom-d").value = b.dataset.a + " "; $("dom-d").focus(); }));
+const conPunto = d => /[?]$/.test(d) ? d : d.replace(/[.!]+$/, "") + "?";
+function salvaDomanda(i, d, r) {
+  const pr = P(); d = d.trim(); r = r.trim();
+  if (d && !r) return "Scrivi anche la risposta: ti servirà per il ripasso.";
+  if (r && !d) return "Hai scritto la risposta: manca la domanda.";
+  if (d) pr.dom[i] = { d: conPunto(d), r }; else delete pr.dom[i];
+  salva(); return "";
+}
+
+/* ---------- Collegamenti con Mappa e Ripasso furbo ---------- */
+const leggiJSON = k => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
+const mappaDi = id => ((leggiJSON("mappeConcetti") || {}).mappe || []).find(m => m.fonteId === id);
+const mazzoDi = id => ((leggiJSON("ripassoFurbo") || {}).mazzi || []).find(m => m.fonte === "testo-" + id);
+function frasiMappa(m) { if (!m) return []; const nome = x => (m.nodi.find(n => n.id === x) || {}).t || "?"; return m.link.filter(l => l.v).map(l => [nome(l.a), l.v, nome(l.b)]); }
+function aggiornaMazzo(fonte, nome, materia, carte, orig) {
+  let d = leggiJSON("ripassoFurbo"); if (!d || !Array.isArray(d.mazzi)) d = { mazzi: [] };
+  let m = d.mazzi.find(x => x.fonte === fonte);
+  if (!m) { m = { id: Math.random().toString(36).slice(2, 10), nome, materia: materia || "", sessione: 0, fonte, carte: [] }; d.mazzi.unshift(m); }
+  m.nome = nome;
+  const nuove = new Set(carte.map(c => c[0]));
+  m.carte = m.carte.filter(c => c.orig !== orig || nuove.has(c.f));
+  carte.forEach(([f, r]) => { const c = m.carte.find(x => x.f === f); if (c) c.r = r; else m.carte.push({ id: Math.random().toString(36).slice(2, 10), f, r, img: "", box: 1, ultima: -1, orig }); });
+  try { localStorage.setItem("ripassoFurbo", JSON.stringify(d)); } catch (e) { return null; }
+  return m;
+}
+function creaMazzoTesto(id) {
+  const b = brano(id), pr = S.prog[id] || {};
+  const carte = Object.values(pr.dom || {}).filter(x => x.d && x.r).map(x => [x.d, x.r])
+    .concat(Object.values(pr.glos || {}).filter(v => v.d || v.t).map(v => [`Che cosa vuol dire «${v.p}»?`, [v.d, v.t ? `(${v.t})` : ""].filter(Boolean).join(" ")]));
+  aggiornaMazzo("testo-" + id, b.titolo, b.materia, carte, "testo");
+  const fr = frasiMappa(mappaDi(id));
+  return aggiornaMazzo("testo-" + id, b.titolo, b.materia, fr.map(([a, v, c]) => [`${a} ${v} …`, c]), "mappa");
+}
+function statoPercorso(id) {
+  const b = brano(id), pr = S.prog[id], m = mappaDi(id), z = mazzoDi(id);
+  const nd = pr ? Object.values(pr.dom || {}).filter(x => x.d).length : 0, metà = Math.ceil(b.par.length / 2);
+  let st3 = "", s3 = "Non ancora fatta.";
+  if (m) { const usati = new Set(); m.link.forEach(l => { usati.add(l.a); usati.add(l.b); }); const vuote = m.link.filter(l => !l.v).length, soli = m.nodi.filter(n => !usati.has(n.id)).length;
+    st3 = m.link.length && !vuote && !soli ? "fatto" : "corso"; s3 = `${m.link.length} ${m.link.length === 1 ? "freccia" : "frecce"}` + (vuote ? `, ${vuote} senza parola` : "") + (soli ? `, ${soli} concetti soli` : ""); }
+  const tot = z ? z.carte.length : 0, imp = z ? z.carte.filter(c => c.box === 5).length : 0;
+  const tutte = [
+    { k: "leggi", t: "Leggi e sottolinea", st: pr && pr.fine ? "fatto" : pr ? "corso" : "", s: pr ? (pr.fine ? "Tutti i paragrafi." : `Paragrafo ${pr.p + 1} di ${b.par.length}.`) : "Da iniziare." },
+    { k: "domande", t: "Domande", st: nd >= metà ? "fatto" : nd ? "corso" : "", s: `${nd} ${nd === 1 ? "domanda" : "domande"} (almeno ${metà}).` },
+    { k: "mappa", t: "Mappa", st: st3, s: s3 },
+    { k: "ripassa", t: "Ripassa", st: z && z.sessione >= 3 ? "fatto" : z ? "corso" : "", s: z ? `Ripassato ${z.sessione} ${z.sessione === 1 ? "volta" : "volte"} · ${imp}/${tot} carte imparate.` : "Le carte nascono da domande, parole difficili e mappa." }
+  ];
+  const liv = livello(b), ok = liv === 1 ? ["leggi"] : liv === 2 ? ["leggi", "domande", "ripassa"] : ["leggi", "domande", "mappa", "ripassa"];
+  return tutte.filter(t => ok.includes(t.k));
+}
+
+/* Schema finale */
+function testoSchema() {
+  const b = B(), pr = P();
+  const dom = Object.keys(pr.dom || {}).sort((a, c) => a - c).map(i => `- ${pr.dom[i].d} → ${pr.dom[i].r}`);
+  const gl = Object.values(pr.glos || {}).map(v => `- ${v.p}: ${v.d || "…"}${v.t ? " (" + v.t + ")" : ""}`);
+  const fr = frasiMappa(mappaDi(b.id)).map(x => "- " + x.join(" "));
+  return b.titolo + "\n\n" + b.par.map((_, i) => `${i + 1}. ${pr.sint[i] || "(paragrafo " + (i + 1) + ")"}\n   Parole chiave: ${paroleSel(i).join(", ") || "—"}`).join("\n") +
+    (dom.length ? "\n\nLe mie domande\n" + dom.join("\n") : "") + (gl.length ? "\n\nParole difficili\n" + gl.join("\n") : "") + (fr.length ? "\n\nLa mia mappa\n" + fr.join("\n") : "") + "\n";
+}
+function disegnaFine() {
+  const b = B(), pr = P();
+  let tot = 0, ok = 0; if (b.chiavi) b.par.forEach((_, i) => { const p = (pr.punti || {})[i]; if (p) { ok += p[0]; tot += p[1]; } });
+  $("f-esito").className = "feedback " + (!tot || ok * 2 >= tot ? "ok" : "");
+  $("f-esito").textContent = b.chiavi && tot ? `Hai trovato ${ok} parole chiave su ${tot} del docente.` + (ok * 2 < tot ? " Le parole tratteggiate sono quelle da guardare con più attenzione la prossima volta." : "") : "Hai finito tutto il testo!";
+  $("schema").innerHTML = `<h3 style="margin:0;font:400 30px var(--font-hand)">${esc(b.titolo)}</h3>` + b.par.map((_, i) => {
+    const mie = paroleSel(i), forme = new Set(mie.map(w => w.toLowerCase()));
+    const mancano = b.chiavi ? (b.chiavi[i] || []).filter(f => !forme.has(f)) : [];
+    return `<div class="blocco"><h4>${i + 1}. ${esc(pr.sint[i] || "Paragrafo " + (i + 1))}</h4>${mie.map(w => `<span class="chip">${esc(w)}</span>`).join("") || '<span class="nota">nessuna parola</span>'}${mancano.length ? ` <span class="nota">· del docente:</span> ${mancano.map(w => `<span class="chip manca">${esc(w)}</span>`).join("")}` : ""}</div>`;
+  }).join("");
+  $("f-msg").textContent = ""; $("f-out").hidden = true;
+  /* percorso */
+  const tappe = statoPercorso(b.id), az = { domande: "Scrivi le domande", mappa: mappaDi(b.id) ? "Apri la mappa" : "Fai la mappa", ripassa: "Ripassa" };
+  $("percorso").hidden = tappe.length < 2;
+  $("percorso").innerHTML = tappe.map((t, i) => `<div class="tappa ${t.st === "fatto" ? "fatto" : t.st === "corso" ? "corso" : ""}"><span class="n">${i + 1}${t.st === "fatto" ? " ✔" : ""}</span><b>${t.t}</b><span class="st">${esc(t.s)}</span>${az[t.k] ? `<button class="btn${t.k === "ripassa" ? " primary" : ""}" data-t="${t.k}">${az[t.k]}</button>` : ""}</div>`).join("");
+  $("percorso").querySelectorAll("[data-t]").forEach(x => x.addEventListener("click", () => vaiTappa(x.dataset.t)));
+  $("f-domande").hidden = $("f-domande").previousElementSibling.hidden = livello(b) === 1;
+  /* domande modificabili */
+  $("f-domande").innerHTML = b.par.map((_, i) => { const d = pr.dom[i] || {}; return `<div class="dom"><span class="nota">${i + 1}. ${esc(pr.sint[i] || "Paragrafo " + (i + 1))}</span><input data-dd="${i}" value="${esc(d.d || "")}" maxlength="140" placeholder="Domanda" aria-label="Domanda sul paragrafo ${i + 1}"><input data-dr="${i}" value="${esc(d.r || "")}" maxlength="200" placeholder="Risposta" aria-label="Risposta"></div>`; }).join("");
+  $("f-domande").querySelectorAll("input").forEach(inp => inp.addEventListener("change", () => {
+    const i = inp.dataset.dd || inp.dataset.dr, d = $("f-domande").querySelector(`[data-dd="${i}"]`).value, r = $("f-domande").querySelector(`[data-dr="${i}"]`).value;
+    const e = salvaDomanda(+i, d, r); $("f-msg").className = "feedback " + (e ? "ko" : ""); $("f-msg").textContent = e;
+  }));
+  const voci = Object.entries(pr.glos);
+  $("f-glos-wrap").hidden = !voci.length; if (voci.length) campiGlos($("f-glos"), voci);
+  const fr = frasiMappa(mappaDi(b.id));
+  $("f-mappa-wrap").hidden = !fr.length; $("f-mappa-frasi").innerHTML = fr.map(([a, v, c]) => `<li>${esc(a)} <i style="color:#5d3a91">${esc(v)}</i> ${esc(c)}</li>`).join("");
+  S.schemi = S.schemi || {};
+  S.schemi[b.id] = { id: b.id, titolo: b.titolo, par: b.par.map((_, i) => ({ sint: pr.sint[i] || "", parole: paroleSel(i) })) };
+  salva();
+}
+$("f-copia").addEventListener("click", async () => {
+  try { await navigator.clipboard.writeText(testoSchema()); $("f-msg").className = "feedback ok"; $("f-msg").textContent = "✔ Copiato: incollalo nel quaderno digitale o in una mappa."; }
+  catch (e) { $("f-out").hidden = false; $("f-out").value = testoSchema(); $("f-out").select(); $("f-msg").className = "feedback"; $("f-msg").textContent = "Copia il testo qui sotto."; }
+});
+$("f-salva").addEventListener("click", async () => {
+  const nome = "schema-" + (B().titolo.replace(/[^a-z0-9àèéìòù ]/gi, "").trim().replace(/\s+/g, "-") || "testo") + ".txt";
+  let r = null;
+  try { if (window.parent !== window && typeof window.parent.ptlSalva === "function") r = await window.parent.ptlSalva(nome, testoSchema()); } catch (e) { r = e && e.code === "declined" ? "declined" : null; }
+  if (r === "saved") { $("f-msg").className = "feedback ok"; $("f-msg").textContent = "✔ File salvato."; return; }
+  if (r === "declined") { $("f-msg").className = "feedback"; $("f-msg").textContent = "Salvataggio annullato."; return; }
+  try { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([testoSchema()], { type: "text/plain" })); a.download = nome; a.click(); $("f-msg").className = "feedback ok"; $("f-msg").textContent = "✔ File scaricato."; }
+  catch (e) { $("f-copia").click(); }
+});
+$("f-stampa").addEventListener("click", () => window.print());
+function vaiTappa(k) {
+  const id = S.corrente;
+  if (k === "domande") { const vuoto = [...$("f-domande").querySelectorAll("[data-dd]")].find(x => !x.value) || $("f-domande").querySelector("input"); if (vuoto) { vuoto.scrollIntoView({ block: "center" }); vuoto.focus(); } return; }
+  if (k === "mappa") { location.href = "mappa-concettuale.html#da-" + encodeURIComponent(id); return; }
+  if (k === "ripassa") {
+    const m = creaMazzoTesto(id);
+    if (!m || !m.carte.length) { $("f-msg").className = "feedback ko"; $("f-msg").textContent = "Per ripassare servono carte: scrivi almeno una domanda con la risposta, la definizione di una parola difficile o fai la mappa."; return; }
+    location.href = "ripasso-furbo.html#studia-" + encodeURIComponent(m.id);
+  }
+}
+
+$("f-rifai").addEventListener("click", () => { const v = S.prog[S.corrente] || {}; S.prog[S.corrente] = { p: 0, fase: "leggi", sel: {}, sint: {}, dom: v.dom || {}, glos: v.glos || {}, fine: false }; salva(); mostra(); });
+
+/* ---------- Testo dello studente e codici ---------- */
+$("mio-ok").addEventListener("click", () => {
+  const par = dividi($("mio-testo").value);
+  if (!par.length || $("mio-testo").value.trim().split(/\s+/).length < 15) { $("mio-msg").className = "feedback ko"; $("mio-msg").textContent = "Incolla un testo un po' più lungo."; return; }
+  const b = { id: "t" + Date.now(), titolo: $("mio-titolo").value.trim() || "Il mio testo", materia: "", max: 5, par, chiavi: null };
+  S.brani.push(b); $("mio-testo").value = ""; $("mio-titolo").value = ""; $("mio-msg").textContent = ""; apri(b.id);
+});
+const codifica = b => "PTLPC1:" + btoa(unescape(encodeURIComponent(JSON.stringify({ t: b.titolo, m: b.materia, x: b.max, l: b.liv || 0, p: b.par, k: b.chiavi }))));
+$("imp-ok").addEventListener("click", () => {
+  try {
+    const c = $("imp-codice").value.trim().replace(/\s+/g, "");
+    if (!c.startsWith("PTLPC1:")) throw 0;
+    const o = JSON.parse(decodeURIComponent(escape(atob(c.slice(7)))));
+    if (!Array.isArray(o.p) || !o.p.length) throw 0;
+    const b = { id: "t" + Date.now(), titolo: String(o.t || "Testo"), materia: String(o.m || ""), max: Math.min(8, Math.max(3, +o.x || 5)), par: o.p.map(String), liv: [1, 2, 3].includes(+o.l) ? +o.l : 0, chiavi: Array.isArray(o.k) ? o.k.map(a => (a || []).map(s => String(s).toLowerCase())) : null };
+    S.brani.push(b); salva(); $("imp-codice").value = ""; $("imp-msg").className = "feedback ok"; $("imp-msg").textContent = "✔ Testo aggiunto."; disegnaLista();
+  } catch (e) { $("imp-msg").className = "feedback ko"; $("imp-msg").textContent = "Codice non valido: controlla di averlo copiato tutto."; }
+});
+
+/* ---------- Testo da PDF o da foto ---------- */
+const TPL_IMPORTA = `
+  <div class="row">
+    <button type="button" class="btn" data-a="pdf">📄 Carica un PDF</button>
+    <button type="button" class="btn" data-a="foto">📷 Da una foto</button>
+    <button type="button" class="btn" data-a="ipad" aria-expanded="false">🍎 Con l'iPad: Testo attivo</button>
+    <input type="file" accept="application/pdf,.pdf" hidden data-f="pdf">
+    <input type="file" accept="image/*" multiple hidden data-f="foto">
+  </div>
+  <div class="pagine-pdf" hidden><span data-n></span><label>dalla pagina <input type="number" min="1" data-da></label><label>alla <input type="number" min="1" data-a2></label><button type="button" class="btn primary" data-a="leggi-pdf">Prendi il testo</button></div>
+  <div class="stato-imp" hidden><span data-st></span><progress max="1" value="0"></progress></div>
+  <p class="feedback" data-msg style="font-size:19px"></p>
+  <div class="card ipad" hidden style="padding:10px 14px">
+    <b>Il metodo più preciso, se hai un iPad (iPadOS 15 o successivo):</b>
+    <ol>
+      <li>Apri la <b>Fotocamera</b> e inquadra la slide o la pagina (oppure apri una foto già fatta in <b>Foto</b>).</li>
+      <li>Tocca il simbolo del testo <b>[≡]</b> che compare in basso a destra.</li>
+      <li>Tieni il dito su una parola e trascina per selezionare, oppure tocca <b>Seleziona tutto</b>.</li>
+      <li>Tocca <b>Copia</b>, torna qui, tieni premuto nel riquadro del testo e scegli <b>Incolla</b>.</li>
+    </ol>
+    <p class="nota" style="margin:6px 0 0">Su Android si fa lo stesso con <b>Google Lens</b> → «Testo» → «Copia».</p>
+  </div>`;
+let pdfjs = null, ocrWorker = null;
+async function caricaPdfjs() { if (!pdfjs) { pdfjs = await import("./lib/pdf.min.js"); pdfjs.GlobalWorkerOptions.workerSrc = new URL("lib/pdf.worker.min.js", location.href).href; } return pdfjs; }
+function caricaScript(src) { return new Promise((ok, ko) => { const s = document.createElement("script"); s.src = src; s.onload = ok; s.onerror = ko; document.head.appendChild(s); }); }
+async function ocr(canvases, avanza) {
+  if (!window.Tesseract) {
+    avanza("Scarico il lettore di testo (solo la prima volta, ~10 MB)…", 0);
+    try { await caricaScript("https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"); } catch (e) { throw new Error("rete"); }
+  }
+  let i = 0;
+  if (!ocrWorker) ocrWorker = await Tesseract.createWorker("ita", 1, { logger: m => { if (m.status === "recognizing text") avanza(`Leggo l'immagine ${i + 1} di ${canvases.length}…`, (i + m.progress) / canvases.length); else avanza("Preparo il lettore di testo…", 0); } });
+  const testi = []; let conf = 0;
+  for (i = 0; i < canvases.length; i++) { const r = await ocrWorker.recognize(canvases[i]); testi.push(r.data.text); conf += r.data.confidence; }
+  return { testo: testi.join("\n\n"), conf: conf / canvases.length };
+}
+async function canvasDaImmagine(file) {
+  const img = await createImageBitmap(file);
+  const k = Math.min(1, 2200 / Math.max(img.width, img.height));
+  const c = document.createElement("canvas"); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+  const ctx = c.getContext("2d"); ctx.filter = "grayscale(1) contrast(1.25)"; ctx.drawImage(img, 0, 0, c.width, c.height);
+  return c;
+}
+/* Mette ordine nel testo letto: elenchi puntati → frasi, titoli brevi uniti al blocco dopo, righe di rumore tolte */
+function riordina(raw) {
+  const blocchi = raw.replace(/\r/g, "").replace(/[-]/g, "•").split(/\n\s*\n/).map(b => {
+    const righe = b.split("\n").map(r => r.trim()).filter(r => /\p{L}{2,}/u.test(r));
+    const voci = [];
+    righe.forEach(r => {
+      const m = r.match(/^([•\-–▪●◦·*>]|\d{1,2}[.)])\s+(.*)$/u);
+      if (m) voci.push({ t: m[2], p: true });
+      else if (voci.length && voci[voci.length - 1].p) voci[voci.length - 1].t += " " + r;
+      else voci.push({ t: r, p: false });
+    });
+    return voci.map(v => v.p && !/[.!?;:]$/.test(v.t) ? v.t + "." : v.t).join("\n");
+  }).filter(Boolean);
+  const out = [];
+  for (let i = 0; i < blocchi.length; i++) {
+    const b = blocchi[i];
+    if (b.split(/\s+/).length <= 6 && !/[.!?:]$/.test(b) && i < blocchi.length - 1) { blocchi[i + 1] = b + ". " + blocchi[i + 1]; continue; }
+    out.push(b);
+  }
+  return out.join("\n\n");
+}
+function pdfPagina(tc) {
+  const items = tc.items.filter(it => it.str && it.str.trim()).map(it => ({ s: it.str, x: it.transform[4], y: it.transform[5], h: Math.hypot(it.transform[2], it.transform[3]) || 10, w: it.width }));
+  items.sort((a, b) => b.y - a.y || a.x - b.x);
+  const righe = [];
+  for (const it of items) { const r = righe.find(r => Math.abs(r.y - it.y) < Math.max(2, it.h * .45)); if (r) r.it.push(it); else righe.push({ y: it.y, h: it.h, it: [it] }); }
+  righe.sort((a, b) => b.y - a.y);
+  const linee = righe.map(r => { r.it.sort((a, b) => a.x - b.x); let t = "", fine = null; r.it.forEach(i => { if (fine !== null && i.x - fine > i.h * .2 && !t.endsWith(" ")) t += " "; t += i.s; fine = i.x + i.w; }); return { y: r.y, h: r.h, t: t.replace(/\s+/g, " ").trim() }; });
+  const passi = []; for (let i = 1; i < linee.length; i++) passi.push(linee[i - 1].y - linee[i].y);
+  const ord = passi.filter(d => d > 0).sort((a, b) => a - b), passo = ord[Math.floor(ord.length / 4)] || 14;
+  let testo = "";
+  linee.forEach((l, i) => { if (i) testo += (linee[i - 1].y - l.y > passo * 1.45 || Math.abs(l.h - linee[i - 1].h) > 2) ? "\n\n" : "\n"; testo += l.t; });
+  return testo;
+}
+document.querySelectorAll(".importa").forEach(box => {
+  box.innerHTML = TPL_IMPORTA;
+  const q = s => box.querySelector(s), ta = $(box.dataset.per);
+  const msg = (t, c) => { q("[data-msg]").className = "feedback " + (c || ""); q("[data-msg]").textContent = t; };
+  const avanza = (t, v) => { q(".stato-imp").hidden = false; q("[data-st]").textContent = t; q("progress").value = v; };
+  const fatto = (testo, extra) => {
+    q(".stato-imp").hidden = true;
+    const t = riordina(testo);
+    if (!t.trim()) { msg("Non ho trovato testo leggibile. Prova una foto più nitida e dritta, oppure Testo attivo.", "ko"); return; }
+    ta.value = (ta.value.trim() ? ta.value.trim() + "\n\n" : "") + t;
+    ta.classList.add("appena"); setTimeout(() => ta.classList.remove("appena"), 2500); ta.scrollIntoView({ block: "center" });
+    msg("✔ Testo caricato. Rileggilo e correggi le parole sbagliate prima di iniziare: le righe vuote separano i paragrafi." + (extra || ""), "ok");
+  };
+  const erroreOcr = e => { q(".stato-imp").hidden = true; msg(e && e.message === "rete" ? "Il lettore delle foto non si è caricato: serve la connessione a internet. In alternativa usa «Testo attivo» dell'iPad." : "Non sono riuscito a leggere l'immagine. Prova con «Testo attivo» dell'iPad.", "ko"); };
+  let pdfDoc = null;
+  q('[data-a="pdf"]').addEventListener("click", () => q('[data-f="pdf"]').click());
+  q('[data-a="foto"]').addEventListener("click", () => q('[data-f="foto"]').click());
+  q('[data-a="ipad"]').addEventListener("click", e => { const d = q(".ipad"); d.hidden = !d.hidden; e.currentTarget.setAttribute("aria-expanded", !d.hidden); });
+  q('[data-f="pdf"]').addEventListener("change", async e => {
+    const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+    msg(""); avanza("Apro il PDF…", 0);
+    try {
+      const lib = await caricaPdfjs();
+      pdfDoc = await lib.getDocument({ data: await f.arrayBuffer(), isEvalSupported: false }).promise;
+      q(".stato-imp").hidden = true;
+      const n = pdfDoc.numPages; q("[data-n]").textContent = `Il PDF ha ${n} ${n === 1 ? "pagina" : "pagine"}.`;
+      q("[data-da]").max = q("[data-a2]").max = n; q("[data-da]").value = 1; q("[data-a2]").value = Math.min(n, 5);
+      q(".pagine-pdf").hidden = n === 1; if (n === 1) q('[data-a="leggi-pdf"]').click();
+    } catch (err) { q(".stato-imp").hidden = true; msg("Non riesco ad aprire questo PDF (forse è protetto o danneggiato).", "ko"); }
+  });
+  q('[data-a="leggi-pdf"]').addEventListener("click", async () => {
+    if (!pdfDoc) return;
+    const n = pdfDoc.numPages, da = Math.max(1, Math.min(n, +q("[data-da]").value || 1)), a = Math.max(da, Math.min(n, +q("[data-a2]").value || da));
+    if (a - da > 14) { msg("Al massimo 15 pagine alla volta: un testo più lungo è difficile da studiare in una volta sola.", "ko"); return; }
+    q(".pagine-pdf").hidden = true;
+    const pagine = [];
+    for (let p = da; p <= a; p++) { avanza(`Leggo la pagina ${p}…`, (p - da) / (a - da + 1)); pagine.push(pdfPagina(await (await pdfDoc.getPage(p)).getTextContent())); }
+    const testo = pagine.join("\n\n");
+    if (testo.replace(/\s/g, "").length >= (a - da + 1) * 20) { fatto(testo); return; }
+    /* PDF scansionato: le pagine sono immagini, le leggo come foto */
+    try {
+      const canv = [];
+      for (let p = da; p <= a; p++) { avanza(`La pagina ${p} è un'immagine: la preparo per la lettura…`, 0); const pg = await pdfDoc.getPage(p), vp = pg.getViewport({ scale: 2 }); const c = document.createElement("canvas"); c.width = Math.round(vp.width); c.height = Math.round(vp.height); const x = c.getContext("2d"); x.fillStyle = "#fff"; x.fillRect(0, 0, c.width, c.height); await pg.render({ canvasContext: x, viewport: vp }).promise; canv.push(c); }
+      const r = await ocr(canv, avanza); fatto(r.testo, r.conf < 70 ? " Attenzione: la scansione non è molto nitida, controlla bene." : "");
+    } catch (e) { erroreOcr(e); }
+  });
+  q('[data-f="foto"]').addEventListener("change", async e => {
+    const files = [...e.target.files].slice(0, 10); e.target.value = ""; if (!files.length) return;
+    msg("");
+    try {
+      const canv = []; for (const f of files) { avanza("Preparo la foto…", 0); canv.push(await canvasDaImmagine(f)); }
+      const r = await ocr(canv, avanza);
+      fatto(r.testo, r.conf < 70 ? " Attenzione: la foto non è molto nitida, controlla bene ogni parola." : "");
+    } catch (err) { erroreOcr(err); }
+  });
+});
+
+/* ---------- Prepara (docente) ---------- */
+let bozza = null;
+function modifica(id) {
+  const b = brano(id); if (!b) return;
+  bozza = JSON.parse(JSON.stringify(b));
+  $("p-titolo").value = b.titolo; $("p-materia").value = b.materia || ""; $("p-max").value = String(b.max || 5); $("p-liv").value = String(b.liv || 0); $("p-testo").value = b.par.join("\n\n");
+  vai("prepara"); disegnaSegna();
+}
+$("p-dividi").addEventListener("click", () => {
+  const par = dividi($("p-testo").value);
+  if (!par.length) { $("p-msg").textContent = ""; return; }
+  const vecchie = bozza ? bozza.chiavi : null;
+  bozza = { id: bozza ? bozza.id : "t" + Date.now(), titolo: $("p-titolo").value.trim() || "Testo", materia: $("p-materia").value.trim(), max: +$("p-max").value, par,
+    chiavi: par.map((p, i) => { const f = new Set(tokens(p).map(x => x.f)); return vecchie && vecchie[i] ? vecchie[i].filter(w => f.has(w)) : []; }) };
+  disegnaSegna();
+});
+function disegnaSegna() {
+  $("p-segna").hidden = false; $("p-codice").hidden = true; $("p-msg").textContent = "";
+  $("p-par").innerHTML = bozza.par.map((p, i) => {
+    const ch = new Set(bozza.chiavi[i]);
+    return `<div class="par-prof"><div class="testa"><span>Paragrafo ${i + 1}</span><span id="pc-${i}">${ch.size} / ${bozza.max}</span></div><div class="foglio prof clic" style="font-size:19px">${tokens(p).map(x => x.w ? `<button type="button" class="w${ch.has(x.f) ? " ok" : ""}${isColla(x.f) ? " colla" : ""}" data-p="${i}" data-f="${esc(x.f)}">${esc(x.t)}</button>` : esc(x.t)).join("")}</div></div>`;
+  }).join("");
+  $("p-par").querySelectorAll("[data-f]").forEach(el => el.addEventListener("click", () => {
+    const i = +el.dataset.p, f = el.dataset.f, a = bozza.chiavi[i], j = a.indexOf(f);
+    if (j >= 0) a.splice(j, 1); else a.push(f);
+    $("p-par").querySelectorAll(`[data-p="${i}"]`).forEach(x => x.classList.toggle("ok", a.includes(x.dataset.f)));
+    const c = $("pc-" + i); c.textContent = `${a.length} / ${bozza.max}`; c.style.color = a.length > bozza.max ? "var(--ko)" : "";
+  }));
+}
+$("p-salva").addEventListener("click", () => {
+  if (!bozza) return;
+  bozza.titolo = $("p-titolo").value.trim() || bozza.titolo; bozza.materia = $("p-materia").value.trim(); bozza.max = +$("p-max").value; bozza.liv = +$("p-liv").value || 0;
+  const vuoti = bozza.chiavi.filter(a => !a.length).length, troppi = bozza.chiavi.filter(a => a.length > bozza.max).length;
+  if (troppi) { $("p-msg").className = "feedback ko"; $("p-msg").textContent = `In ${troppi} paragrafo/i hai segnato più di ${bozza.max} parole: gli studenti non potranno trovarle tutte.`; return; }
+  const i = S.brani.findIndex(b => b.id === bozza.id);
+  const b = JSON.parse(JSON.stringify(bozza)); if (i >= 0) S.brani[i] = b; else S.brani.push(b);
+  delete S.prog[b.id]; salva();
+  $("p-codice").hidden = false; $("p-codice").value = codifica(b); $("p-codice").select();
+  $("p-msg").className = "feedback ok"; $("p-msg").textContent = "✔ Salvato. Il codice qui sotto si incolla sui tablet in «Ho un codice dal docente»." + (vuoti ? ` (Attenzione: ${vuoti} paragrafo/i senza parole chiave.)` : "");
+  try { navigator.clipboard.writeText(codifica(b)); } catch (e) {}
+});
+
+const hh = decodeURIComponent(location.hash.slice(1));
+if (hh.startsWith("scheda-") && brano(hh.slice(7))) { history.replaceState(null, "", location.pathname); apri(hh.slice(7)); }
+else if (S.corrente && brano(S.corrente) && S.prog[S.corrente]) vai("lavora"); else vai("brani");
+</script>
+<script src="a11y.js"></script>
+</body>
+</html>

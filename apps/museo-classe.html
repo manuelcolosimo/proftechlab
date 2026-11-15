@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Il museo della classe</title>
+<link rel="stylesheet" href="ptl.css">
+<style>
+:root { --accent: #7c2d12; }
+.parete { background: linear-gradient(#efe6d6, #e6d9c2); border: 3px solid var(--ink); border-radius: 14px; padding: 26px 18px 34px; display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 30px 22px; box-shadow: inset 0 -26px 0 #b08d62; }
+.quadro { display: grid; gap: 8px; justify-items: center; cursor: pointer; background: none; border: 0; font: inherit; color: inherit; }
+.cornice { background: #fff; padding: 12px; border: 10px solid #6b4423; box-shadow: 0 8px 14px rgba(0,0,0,.25), inset 0 0 0 2px #c9a227; width: 100%; aspect-ratio: 4/3; display: grid; place-items: center; overflow: hidden; }
+.cornice img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.targa { background: #fffdf6; border: 1.5px solid #8a7a60; border-radius: 3px; padding: 3px 10px; font: 400 18px var(--font-hand); text-align: center; max-width: 100%; }
+.targa small { display: block; font: 13px var(--font-body); color: var(--muted); }
+.form { display: grid; gap: 10px; }
+.campo { display: grid; gap: 4px; font-weight: 700; }
+.campo input, .campo textarea, .campo select { font: 400 19px var(--font-hand); border: 2px solid var(--ink); border-radius: 8px; padding: 4px 8px; background: #fff; }
+.campo textarea { min-height: 80px; font: 400 17px var(--font-body); }
+.due { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.anteprima { max-width: 100%; max-height: 260px; border: 2px solid var(--ink); border-radius: 8px; }
+.audio-box { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: #fff7ed; border: 2px solid #fdba74; border-radius: 10px; padding: 8px 10px; }
+.rec { background: #dc2626 !important; color: #fff !important; }
+.elenco { display: grid; gap: 8px; }
+.voce { display: grid; grid-template-columns: 70px 1fr auto; gap: 10px; align-items: center; background: #fff; border: 2px solid var(--ink); border-radius: 10px; padding: 6px; }
+.voce img { width: 70px; height: 52px; object-fit: cover; border-radius: 6px; }
+.voce .row button { font-size: 15px; border: 1.5px solid var(--ink); border-radius: 8px; background: #fff; padding: 2px 8px; cursor: pointer; }
+#visita { position: fixed; inset: 0; z-index: 40; background: #1b1410; color: #f4ecdf; display: grid; grid-template-rows: 1fr auto; }
+#visita .opera { display: grid; place-items: center; padding: 20px; min-height: 0; }
+#visita .opera img { max-width: 100%; max-height: 72vh; border: 14px solid #6b4423; box-shadow: 0 0 0 3px #c9a227, 0 20px 50px rgba(0,0,0,.6); background: #fff; }
+#visita .info { background: #2a201a; padding: 14px 20px 18px; display: grid; gap: 8px; }
+#visita h2 { margin: 0; font: 700 38px var(--font-chalk); }
+#visita .nav { display: flex; gap: 8px; flex-wrap: wrap; }
+#visita .nav button { font: 400 21px var(--font-hand); border: 2px solid #f4ecdf; border-radius: 10px; background: transparent; color: #f4ecdf; padding: 4px 14px; cursor: pointer; }
+.privacy { background: #fff7ed; border: 2px solid #fdba74; border-radius: 12px; padding: 8px 12px; font-size: 16px; margin: 0; }
+</style>
+</head>
+<body>
+<header class="app-bar"><h1>Il museo della classe</h1><span class="sub">Esponi le opere e registra l'audioguida</span></header>
+<div class="container">
+  <div class="tabs" role="tablist"><button class="tab" id="t-museo" aria-selected="true">🏛️ Visita il museo</button><button class="tab" id="t-allestisci" aria-selected="false">🛠️ Allestisci</button></div>
+  <section id="s-museo" style="display:grid;gap:12px">
+    <div class="row"><input id="nome-museo" style="font:700 30px var(--font-chalk);border:0;background:transparent;flex:1;min-width:200px" aria-label="Nome del museo"><button class="btn primary" id="b-guidata">▶ Visita guidata</button></div>
+    <div class="parete" id="parete"></div>
+  </section>
+  <section id="s-allestisci" hidden style="display:grid;gap:14px">
+    <p class="privacy">🔒 Fotografa solo le <b>opere</b>, mai i volti. Come autore scrivi il nome o le iniziali, senza cognome. Il museo resta su questo dispositivo: per spostarlo (per esempio sul computer della LIM) usa «Esporta» e «Importa».</p>
+    <div class="card form">
+      <p class="consegna" id="f-tit">Aggiungi un'opera</p>
+      <div class="row"><button class="btn" id="b-foto">📷 Foto dell'opera</button><span class="nota">Scatta o scegli una foto ben dritta, con buona luce.</span></div>
+      <img id="f-img" class="anteprima" hidden alt="Anteprima dell'opera">
+      <div class="due"><label class="campo">Titolo<input id="f-titolo" maxlength="60"></label><label class="campo">Autore (nome o iniziali)<input id="f-autore" maxlength="30"></label></div>
+      <div class="due"><label class="campo">Tecnica<input id="f-tecnica" maxlength="40" placeholder="es. tempera su cartoncino" list="tecniche"></label><label class="campo">Classe e anno<input id="f-classe" maxlength="30" placeholder="es. 2ª B · 2026"></label></div>
+      <datalist id="tecniche"><option>matita su carta</option><option>pastelli su carta</option><option>tempera su cartoncino</option><option>acquerello</option><option>collage</option><option>pennarelli</option><option>scultura in creta</option><option>tecnica mista</option><option>disegno digitale</option></datalist>
+      <label class="campo">Didascalia: che cosa rappresenta, come l'ho fatta, che cosa volevo comunicare<textarea id="f-did" maxlength="600"></textarea></label>
+      <div class="audio-box"><b>🎙️ Audioguida</b><button class="btn" id="b-rec">⏺ Registra</button><audio id="f-audio" controls hidden></audio><button class="btn" id="b-audio-del" hidden>🗑</button><span class="nota" id="rec-stato">Massimo 60 secondi. Presenta la tua opera come una guida del museo.</span></div>
+      <div class="row"><button class="btn primary" id="b-salva">💾 Metti nel museo</button><button class="btn" id="b-annulla" hidden>Annulla modifica</button></div>
+      <p class="feedback" id="f-fb"></p>
+    </div>
+    <div class="card" style="display:grid;gap:8px"><p class="consegna">Le opere esposte</p><div class="elenco" id="elenco"></div>
+      <div class="row"><button class="btn" id="b-esporta">📦 Esporta il museo</button><button class="btn" id="b-importa">📥 Importa</button><span class="nota" id="io-stato"></span></div></div>
+  </section>
+</div>
+<div id="visita" hidden role="dialog" aria-label="Visita del museo"><div class="opera"><img id="v-img" alt=""></div><div class="info"><h2 id="v-tit"></h2><div id="v-sotto" class="nota" style="color:#d9cbb4"></div><div id="v-did"></div><div class="nav"><button id="v-prec">◀</button><button id="v-audio">🔊 Audioguida</button><button id="v-succ">▶</button><button id="v-chiudi" style="margin-left:auto">✕ Esci</button></div></div></div>
+<input type="file" id="file" accept="image/*" hidden><input type="file" id="file-imp" accept=".json,application/json" hidden>
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s || "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+/* ---- Archivio sul dispositivo (IndexedDB) ---- */
+let dbp = null;
+function db() { if (!dbp) dbp = new Promise((res, rej) => { const r = indexedDB.open("museoClasse", 1); r.onupgradeneeded = () => r.result.createObjectStore("opere", { keyPath: "id" }); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); return dbp; }
+async function op(mode, f) { const d = await db(); return new Promise((res, rej) => { const t = d.transaction("opere", mode), s = t.objectStore("opere"), r = f(s); t.oncomplete = () => res(r && r.result); t.onerror = () => rej(t.error); }); }
+const tutte = async () => ((await op("readonly", s => s.getAll())) || []).sort((a, b) => a.ordine - b.ordine || a.id - b.id);
+$("nome-museo").value = localStorage.getItem("museo-nome") || "Il museo della classe";
+$("nome-museo").addEventListener("input", () => { try { localStorage.setItem("museo-nome", $("nome-museo").value); } catch (e) {} });
+/* ---- Parete ---- */
+let opere = [];
+async function aggiorna() {
+  opere = await tutte();
+  $("parete").innerHTML = opere.length ? opere.map((o, i) => `<button class="quadro" data-i="${i}"><div class="cornice"><img src="${o.img}" alt="${esc(o.titolo)}"></div><div class="targa">${esc(o.titolo || "Senza titolo")}${o.audio ? " 🔊" : ""}<small>${esc([o.autore, o.tecnica].filter(Boolean).join(" · "))}</small></div></button>`).join("")
+    : `<p class="consegna" style="grid-column:1/-1;text-align:center">Il museo è ancora vuoto: vai su «Allestisci» e aggiungi la prima opera!</p>`;
+  $("parete").querySelectorAll(".quadro").forEach(b => b.onclick = () => apriVisita(+b.dataset.i, false));
+  $("elenco").innerHTML = opere.length ? opere.map((o, i) => `<div class="voce"><img src="${o.img}" alt=""><div><b>${esc(o.titolo || "Senza titolo")}</b><br><span class="nota">${esc(o.autore)}${o.audio ? " · 🔊 audioguida" : ""}</span></div><div class="row"><button data-su="${i}" aria-label="Sposta su">⬆</button><button data-mod="${i}">✏️</button><button data-del="${i}">🗑</button></div></div>`).join("") : '<span class="nota">Nessuna opera.</span>';
+  $("elenco").querySelectorAll("[data-mod]").forEach(b => b.onclick = () => modifica(opere[+b.dataset.mod]));
+  $("elenco").querySelectorAll("[data-del]").forEach(b => b.onclick = async () => { if (b.dataset.conf !== "1") { b.dataset.conf = "1"; b.textContent = "Sicuro?"; return; } await op("readwrite", s => s.delete(opere[+b.dataset.del].id)); aggiorna(); });
+  $("elenco").querySelectorAll("[data-su]").forEach(b => b.onclick = async () => { const i = +b.dataset.su; if (!i) return; const a = opere[i], c = opere[i - 1]; [a.ordine, c.ordine] = [i - 1, i]; opere.forEach((o, k) => { if (o !== a && o !== c) o.ordine = k; }); await op("readwrite", s => opere.forEach(o => s.put(o))); aggiorna(); });
+}
+/* ---- Modulo ---- */
+let bozza = null, rec = null, pezzi = [];
+function nuovaBozza() { bozza = { id: Date.now(), img: null, audio: null, ordine: opere.length }; ["f-titolo", "f-autore", "f-tecnica", "f-classe", "f-did"].forEach(id => $(id).value = ""); $("f-img").hidden = true; $("f-audio").hidden = true; $("b-audio-del").hidden = true; $("f-tit").textContent = "Aggiungi un'opera"; $("b-annulla").hidden = true; }
+function modifica(o) { bozza = Object.assign({}, o); $("f-titolo").value = o.titolo || ""; $("f-autore").value = o.autore || ""; $("f-tecnica").value = o.tecnica || ""; $("f-classe").value = o.classe || ""; $("f-did").value = o.did || ""; $("f-img").src = o.img; $("f-img").hidden = false; mostraAudio(); $("f-tit").textContent = "Modifica l'opera"; $("b-annulla").hidden = false; window.scrollTo({ top: 0, behavior: "smooth" }); }
+function mostraAudio() { const a = $("f-audio"); if (bozza.audio) { a.src = URL.createObjectURL(bozza.audio); a.hidden = false; $("b-audio-del").hidden = false; } else { a.hidden = true; $("b-audio-del").hidden = true; } }
+$("b-foto").onclick = () => $("file").click();
+$("file").addEventListener("change", async e => { const f = e.target.files[0]; e.target.value = ""; if (!f) return; bozza.img = await riduci(f, 1400); $("f-img").src = bozza.img; $("f-img").hidden = false; });
+function riduci(file, max) { return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => { const im = new Image(); im.onload = () => { const k = Math.min(1, max / Math.max(im.width, im.height)), c = document.createElement("canvas"); c.width = im.width * k; c.height = im.height * k; c.getContext("2d").drawImage(im, 0, 0, c.width, c.height); res(c.toDataURL("image/jpeg", .85)); }; im.onerror = rej; im.src = r.result; }; r.readAsDataURL(file); }); }
+$("b-rec").onclick = async () => {
+  if (rec && rec.state === "recording") { rec.stop(); return; }
+  if (!navigator.mediaDevices || !window.MediaRecorder) { $("rec-stato").textContent = "La registrazione non è disponibile su questo dispositivo."; return; }
+  try {
+    const st = await navigator.mediaDevices.getUserMedia({ audio: true }); pezzi = []; rec = new MediaRecorder(st);
+    rec.ondataavailable = e => e.data.size && pezzi.push(e.data);
+    rec.onstop = () => { st.getTracks().forEach(t => t.stop()); bozza.audio = new Blob(pezzi, { type: rec.mimeType || "audio/webm" }); $("b-rec").textContent = "⏺ Registra di nuovo"; $("b-rec").classList.remove("rec"); $("rec-stato").textContent = "Ascolta la registrazione: se non ti piace, registra di nuovo."; mostraAudio(); };
+    rec.start(); $("b-rec").textContent = "⏹ Ferma"; $("b-rec").classList.add("rec"); let t = 0; $("rec-stato").textContent = "Registrazione… 0 s";
+    const iv = setInterval(() => { if (!rec || rec.state !== "recording") { clearInterval(iv); return; } t++; $("rec-stato").textContent = `Registrazione… ${t} s`; if (t >= 60) rec.stop(); }, 1000);
+  } catch (e) { $("rec-stato").textContent = "Non riesco ad usare il microfono (permesso negato)."; }
+};
+$("b-audio-del").onclick = () => { bozza.audio = null; mostraAudio(); };
+$("b-annulla").onclick = nuovaBozza;
+$("b-salva").onclick = async () => {
+  if (!bozza.img) { $("f-fb").className = "feedback ko"; $("f-fb").textContent = "Manca la foto dell'opera."; return; }
+  Object.assign(bozza, { titolo: $("f-titolo").value.trim(), autore: $("f-autore").value.trim(), tecnica: $("f-tecnica").value.trim(), classe: $("f-classe").value.trim(), did: $("f-did").value.trim() });
+  try { await op("readwrite", s => s.put(bozza)); } catch (e) { $("f-fb").className = "feedback ko"; $("f-fb").textContent = "Spazio pieno: non riesco a salvare."; return; }
+  $("f-fb").className = "feedback ok"; $("f-fb").textContent = "✔ Opera esposta nel museo!"; await aggiorna(); nuovaBozza();
+};
+/* ---- Visita ---- */
+let vi = 0, guidata = false, timer = null, audioV = new Audio();
+function apriVisita(i, g) { if (!opere.length) return; vi = i; guidata = g; $("visita").hidden = false; mostraVisita(); }
+function mostraVisita() {
+  clearTimeout(timer); audioV.pause(); const o = opere[vi];
+  $("v-img").src = o.img; $("v-img").alt = o.titolo || "Opera"; $("v-tit").textContent = o.titolo || "Senza titolo";
+  $("v-sotto").textContent = [o.autore, o.tecnica, o.classe].filter(Boolean).join(" · "); $("v-did").textContent = o.did || "";
+  $("v-audio").hidden = !o.audio;
+  if (o.audio) { audioV.src = URL.createObjectURL(o.audio); if (guidata) audioV.play().catch(() => {}); }
+  if (guidata) { const prossima = () => { if (vi < opere.length - 1) { vi++; mostraVisita(); } }; if (o.audio) audioV.onended = () => timer = setTimeout(prossima, 1500); else timer = setTimeout(prossima, 9000); }
+}
+$("v-prec").onclick = () => { vi = (vi - 1 + opere.length) % opere.length; mostraVisita(); };
+$("v-succ").onclick = () => { vi = (vi + 1) % opere.length; mostraVisita(); };
+$("v-audio").onclick = () => { audioV.currentTime = 0; audioV.play().catch(() => {}); };
+$("v-chiudi").onclick = () => { clearTimeout(timer); audioV.pause(); guidata = false; $("visita").hidden = true; };
+document.addEventListener("keydown", e => { if ($("visita").hidden) return; if (e.key === "ArrowRight") $("v-succ").click(); if (e.key === "ArrowLeft") $("v-prec").click(); if (e.key === "Escape") $("v-chiudi").click(); });
+$("b-guidata").onclick = () => apriVisita(0, true);
+/* ---- Esporta / importa ---- */
+const b64 = blob => new Promise(r => { const f = new FileReader(); f.onload = () => r(f.result); f.readAsDataURL(blob); });
+$("b-esporta").onclick = async () => {
+  const dati = { museo: $("nome-museo").value, opere: await Promise.all(opere.map(async o => Object.assign({}, o, { audio: o.audio ? await b64(o.audio) : null }))) };
+  const blob = new Blob([JSON.stringify(dati)], { type: "application/json" }), nome = "museo-classe.json";
+  let r = null; try { if (window.parent !== window && typeof window.parent.ptlSalva === "function") r = await window.parent.ptlSalva(nome, blob); } catch (e) {}
+  if (r !== "saved" && r !== "declined") { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = nome; a.click(); }
+  $("io-stato").textContent = `Esportate ${opere.length} opere.`;
+};
+$("b-importa").onclick = () => $("file-imp").click();
+$("file-imp").addEventListener("change", async e => {
+  const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+  try { const d = JSON.parse(await f.text()); if (!Array.isArray(d.opere)) throw 0;
+    const nuove = await Promise.all(d.opere.map(async (o, k) => Object.assign({}, o, { id: Date.now() + k, ordine: opere.length + k, audio: o.audio ? await (await fetch(o.audio)).blob() : null })));
+    await op("readwrite", s => nuove.forEach(o => s.put(o))); $("io-stato").textContent = `✔ Importate ${nuove.length} opere.`; aggiorna();
+  } catch (err) { $("io-stato").textContent = "File non valido."; }
+});
+/* ---- Schede ---- */
+["museo", "allestisci"].forEach(t => $("t-" + t).addEventListener("click", () => ["museo", "allestisci"].forEach(x => { $("t-" + x).setAttribute("aria-selected", x === t); $("s-" + x).hidden = x !== t; })));
+(async () => { try { await aggiorna(); } catch (e) { $("parete").innerHTML = '<p class="consegna">Questo browser non permette di salvare il museo (archivio non disponibile).</p>'; } nuovaBozza(); })();
+</script>
+<script src="a11y.js"></script>
+</body>
+</html>

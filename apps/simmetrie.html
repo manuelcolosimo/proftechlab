@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simmetrie e decorazioni</title>
+<link rel="stylesheet" href="ptl.css">
+<style>
+:root { --accent: #4338ca; }
+.layout { display: grid; grid-template-columns: minmax(280px, 640px) 1fr; gap: 16px; align-items: start; }
+@media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+canvas { width: 100%; aspect-ratio: 1; border: 3px solid var(--ink); border-radius: 10px; background: #fff; touch-action: none; display: block; }
+.gruppo { background: var(--label); border: 2px solid var(--ink); border-radius: 12px; padding: 10px 12px; display: grid; gap: 8px; }
+.gruppo h3 { margin: 0; font: 400 22px var(--font-hand); }
+.scelte { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.scelte button { font: 400 18px var(--font-hand); border: 2px solid var(--ink); border-radius: 10px; background: #fff; padding: 2px 10px; cursor: pointer; }
+.scelte button[aria-pressed="true"] { background: var(--giallo); }
+.colori button { width: 34px; height: 34px; border-radius: 50%; padding: 0; }
+.colori button[aria-pressed="true"] { outline: 4px solid var(--ink); outline-offset: 2px; }
+.spiega { background: #eef2ff; border: 2px solid #a5b4fc; border-radius: 12px; padding: 10px 14px; font-size: 17px; margin: 0; }
+</style>
+</head>
+<body>
+<header class="app-bar"><h1>Simmetrie e decorazioni</h1><span class="sub">Disegna una volta, la geometria fa il resto</span></header>
+<div class="container">
+  <div class="tabs" role="tablist" id="tabs"></div>
+  <div class="layout">
+    <canvas id="cv" width="900" height="900" aria-label="Foglio da disegno"></canvas>
+    <div style="display:grid;gap:12px">
+      <p class="spiega" id="spiega"></p>
+      <div class="gruppo" id="opzioni"></div>
+      <div class="gruppo"><h3>Pennello</h3><div class="scelte colori" id="colori"></div><label class="row">Spessore <input type="range" id="spess" min="2" max="30" value="8"></label><label class="row">Sfondo <input type="color" id="sfondo" value="#ffffff"></label><label class="row"><input type="checkbox" id="guide" checked> Mostra le guide</label></div>
+      <div class="scelte"><button id="annulla">↶ Annulla</button><button id="pulisci">🧽 Pulisci</button><button id="png">🖼 Salva immagine</button></div>
+      <p class="feedback" id="fb" style="font-size:19px"></p><img id="img-out" hidden alt="La tua decorazione" style="max-width:100%;border:2px solid var(--ink)">
+    </div>
+  </div>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const W = 900, C = W / 2;
+const MODI = {
+  specchio: { t: "🪞 Specchio", s: "<b>Simmetria assiale</b>: ciò che disegni da una parte compare riflesso dall'altra, come allo specchio. La linea che divide è l'<b>asse di simmetria</b>. La trovi nelle facciate delle chiese, nelle farfalle, nei volti." },
+  rosone: { t: "🌸 Rosone", s: "<b>Simmetria di rotazione</b>: il disegno si ripete girando intorno al centro. Più spicchi scegli, più l'angolo è piccolo (360° diviso il numero di spicchi). La trovi nei rosoni delle cattedrali gotiche, nei mandala, nei fiori." },
+  fregio: { t: "〰️ Fregio", s: "<b>Traslazione</b>: il disegno si ripete scivolando sempre nella stessa direzione, come in una fascia decorativa. Pensa alle greche dei vasi antichi e alle cornici dei pavimenti." },
+  tassella: { t: "🧩 Tassellazione", s: "<b>Tassellazione</b>: il disegno si ripete in tutte le direzioni e copre il piano senza buchi né sovrapposizioni, come le piastrelle. Le decorazioni geometriche dell'arte islamica (per esempio all'Alhambra di Granada) sono tassellazioni bellissime." }
+};
+let S = { modo: "rosone", n: 8, rifl: true, doppio: false, freRifl: false, tasRifl: false, tratti: [], sfondo: "#ffffff" };
+try { const v = JSON.parse(localStorage.getItem("simmetrie")); if (v && v.tratti) S = Object.assign(S, v); } catch (e) {}
+const salva = () => { try { localStorage.setItem("simmetrie", JSON.stringify(S)); } catch (e) {} };
+const PAL = ["#1f2a44", "#d62828", "#f77f00", "#fcbf49", "#2a9d8f", "#52b788", "#4ea8de", "#1d4e89", "#7b2cbf", "#f4a3b5", "#8d5524", "#ffffff"];
+let colore = PAL[7];
+const FY0 = 360, FH = 180, FCW = 180, TC = 150;
+/* ---- Trasformazioni per ogni modo ---- */
+function trasforma(p, modo) {
+  const out = [];
+  if (modo === "specchio") { out.push(p, p.map(q => [W - q[0], q[1]])); if (S.doppio) out.push(p.map(q => [q[0], W - q[1]]), p.map(q => [W - q[0], W - q[1]])); }
+  if (modo === "rosone") { for (let k = 0; k < S.n; k++) { const a = k * 2 * Math.PI / S.n, co = Math.cos(a), si = Math.sin(a); const rot = q => [C + (q[0] - C) * co - (q[1] - C) * si, C + (q[0] - C) * si + (q[1] - C) * co]; out.push(p.map(rot)); if (S.rifl) out.push(p.map(q => rot([2 * C - q[0], q[1]]))); } }
+  if (modo === "fregio") { for (let k = -1; k <= W / FCW; k++) out.push(p.map(q => [k % 2 && S.freRifl ? k * FCW + FCW - q[0] : k * FCW + q[0], q[1]])); }
+  if (modo === "tassella") { for (let i = -1; i <= W / TC; i++) for (let j = -1; j <= W / TC; j++) out.push(p.map(q => [i * TC + (S.tasRifl && i % 2 ? TC - q[0] : q[0]), j * TC + (S.tasRifl && j % 2 ? TC - q[1] : q[1])])); }
+  return out;
+}
+const cv = $("cv"), x = cv.getContext("2d");
+function guide() {
+  x.save(); x.strokeStyle = "rgba(67,56,202,.35)"; x.lineWidth = 2; x.setLineDash([10, 8]);
+  const L = (a, b, c, d) => { x.beginPath(); x.moveTo(a, b); x.lineTo(c, d); x.stroke(); };
+  if (S.modo === "specchio") { L(C, 0, C, W); if (S.doppio) L(0, C, W, C); }
+  if (S.modo === "rosone") for (let k = 0; k < S.n; k++) { const a = k * 2 * Math.PI / S.n - Math.PI / 2; L(C, C, C + Math.cos(a) * C, C + Math.sin(a) * C); }
+  if (S.modo === "fregio") { L(0, FY0, W, FY0); L(0, FY0 + FH, W, FY0 + FH); for (let k = 0; k <= W / FCW; k++) L(k * FCW, FY0, k * FCW, FY0 + FH); x.setLineDash([]); x.strokeStyle = "rgba(67,56,202,.8)"; x.lineWidth = 4; x.strokeRect(0, FY0, FCW, FH); }
+  if (S.modo === "tassella") { for (let k = 0; k <= W / TC; k++) { L(k * TC, 0, k * TC, W); L(0, k * TC, W, k * TC); } x.setLineDash([]); x.strokeStyle = "rgba(67,56,202,.8)"; x.lineWidth = 4; x.strokeRect(0, 0, TC, TC); }
+  x.restore();
+}
+function disegna(perImmagine) {
+  x.fillStyle = S.sfondo; x.fillRect(0, 0, W, W);
+  if (S.modo === "fregio") { x.fillStyle = "#f4f1e8"; x.fillRect(0, 0, W, FY0); x.fillRect(0, FY0 + FH, W, W); x.fillStyle = S.sfondo; x.fillRect(0, FY0, W, FH); }
+  if (!perImmagine && $("guide").checked) guide();
+  x.lineCap = "round"; x.lineJoin = "round";
+  S.tratti.filter(t => t.m === S.modo).forEach(t => { x.strokeStyle = t.c; x.lineWidth = t.w; trasforma(t.p, S.modo).forEach(p => { x.beginPath(); p.forEach((q, i) => i ? x.lineTo(q[0], q[1]) : x.moveTo(q[0], q[1])); if (p.length === 1) x.lineTo(p[0][0] + .1, p[0][1]); x.stroke(); }); });
+}
+/* ---- Input ---- */
+function punto(e) { const r = cv.getBoundingClientRect(); let px = (e.clientX - r.left) / r.width * W, py = (e.clientY - r.top) / r.height * W;
+  if (S.modo === "fregio") { px = ((px % FCW) + FCW) % FCW; py = Math.max(FY0, Math.min(FY0 + FH, py)); }
+  if (S.modo === "tassella") { px = ((px % TC) + TC) % TC; py = ((py % TC) + TC) % TC; }
+  return [Math.round(px * 10) / 10, Math.round(py * 10) / 10]; }
+let corrente = null, ultimo = null;
+cv.addEventListener("pointerdown", e => { cv.setPointerCapture(e.pointerId); corrente = { m: S.modo, c: colore, w: +$("spess").value, p: [punto(e)] }; ultimo = corrente.p[0]; S.tratti.push(corrente); disegna(); });
+cv.addEventListener("pointermove", e => {
+  if (!corrente) return; const p = punto(e);
+  if ((S.modo === "fregio" || S.modo === "tassella") && Math.hypot(p[0] - ultimo[0], p[1] - ultimo[1]) > (S.modo === "fregio" ? FCW : TC) / 2) { corrente = { m: S.modo, c: corrente.c, w: corrente.w, p: [p] }; S.tratti.push(corrente); }
+  else corrente.p.push(p);
+  ultimo = p; disegna();
+});
+cv.addEventListener("pointerup", () => { corrente = null; salva(); });
+/* ---- Pannello ---- */
+function tabs() {
+  $("tabs").innerHTML = Object.entries(MODI).map(([k, m]) => `<button class="tab" data-m="${k}" aria-selected="${k === S.modo}">${m.t}</button>`).join("");
+  $("tabs").querySelectorAll("button").forEach(b => b.onclick = () => { S.modo = b.dataset.m; salva(); tabs(); opzioni(); disegna(); });
+  $("spiega").innerHTML = MODI[S.modo].s;
+}
+function opzioni() {
+  let h = "<h3>Opzioni</h3>";
+  if (S.modo === "specchio") h += `<label class="row"><input type="checkbox" data-o="doppio" ${S.doppio ? "checked" : ""}> Due assi (orizzontale e verticale)</label>`;
+  if (S.modo === "rosone") h += `<div class="scelte">Spicchi: ${[3, 4, 5, 6, 8, 10, 12].map(n => `<button data-n="${n}" aria-pressed="${S.n === n}">${n}</button>`).join("")}</div><label class="row"><input type="checkbox" data-o="rifl" ${S.rifl ? "checked" : ""}> Anche riflesso in ogni spicchio</label><span class="nota">Angolo di rotazione: ${Math.round(360 / S.n * 10) / 10}°</span>`;
+  if (S.modo === "fregio") h += `<label class="row"><input type="checkbox" data-o="freRifl" ${S.freRifl ? "checked" : ""}> Alterna il disegno allo specchio</label><span class="nota">Disegna nel riquadro evidenziato: si ripete in tutta la fascia.</span>`;
+  if (S.modo === "tassella") h += `<label class="row"><input type="checkbox" data-o="tasRifl" ${S.tasRifl ? "checked" : ""}> Piastrelle alternate allo specchio</label><span class="nota">Disegna in una piastrella qualsiasi: si ripete ovunque. Prova a uscire dal bordo: il tratto continua nella piastrella vicina!</span>`;
+  $("opzioni").innerHTML = h;
+  $("opzioni").querySelectorAll("[data-o]").forEach(i => i.onchange = () => { S[i.dataset.o] = i.checked; salva(); opzioni(); disegna(); });
+  $("opzioni").querySelectorAll("[data-n]").forEach(b => b.onclick = () => { S.n = +b.dataset.n; salva(); opzioni(); disegna(); });
+}
+function colori() { $("colori").innerHTML = PAL.map(c => `<button data-c="${c}" style="background:${c}" aria-pressed="${c === colore}" aria-label="colore ${c}"></button>`).join(""); $("colori").querySelectorAll("button").forEach(b => b.onclick = () => { colore = b.dataset.c; colori(); }); }
+$("sfondo").value = S.sfondo; $("sfondo").addEventListener("input", e => { S.sfondo = e.target.value; salva(); disegna(); });
+$("guide").addEventListener("change", () => disegna());
+$("annulla").onclick = () => { for (let i = S.tratti.length - 1; i >= 0; i--) if (S.tratti[i].m === S.modo) { S.tratti.splice(i, 1); break; } salva(); disegna(); };
+let conf = false;
+$("pulisci").onclick = () => { if (!conf) { conf = true; $("pulisci").textContent = "Sicuro? Tocca ancora"; setTimeout(() => { conf = false; $("pulisci").textContent = "🧽 Pulisci"; }, 3000); return; } conf = false; $("pulisci").textContent = "🧽 Pulisci"; S.tratti = S.tratti.filter(t => t.m !== S.modo); salva(); disegna(); };
+$("png").onclick = async () => {
+  disegna(true); const blob = await new Promise(r => cv.toBlob(r, "image/png")), url = cv.toDataURL("image/png"); disegna();
+  let r = null; try { if (window.parent !== window && typeof window.parent.ptlSalva === "function") r = await window.parent.ptlSalva("decorazione.png", blob); } catch (e) {}
+  if (r === "saved") { $("fb").className = "feedback ok"; $("fb").textContent = "✔ Immagine salvata."; return; }
+  $("img-out").src = url; $("img-out").hidden = false; $("fb").className = "feedback"; $("fb").textContent = "Tieni premuta l'immagine e scegli «Salva immagine».";
+};
+tabs(); opzioni(); colori(); disegna();
+</script>
+<script src="a11y.js"></script>
+</body>
+</html>

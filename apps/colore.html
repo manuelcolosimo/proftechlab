@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Laboratorio del colore</title>
+<link rel="stylesheet" href="ptl.css">
+<style>
+:root { --accent: #c2410c; }
+.due { display: grid; grid-template-columns: minmax(280px, 460px) 1fr; gap: 18px; align-items: start; }
+@media (max-width: 820px) { .due { grid-template-columns: 1fr; } }
+#ruota { width: 100%; max-width: 460px; touch-action: manipulation; }
+#ruota .sp { cursor: pointer; stroke: #1f2a44; stroke-width: 2; transition: opacity .2s; }
+#ruota .sp.spento { opacity: .18; }
+#ruota .sp.sel { stroke-width: 6; }
+.filtri { display: flex; gap: 6px; flex-wrap: wrap; }
+.filtri button { font: 400 19px var(--font-hand); border: 2px solid var(--ink); border-radius: 99px; background: #fff; padding: 2px 14px; cursor: pointer; }
+.filtri button[aria-pressed="true"] { background: var(--giallo); }
+.scheda-col { display: grid; gap: 10px; }
+.campione { height: 90px; border: 3px solid var(--ink); border-radius: 14px; }
+.coppia { display: flex; gap: 0; border: 3px solid var(--ink); border-radius: 14px; overflow: hidden; height: 80px; }
+.coppia div { flex: 1; display: grid; place-items: center; font: 400 22px var(--font-hand); }
+.vasetti { display: flex; gap: 12px; flex-wrap: wrap; }
+.vasetto { display: grid; justify-items: center; gap: 4px; }
+.vasetto button.goccia { width: 64px; height: 64px; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; border: 3px solid var(--ink); cursor: pointer; }
+.vasetto .n { font: 700 18px var(--font-body); }
+.vasetto .meno { font-size: 14px; border: 1.5px solid var(--ink); border-radius: 6px; background: #fff; cursor: pointer; padding: 0 8px; }
+.tavolozza { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.macchia { width: 150px; height: 150px; border-radius: 46% 54% 50% 50% / 52% 44% 56% 48%; border: 3px solid var(--ink); }
+.luce { position: relative; width: 100%; max-width: 420px; aspect-ratio: 1; background: #000; border-radius: 16px; overflow: hidden; border: 3px solid var(--ink); }
+.luce div { position: absolute; width: 56%; aspect-ratio: 1; border-radius: 50%; mix-blend-mode: screen; }
+.cursore { display: grid; grid-template-columns: 90px 1fr 50px; gap: 8px; align-items: center; }
+.cursore input { width: 100%; }
+.spiega { background: #fff7d6; border: 2px dashed var(--ink); border-radius: 10px; padding: 8px 12px; }
+</style>
+</head>
+<body>
+<header class="app-bar"><h1>Laboratorio del colore</h1><span class="sub">Cerchio cromatico · pigmenti · luce</span></header>
+<div class="container">
+  <div class="tabs" role="tablist">
+    <button class="tab" id="t-cerchio" aria-selected="true">🎨 Cerchio cromatico</button>
+    <button class="tab" id="t-mescola" aria-selected="false">🖌️ Mescola le tempere</button>
+    <button class="tab" id="t-luce" aria-selected="false">💡 I colori della luce</button>
+    <button class="tab" id="t-sfide" aria-selected="false">🎯 Sfide</button>
+  </div>
+
+  <section id="s-cerchio" class="due">
+    <svg id="ruota" viewBox="-210 -210 420 420" role="img" aria-label="Cerchio cromatico a 12 colori"></svg>
+    <div class="scheda-col">
+      <p class="consegna">Tocca un colore del cerchio.</p>
+      <div class="filtri" id="filtri"></div>
+      <div class="card scheda-col" id="info"></div>
+    </div>
+  </section>
+
+  <section id="s-mescola" hidden style="display:grid;gap:14px">
+    <p class="consegna">Aggiungi gocce di tempera e guarda il colore che ottieni.</p>
+    <div class="vasetti" id="vasetti"></div>
+    <div class="tavolozza"><div class="macchia" id="macchia"></div><div style="display:grid;gap:6px"><b id="ricetta" style="font:400 24px var(--font-hand)"></b><span class="nota" id="nome-mix"></span><button class="btn" id="svuota">🧽 Pulisci la tavolozza</button></div></div>
+    <p class="spiega">Con le tempere i colori si <b>sottraggono</b>: ogni pigmento assorbe una parte della luce. Più colori mescoli, più il risultato diventa scuro e spento (fino al marrone). È una simulazione: con le tempere vere il risultato cambia un po' secondo la marca.</p>
+  </section>
+
+  <section id="s-luce" hidden class="due">
+    <div class="luce" id="luce"><div id="l-r" style="background:#f00;left:8%;top:6%"></div><div id="l-g" style="background:#0f0;left:36%;top:6%"></div><div id="l-b" style="background:#00f;left:22%;top:36%"></div></div>
+    <div class="scheda-col">
+      <p class="consegna">Tre faretti colorati su un muro bianco al buio.</p>
+      <div class="cursore"><b style="color:#d00">Rosso</b><input type="range" id="c-r" min="0" max="255" value="255"><span id="v-r"></span></div>
+      <div class="cursore"><b style="color:#080">Verde</b><input type="range" id="c-g" min="0" max="255" value="255"><span id="v-g"></span></div>
+      <div class="cursore"><b style="color:#00c">Blu</b><input type="range" id="c-b" min="0" max="255" value="255"><span id="v-b"></span></div>
+      <div class="row"><span>Al centro:</span><span id="centro" style="width:60px;height:36px;border:2px solid var(--ink);border-radius:8px;display:inline-block"></span><b id="centro-n"></b></div>
+      <p class="spiega">Con la luce i colori si <b>sommano</b>: rosso + verde = giallo, verde + blu = ciano, rosso + blu = magenta, tutti e tre = bianco. Schermi, LIM e tablet creano ogni colore con puntini rossi, verdi e blu (RGB). Le stampanti invece usano gli inchiostri ciano, magenta, giallo e nero (CMYK).</p>
+    </div>
+  </section>
+
+  <section id="s-sfide" hidden style="display:grid;gap:14px">
+    <div class="livelli" id="livelli"></div>
+    <div class="card" style="display:grid;gap:12px">
+      <p class="consegna" id="sf-titolo"></p>
+      <div class="tavolozza"><div style="text-align:center"><div class="macchia" id="sf-target"></div><span class="nota">Obiettivo</span></div><div style="text-align:center"><div class="macchia" id="sf-mio"></div><span class="nota">Il tuo colore</span></div></div>
+      <div class="vasetti" id="sf-vasetti"></div>
+      <div class="row"><button class="btn primary" id="sf-ok">Controlla</button><button class="btn" id="sf-pulisci">🧽 Ricomincia</button></div>
+      <p class="feedback" id="sf-fb"></p>
+    </div>
+  </section>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+/* ---- Modello RYB dei pigmenti (interpolazione trilineare, Gossett e Chen) ---- */
+const ANG = [[1,1,1],[1,0,0],[1,1,0],[1,.5,0],[.163,.373,.6],[.5,0,.5],[0,.66,.2],[.2,.094,0]];
+function ryb2rgb(r, y, b) {
+  const L = (a, c, t) => a + (c - a) * t, out = [];
+  for (let k = 0; k < 3; k++) {
+    const c000 = ANG[0][k], c100 = ANG[1][k], c010 = ANG[2][k], c110 = ANG[3][k], c001 = ANG[4][k], c101 = ANG[5][k], c011 = ANG[6][k], c111 = ANG[7][k];
+    const x0 = L(L(c000, c100, r), L(c010, c110, r), y), x1 = L(L(c001, c101, r), L(c011, c111, r), y);
+    out.push(L(x0, x1, b));
+  }
+  return out;
+}
+const hex = c => "#" + c.map(v => Math.round(Math.max(0, Math.min(1, v)) * 255).toString(16).padStart(2, "0")).join("");
+function mescola(q) { // q = {r,y,b,w,k} gocce
+  const tot = q.r + q.y + q.b + q.w + q.k; if (!tot) return null;
+  const m = Math.max(q.r, q.y, q.b);
+  let c = m ? ryb2rgb(q.r / m, q.y / m, q.b / m) : [1, 1, 1];
+  const pig = q.r + q.y + q.b;
+  if (!pig) c = q.k ? [1 - q.k / tot, 1 - q.k / tot, 1 - q.k / tot] : [1, 1, 1];
+  else { const w = q.w / tot, k = q.k / tot; c = c.map(v => (v * (1 - w) + w) * (1 - k * 1.1 > 0 ? 1 - k * 1.1 : 0)); }
+  return c;
+}
+/* ---- Cerchio a 12 colori ---- */
+const NOMI = ["rosso", "rosso-arancio", "arancione", "giallo-arancio", "giallo", "giallo-verde", "verde", "blu-verde", "blu", "blu-viola", "viola", "rosso-viola"];
+function rybDiI(i) { const t = i % 4 / 4 * 2; const a = Math.min(1, 2 - t), bb = Math.min(1, t); const seg = Math.floor(i / 4); return seg === 0 ? [a, bb, 0] : seg === 1 ? [0, a, bb] : [bb, 0, a]; }
+const COL = NOMI.map((_, i) => hex(ryb2rgb(...rybDiI(i))));
+const tipo = i => i % 4 === 0 ? "primario" : i % 2 === 0 ? "secondario" : "terziario";
+const caldo = i => [11, 0, 1, 2, 3, 4].includes(i);
+let sel = 0, filtro = "tutti";
+function disegnaRuota() {
+  const R1 = 200, R2 = 105; let h = "";
+  COL.forEach((c, i) => {
+    const a0 = (i * 30 - 105) * Math.PI / 180, a1 = ((i + 1) * 30 - 105) * Math.PI / 180;
+    const p = (r, a) => `${(r * Math.cos(a)).toFixed(1)} ${(r * Math.sin(a)).toFixed(1)}`;
+    const spento = filtro === "primari" ? tipo(i) !== "primario" : filtro === "secondari" ? tipo(i) !== "secondario" : filtro === "terziari" ? tipo(i) !== "terziario" : filtro === "caldi" ? !caldo(i) : filtro === "freddi" ? caldo(i) : filtro === "complementari" ? !(i === sel || i === (sel + 6) % 12) : false;
+    h += `<path class="sp${spento ? " spento" : ""}${i === sel ? " sel" : ""}" data-i="${i}" fill="${c}" d="M${p(R2, a0)} L${p(R1, a0)} A${R1} ${R1} 0 0 1 ${p(R1, a1)} L${p(R2, a1)} A${R2} ${R2} 0 0 0 ${p(R2, a0)}Z"><title>${NOMI[i]}</title></path>`;
+  });
+  const t = (i, r) => { const a = (i * 30 + 15 - 105) * Math.PI / 180; return [r * Math.cos(a), r * Math.sin(a)]; };
+  if (filtro === "complementari") { const [x1, y1] = t(sel, 100), [x2, y2] = t((sel + 6) % 12, 100); h += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#1f2a44" stroke-width="4" stroke-dasharray="8 6"/>`; }
+  h += `<circle r="${filtro === "complementari" ? 30 : 95}" fill="${COL[sel]}" stroke="#1f2a44" stroke-width="3"/>`;
+  $("ruota").innerHTML = h;
+  $("ruota").querySelectorAll(".sp").forEach(e => e.addEventListener("click", () => { sel = +e.dataset.i; disegnaRuota(); info(); }));
+}
+function info() {
+  const i = sel, c = (i + 6) % 12, tp = tipo(i);
+  const come = tp === "primario" ? "Non si ottiene mescolando altri colori." : tp === "secondario" ? `Si ottiene mescolando ${NOMI[(i + 10) % 12]} e ${NOMI[(i + 2) % 12]} in parti uguali.` : `Si ottiene mescolando ${NOMI[(i + 11) % 12]} e ${NOMI[(i + 1) % 12]}.`;
+  $("info").innerHTML = `<div class="campione" style="background:${COL[i]}"></div><b style="font:400 32px var(--font-hand)">${NOMI[i]}</b>
+  <div>Colore <b>${tp}</b> · colore <b>${caldo(i) ? "caldo 🔥" : "freddo ❄️"}</b></div><div>${come}</div>
+  <div>Il suo <b>complementare</b> (opposto nel cerchio) è il <b>${NOMI[c]}</b>. Vicini, due complementari si fanno risaltare a vicenda; mescolati, si spengono verso il grigio-marrone.</div>
+  <div class="coppia"><div style="background:${COL[i]}"></div><div style="background:${COL[c]}"></div></div>`;
+}
+const FILTRI = [["tutti", "Tutti"], ["primari", "Primari"], ["secondari", "Secondari"], ["terziari", "Terziari"], ["complementari", "Complementari"], ["caldi", "Caldi"], ["freddi", "Freddi"]];
+$("filtri").innerHTML = FILTRI.map(([k, t]) => `<button data-f="${k}" aria-pressed="${k === filtro}">${t}</button>`).join("");
+$("filtri").querySelectorAll("button").forEach(b => b.addEventListener("click", () => { filtro = b.dataset.f; $("filtri").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b)); disegnaRuota(); }));
+
+/* ---- Mescola ---- */
+const POT = [["r", "Rosso", hex(ryb2rgb(1, 0, 0))], ["y", "Giallo", hex(ryb2rgb(0, 1, 0))], ["b", "Blu", hex(ryb2rgb(0, 0, 1))], ["w", "Bianco", "#ffffff"], ["k", "Nero", "#1a1a1a"]];
+function vasetti(box, q, onChange) {
+  box.innerHTML = POT.map(([k, n, c]) => `<div class="vasetto"><button class="goccia" data-k="${k}" style="background:${c}" aria-label="Aggiungi una goccia di ${n}"></button><span>${n}</span><span class="n" data-n="${k}">${q[k]}</span><button class="meno" data-m="${k}" aria-label="Togli una goccia di ${n}">− togli</button></div>`).join("");
+  box.querySelectorAll("[data-k]").forEach(b => b.addEventListener("click", () => { if (q[b.dataset.k] < 12) q[b.dataset.k]++; onChange(); }));
+  box.querySelectorAll("[data-m]").forEach(b => b.addEventListener("click", () => { if (q[b.dataset.m] > 0) q[b.dataset.m]--; onChange(); }));
+}
+function nomeColore(c) {
+  const [r, g, b] = c, mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2;
+  if (mx - mn < .08) return l > .85 ? "bianco" : l < .18 ? "nero" : "grigio";
+  let h; const d = mx - mn;
+  if (mx === r) h = ((g - b) / d + 6) % 6; else if (mx === g) h = (b - r) / d + 2; else h = (r - g) / d + 4; h *= 60;
+  let n = h < 15 || h >= 340 ? "rosso" : h < 40 ? "arancione" : h < 65 ? "giallo" : h < 160 ? "verde" : h < 200 ? "azzurro-verde" : h < 255 ? "blu" : h < 300 ? "viola" : "rosa-viola";
+  if (n === "arancione" && l < .4) n = "marrone"; if (n === "rosso" && l > .7) n = "rosa";
+  return n + (l > .72 && n !== "rosa" ? " chiaro" : l < .3 && n !== "marrone" ? " scuro" : "");
+}
+const mix = { r: 0, y: 0, b: 0, w: 0, k: 0 };
+function aggiornaMix() {
+  POT.forEach(([k]) => { const e = $("vasetti").querySelector(`[data-n="${k}"]`); if (e) e.textContent = mix[k]; });
+  const c = mescola(mix); $("macchia").style.background = c ? hex(c) : "#fff";
+  const parti = POT.filter(([k]) => mix[k]).map(([k, n]) => `${mix[k]} ${n.toLowerCase()}`);
+  $("ricetta").textContent = parti.length ? parti.join(" + ") : "Tavolozza vuota";
+  $("nome-mix").textContent = c ? "Più o meno: " + nomeColore(c) : "";
+}
+vasetti($("vasetti"), mix, aggiornaMix);
+$("svuota").addEventListener("click", () => { Object.keys(mix).forEach(k => mix[k] = 0); aggiornaMix(); });
+
+/* ---- Luce ---- */
+function luce() {
+  const r = +$("c-r").value, g = +$("c-g").value, b = +$("c-b").value;
+  $("l-r").style.background = `rgb(${r},0,0)`; $("l-g").style.background = `rgb(0,${g},0)`; $("l-b").style.background = `rgb(0,0,${b})`;
+  $("v-r").textContent = r; $("v-g").textContent = g; $("v-b").textContent = b;
+  $("centro").style.background = `rgb(${r},${g},${b})`; $("centro-n").textContent = r + g + b === 0 ? "buio" : nomeColore([r / 255, g / 255, b / 255]);
+}
+["c-r", "c-g", "c-b"].forEach(id => $(id).addEventListener("input", luce));
+
+/* ---- Sfide ---- */
+const SFIDE = [
+  { n: "Arancione", q: { r: 1, y: 1 } }, { n: "Verde", q: { y: 1, b: 1 } }, { n: "Viola", q: { r: 1, b: 1 } },
+  { n: "Giallo-arancio", q: { r: 1, y: 2 } }, { n: "Rosa", q: { r: 1, w: 2 } }, { n: "Azzurro", q: { b: 1, w: 2 } },
+  { n: "Grigio", q: { w: 1, k: 1 } }, { n: "Marrone", q: { r: 1, y: 1, b: 1 } }, { n: "Verde chiaro", q: { y: 2, b: 1, w: 2 } },
+  { n: "Rosso scuro", q: { r: 3, k: 1 } }, { n: "Lilla", q: { r: 1, b: 1, w: 3 } }, { n: "Verde oliva", q: { y: 3, b: 1, k: 1 } }
+];
+let liv = 0, fatti = []; try { fatti = JSON.parse(localStorage.getItem("colore-sfide")) || []; } catch (e) {}
+const mio = { r: 0, y: 0, b: 0, w: 0, k: 0 };
+function sfida(i) {
+  liv = i; Object.keys(mio).forEach(k => mio[k] = 0);
+  const s = SFIDE[i], q = Object.assign({ r: 0, y: 0, b: 0, w: 0, k: 0 }, s.q);
+  $("sf-titolo").innerHTML = `Sfida ${i + 1}: ottieni il <b>${s.n.toLowerCase()}</b>`;
+  $("sf-target").style.background = hex(mescola(q)); $("sf-fb").textContent = "";
+  vasetti($("sf-vasetti"), mio, aggiornaMio); aggiornaMio(); disegnaLivelli();
+}
+function aggiornaMio() { POT.forEach(([k]) => { const e = $("sf-vasetti").querySelector(`[data-n="${k}"]`); if (e) e.textContent = mio[k]; }); const c = mescola(mio); $("sf-mio").style.background = c ? hex(c) : "#fff"; }
+function disegnaLivelli() { $("livelli").innerHTML = SFIDE.map((s, i) => `<button class="${fatti.includes(i) ? "fatto" : ""}${i === liv ? " attivo" : ""}" data-l="${i}" title="${s.n}">${i + 1}</button>`).join(""); $("livelli").querySelectorAll("[data-l]").forEach(b => b.addEventListener("click", () => sfida(+b.dataset.l))); }
+$("sf-pulisci").addEventListener("click", () => { Object.keys(mio).forEach(k => mio[k] = 0); aggiornaMio(); $("sf-fb").textContent = ""; });
+$("sf-ok").addEventListener("click", () => {
+  const c = mescola(mio); if (!c) { $("sf-fb").className = "feedback ko"; $("sf-fb").textContent = "Aggiungi qualche goccia!"; return; }
+  const t = mescola(Object.assign({ r: 0, y: 0, b: 0, w: 0, k: 0 }, SFIDE[liv].q));
+  const d = Math.hypot(c[0] - t[0], c[1] - t[1], c[2] - t[2]) / Math.sqrt(3);
+  if (d < .035) { $("sf-fb").className = "feedback ok"; $("sf-fb").textContent = "✔ Perfetto! Ricetta: " + POT.filter(([k]) => SFIDE[liv].q[k]).map(([k, n]) => `${SFIDE[liv].q[k]} ${n.toLowerCase()}`).join(" + "); if (!fatti.includes(liv)) { fatti.push(liv); try { localStorage.setItem("colore-sfide", JSON.stringify(fatti)); } catch (e) {} } disegnaLivelli(); }
+  else if (d < .1) { $("sf-fb").className = "feedback"; $("sf-fb").textContent = "Ci sei quasi! " + suggerisci(c, t); }
+  else { $("sf-fb").className = "feedback ko"; $("sf-fb").textContent = "Ancora lontano. " + suggerisci(c, t); }
+});
+function suggerisci(c, t) {
+  const lc = (c[0] + c[1] + c[2]) / 3, lt = (t[0] + t[1] + t[2]) / 3;
+  if (lc < lt - .08) return "Il tuo colore è troppo scuro: prova con meno nero o un po' di bianco.";
+  if (lc > lt + .08) return "Il tuo colore è troppo chiaro: togli un po' di bianco.";
+  return "La luminosità va bene: cambia le proporzioni dei colori.";
+}
+
+/* ---- Schede ---- */
+const TAB = ["cerchio", "mescola", "luce", "sfide"];
+TAB.forEach(t => $("t-" + t).addEventListener("click", () => { TAB.forEach(x => { $("t-" + x).setAttribute("aria-selected", x === t); $("s-" + x).hidden = x !== t; }); }));
+disegnaRuota(); info(); aggiornaMix(); luce(); sfida(0);
+</script>
+<script src="a11y.js"></script>
+</body>
+</html>

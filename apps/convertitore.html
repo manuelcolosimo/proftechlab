@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Convertitore PDF ⇄ Word</title>
+<link rel="stylesheet" href="ptl.css">
+<style>
+:root { --accent: #2f6fd6; }
+.scelte { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.scelta { border: 3px solid var(--ink); border-radius: 16px; background: #fff; padding: 16px; cursor: pointer; display: grid; gap: 6px; text-align: left; font: inherit; color: inherit; }
+.scelta[aria-pressed="true"] { background: #fff8db; box-shadow: 0 0 0 4px var(--giallo); }
+.scelta b { font: 400 28px var(--font-hand); }
+.drop { border: 3px dashed var(--accent); border-radius: 16px; background: #f3f7fe; padding: 26px 16px; text-align: center; display: grid; gap: 8px; justify-items: center; cursor: pointer; }
+.drop.sopra { background: #e2ecfc; }
+.drop .e { font-size: 44px; }
+.opzioni { display: grid; gap: 6px; }
+.opzioni label { display: flex; gap: 8px; align-items: flex-start; font-size: 16px; }
+.stato { font: 400 22px var(--font-hand); }
+.barra { height: 14px; border: 2px solid var(--ink); border-radius: 99px; overflow: hidden; background: #fff; }
+.barra div { height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+.privacy { background: #e2f3ea; border: 2px solid var(--ok); border-radius: 12px; padding: 8px 12px; font-size: 15px; }
+.limiti { font-size: 15px; color: var(--muted); }
+.limiti li { margin-bottom: 4px; }
+@media (max-width: 700px) { .scelte { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header class="app-bar"><h1>Convertitore PDF ⇄ Word</h1><span class="sub">Per i docenti · i file restano sul tuo dispositivo</span></header>
+<div class="container">
+  <p class="privacy">🔒 La conversione avviene <b>dentro il browser</b>: i documenti non vengono caricati su nessun sito. Puoi convertire anche verifiche, PDP o circolari senza mandarli a servizi esterni.</p>
+  <div class="scelte">
+    <button class="scelta" id="m-pdf2word" aria-pressed="true"><b>📄 → 📝 Da PDF a Word</b><span>Ricava il testo del PDF in un file .docx da modificare.</span></button>
+    <button class="scelta" id="m-word2pdf" aria-pressed="false"><b>📝 → 📄 Da Word a PDF</b><span>Trasforma un .docx in un PDF da stampare o condividere.</span></button>
+  </div>
+
+  <div class="card" style="display:grid;gap:12px">
+    <label class="drop" id="drop" for="file">
+      <span class="e" id="drop-e">📄</span>
+      <b style="font:400 24px var(--font-hand)" id="drop-t">Tocca per scegliere un PDF, oppure trascinalo qui</b>
+      <span class="nota" id="drop-n">Un file alla volta, fino a circa 50 pagine.</span>
+      <input type="file" id="file" accept="application/pdf,.pdf" hidden>
+    </label>
+    <div class="opzioni" id="opz-pdf">
+      <label><input type="radio" name="modo" value="testo" checked> <span><b>Testo modificabile</b> (consigliato): paragrafi, titoli e grassetti diventano testo di Word. Immagini e tabelle complesse non vengono riprodotte.</span></label>
+      <label><input type="radio" name="modo" value="pagine"> <span><b>Copia fedele</b>: ogni pagina diventa un'immagine dentro il Word. Identico all'originale, ma il testo non si può modificare.</span></label>
+    </div>
+    <div class="stato" id="stato" aria-live="polite"></div>
+    <div class="barra" id="barra" hidden><div></div></div>
+    <div class="row" id="azioni" hidden><button class="btn primary" id="scarica">💾 Scarica il file</button><span class="nota" id="nome-out"></span></div>
+    <p class="feedback" id="msg" aria-live="polite"></p>
+  </div>
+
+  <details class="card">
+    <summary style="cursor:pointer;font:400 22px var(--font-hand)">Cosa aspettarsi (e cosa no)</summary>
+    <ul class="limiti">
+      <li><b>Da PDF a Word</b>: funziona bene con documenti di testo (circolari, verifiche, schede). L'impaginazione viene semplificata: colonne, tabelle e caselle diventano testo normale, da sistemare a mano.</li>
+      <li><b>PDF scansionati</b> (fotografie di fogli): non contengono testo. Usa la «Copia fedele», oppure un programma con riconoscimento del testo (OCR).</li>
+      <li><b>Da Word a PDF</b>: testo, titoli, grassetti, elenchi, tabelle semplici e immagini JPG/PNG vengono riportati; caratteri, colori e impaginazione originale no. Se ti serve il PDF identico al Word, in Word usa <i>File → Salva come → PDF</i>.</li>
+      <li>I simboli che i caratteri del PDF non supportano (alcune emoji e simboli speciali) vengono sostituiti.</li>
+    </ul>
+  </details>
+</div>
+<script src="lib/jszip.min.js"></script>
+<script src="lib/pdf-lib.min.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+let modo = "pdf2word", risultato = null;
+function impostaModo(m) {
+  modo = m; risultato = null; $("azioni").hidden = true; $("stato").textContent = ""; $("msg").textContent = ""; $("barra").hidden = true;
+  $("m-pdf2word").setAttribute("aria-pressed", m === "pdf2word"); $("m-word2pdf").setAttribute("aria-pressed", m === "word2pdf");
+  $("opz-pdf").hidden = m !== "pdf2word";
+  $("file").accept = m === "pdf2word" ? "application/pdf,.pdf" : ".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  $("drop-e").textContent = m === "pdf2word" ? "📄" : "📝";
+  $("drop-t").textContent = m === "pdf2word" ? "Tocca per scegliere un PDF, oppure trascinalo qui" : "Tocca per scegliere un file Word (.docx), oppure trascinalo qui";
+  $("drop-n").textContent = m === "pdf2word" ? "Un file alla volta, fino a circa 50 pagine." : "Solo .docx (i vecchi .doc vanno prima salvati come .docx).";
+}
+$("m-pdf2word").addEventListener("click", () => impostaModo("pdf2word"));
+$("m-word2pdf").addEventListener("click", () => impostaModo("word2pdf"));
+const drop = $("drop");
+["dragenter", "dragover"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("sopra"); }));
+["dragleave", "drop"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("sopra"); }));
+drop.addEventListener("drop", e => { const f = e.dataTransfer.files[0]; if (f) converti(f); });
+$("file").addEventListener("change", e => { const f = e.target.files[0]; if (f) converti(f); e.target.value = ""; });
+const stato = (t, p) => { $("stato").textContent = t; if (p !== undefined) { $("barra").hidden = false; $("barra").firstElementChild.style.width = Math.round(p * 100) + "%"; } };
+const errore = t => { $("msg").textContent = t; $("msg").className = "feedback ko"; $("barra").hidden = true; stato(""); };
+
+async function converti(f) {
+  risultato = null; $("azioni").hidden = true; $("msg").textContent = "";
+  try {
+    const buf = new Uint8Array(await f.arrayBuffer());
+    const base = f.name.replace(/\.[^.]+$/, "") || "documento";
+    if (modo === "pdf2word") {
+      if (!(buf[0] === 0x25 && buf[1] === 0x50 && buf[2] === 0x44 && buf[3] === 0x46)) return errore("Questo file non sembra un PDF.");
+      const m = document.querySelector('input[name="modo"]:checked').value;
+      const out = await pdfAWord(buf, m);
+      risultato = { nome: base + ".docx", dati: out.docx };
+      $("msg").textContent = out.avviso || ""; $("msg").className = "feedback " + (out.avviso ? "ko" : "");
+    } else {
+      if (!(buf[0] === 0x50 && buf[1] === 0x4B)) return errore("Questo file non sembra un .docx. Se è un vecchio .doc, aprilo in Word e salvalo come .docx.");
+      const out = await wordAPdf(buf);
+      risultato = { nome: base + ".pdf", dati: out.pdf };
+      $("msg").textContent = out.avviso || ""; $("msg").className = "feedback " + (out.avviso ? "ko" : "");
+    }
+    stato("✔ Fatto! Il file è pronto.", 1);
+    $("azioni").hidden = false; $("nome-out").textContent = risultato.nome;
+  } catch (e) {
+    console.error(e);
+    errore("Non sono riuscito a convertire questo file. Se è protetto da password o danneggiato, prova ad aprirlo e salvarlo di nuovo.");
+  }
+}
+$("scarica").addEventListener("click", async () => {
+  if (!risultato) return;
+  let r = null;
+  try { if (window.parent !== window && typeof window.parent.ptlSalva === "function") r = await window.parent.ptlSalva(risultato.nome, risultato.dati); }
+  catch (e) { r = e && e.code ? e.code : null; }
+  if (r === null && window.parent === window) {
+    try { const tipo = risultato.nome.endsWith(".pdf") ? "application/pdf" : "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+      const url = URL.createObjectURL(new Blob([risultato.dati], { type: tipo })), a = document.createElement("a");
+      a.href = url; a.download = risultato.nome; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 4000); r = "saved"; } catch (e) {}
+  }
+  $("msg").textContent = r === "saved" ? "✔ File salvato." : r === "declined" ? "Salvataggio annullato." : "Il salvataggio non è disponibile qui: apri l'app dal sito pubblicato.";
+  $("msg").className = "feedback " + (r === "saved" ? "ok" : r === "declined" ? "" : "ko");
+});
+
+/* =====================================================================
+   DA PDF A WORD (pdf.js per leggere il testo, poi un .docx scritto a mano)
+   ===================================================================== */
+let pdfjs = null;
+async function caricaPdfjs() {
+  if (pdfjs) return pdfjs;
+  pdfjs = await import("./lib/pdf.min.js");
+  pdfjs.GlobalWorkerOptions.workerSrc = new URL("lib/pdf.worker.min.js", location.href).href;
+  return pdfjs;
+}
+async function pdfAWord(buf, m) {
+  stato("Apro il PDF…", 0.02);
+  const lib = await caricaPdfjs();
+  const doc = await lib.getDocument({ data: buf, isEvalSupported: false }).promise;
+  const n = Math.min(doc.numPages, 80);
+  if (m === "pagine") {
+    const immagini = [];
+    for (let p = 1; p <= n; p++) {
+      stato(`Pagina ${p} di ${n}…`, p / n * .9);
+      const pg = await doc.getPage(p), vp = pg.getViewport({ scale: 2 });
+      const c = document.createElement("canvas"); c.width = Math.round(vp.width); c.height = Math.round(vp.height);
+      const ctx = c.getContext("2d"); ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, c.width, c.height);
+      await pg.render({ canvasContext: ctx, viewport: vp }).promise;
+      const blob = await new Promise(r => c.toBlob(r, "image/jpeg", .85));
+      immagini.push({ dati: new Uint8Array(await blob.arrayBuffer()), w: c.width, h: c.height });
+    }
+    return { docx: await docxDaImmagini(immagini), avviso: doc.numPages > n ? `Convertite solo le prime ${n} pagine.` : "" };
+  }
+  const paragrafi = []; let caratteri = 0;
+  for (let p = 1; p <= n; p++) {
+    stato(`Leggo la pagina ${p} di ${n}…`, p / n * .9);
+    const pg = await doc.getPage(p), tc = await pg.getTextContent();
+    const nomi = {};
+    for (const it of tc.items) if (it.fontName && !(it.fontName in nomi)) {
+      let nome = "";
+      try { const fo = pg.commonObjs.has(it.fontName) ? pg.commonObjs.get(it.fontName) : null; nome = fo && fo.name ? fo.name : ""; } catch (e) {}
+      nomi[it.fontName] = (nome + " " + ((tc.styles[it.fontName] || {}).fontFamily || "")).toLowerCase();
+    }
+    const items = tc.items.filter(it => it.str !== undefined).map(it => ({ s: it.str.replace(/[\uf0b7\uf0a7\uf076\uf0d8\uf0fc\u25aa\u25cf]/g, "•").replace(/[\ue000-\uf8ff]/g, ""), x: it.transform[4], y: it.transform[5], h: Math.hypot(it.transform[2], it.transform[3]) || it.height || 10, w: it.width, b: /bold|black|heavy|semibold/.test(nomi[it.fontName] || ""), eol: it.hasEOL }));
+    caratteri += items.reduce((s, i) => s + i.s.trim().length, 0);
+    /* righe: stessa altezza sulla pagina */
+    items.sort((a, b) => b.y - a.y || a.x - b.x);
+    const righe = [];
+    for (const it of items) {
+      if (!it.s && !it.eol) continue;
+      const r = righe.find(r => Math.abs(r.y - it.y) < Math.max(2, it.h * .45));
+      if (r) r.items.push(it); else righe.push({ y: it.y, items: [it] });
+    }
+    righe.sort((a, b) => b.y - a.y);
+    const linee = righe.map(r => {
+      r.items.sort((a, b) => a.x - b.x);
+      let testo = "", fine = null, sz = 0, bold = 0, tot = 0;
+      for (const it of r.items) {
+        if (!it.s) continue;
+        if (fine !== null && it.x - fine > it.h * .2 && !testo.endsWith(" ") && !it.s.startsWith(" ")) testo += " ";
+        testo += it.s; fine = it.x + it.w; sz = Math.max(sz, it.h); const l = it.s.trim().length; tot += l; if (it.b) bold += l;
+      }
+      return { y: r.y, x: r.items[0].x, t: testo.replace(/\s+/g, " ").trim(), sz, bold: tot > 0 && bold / tot > .6 };
+    }).filter(l => l.t);
+    if (!linee.length) { if (p < n) paragrafi.push({ salto: true }); continue; }
+    const corpo = mediana(linee.map(l => l.sz)) || 11;
+    const passi = []; for (let i = 1; i < linee.length; i++) passi.push(linee[i - 1].y - linee[i].y);
+    const passo = mediana(passi.filter(d => d > 0)) || corpo * 1.2;
+    let cur = null;
+    linee.forEach((l, i) => {
+      const titolo = (l.sz > corpo * 1.25 || (l.sz > corpo * 1.12 && l.bold)) && l.t.length < 120;
+      const gap = i ? linee[i - 1].y - l.y : 0;
+      const elenco = /^([•\-–▪●◦·]|\d{1,2}[.)]|[a-z][.)])\s/.test(l.t);
+      const nuovo = !cur || titolo || cur.titolo || gap > passo * 1.45 || elenco || (l.bold !== cur.bold && l.t.length < 80) || Math.abs(l.sz - cur.sz) > 1.5;
+      if (nuovo) { cur = { t: l.t, sz: l.sz, bold: l.bold, titolo, livello: titolo ? (l.sz > corpo * 1.6 ? 1 : 2) : 0 }; paragrafi.push(cur); }
+      else cur.t = cur.t.endsWith("-") && /[a-zà-ù]$/i.test(cur.t.slice(0, -1)) ? cur.t.slice(0, -1) + l.t : cur.t + " " + l.t;
+    });
+    if (p < n) paragrafi.push({ salto: true });
+  }
+  stato("Creo il file Word…", .95);
+  let avviso = "";
+  if (caratteri < n * 20) avviso = "⚠️ Ho trovato pochissimo testo: probabilmente è un PDF scansionato. Prova la «Copia fedele».";
+  if (doc.numPages > n) avviso += ` Convertite solo le prime ${n} pagine.`;
+  return { docx: await docxDaParagrafi(paragrafi), avviso: avviso.trim() };
+}
+function mediana(a) { if (!a.length) return 0; const b = a.slice().sort((x, y) => x - y); return b[Math.floor(b.length / 2)]; }
+
+/* ---------- Scrittura .docx ---------- */
+const X = t => String(t).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+const W_NS = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"';
+const STILI = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:eastAsia="Calibri" w:cs="Calibri"/><w:sz w:val="22"/><w:szCs w:val="22"/><w:lang w:val="it-IT"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="120" w:line="276" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>
+<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style>
+<w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr><w:keepNext/><w:spacing w:before="240" w:after="120"/><w:outlineLvl w:val="0"/></w:pPr><w:rPr><w:b/><w:sz w:val="32"/><w:szCs w:val="32"/></w:rPr></w:style>
+<w:style w:type="paragraph" w:styleId="Heading2"><w:name w:val="heading 2"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr><w:keepNext/><w:spacing w:before="200" w:after="100"/><w:outlineLvl w:val="1"/></w:pPr><w:rPr><w:b/><w:sz w:val="26"/><w:szCs w:val="26"/></w:rPr></w:style></w:styles>`;
+const CT = img => `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>${img ? '<Default Extension="jpeg" ContentType="image/jpeg"/>' : ""}<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>`;
+const RELS = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`;
+const SECT = `<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="567" w:footer="567" w:gutter="0"/></w:sectPr>`;
+async function impacchetta(documento, docRels, media) {
+  const z = new JSZip();
+  z.file("[Content_Types].xml", CT(media.length)); z.file("_rels/.rels", RELS);
+  z.file("word/document.xml", documento); z.file("word/styles.xml", STILI);
+  z.file("word/_rels/document.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdS" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>${docRels}</Relationships>`);
+  media.forEach(m => z.file("word/media/" + m.nome, m.dati));
+  return await z.generateAsync({ type: "uint8array", compression: "DEFLATE" });
+}
+function docxDaParagrafi(par) {
+  let body = "";
+  for (const p of par) {
+    if (p.salto) { body += `<w:p><w:r><w:br w:type="page"/></w:r></w:p>`; continue; }
+    const stile = p.livello ? `<w:pStyle w:val="Heading${p.livello}"/>` : "";
+    const rpr = !p.livello && p.bold ? "<w:rPr><w:b/></w:rPr>" : "";
+    body += `<w:p><w:pPr>${stile}</w:pPr><w:r>${rpr}<w:t xml:space="preserve">${X(p.t)}</w:t></w:r></w:p>`;
+  }
+  return impacchetta(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document ${W_NS}><w:body>${body}${SECT}</w:body></w:document>`, "", []);
+}
+function docxDaImmagini(imgs) {
+  const EMU = 9525, maxW = 9638 * 635; /* larghezza utile A4 con margini 2 cm, in EMU */
+  let body = "", rels = "", media = [];
+  imgs.forEach((im, i) => {
+    const id = "rIdImg" + (i + 1), nome = `pagina${i + 1}.jpeg`;
+    let cx = maxW, cy = Math.round(im.h / im.w * maxW);
+    const maxH = 14570 * 635; if (cy > maxH) { cx = Math.round(cx * maxH / cy); cy = maxH; }
+    rels += `<Relationship Id="${id}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${nome}"/>`;
+    media.push({ nome, dati: im.dati });
+    body += `<w:p><w:pPr><w:spacing w:after="0"/><w:jc w:val="center"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="${i + 1}" name="Pagina ${i + 1}"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="${i + 1}" name="${nome}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${id}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`;
+    if (i < imgs.length - 1) body += `<w:p><w:r><w:br w:type="page"/></w:r></w:p>`;
+  });
+  return impacchetta(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document ${W_NS}><w:body>${body}${SECT}</w:body></w:document>`, rels, media);
+}
+
+/* =====================================================================
+   DA WORD A PDF (lettura del .docx e impaginazione con pdf-lib)
+   ===================================================================== */
+const NS_W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+const NS_R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+const NS_A = "http://schemas.openxmlformats.org/drawingml/2006/main";
+const figli = (el, nome) => el ? Array.from(el.childNodes).filter(n => n.nodeType === 1 && n.localName === nome && n.namespaceURI === NS_W) : [];
+const figlio = (el, nome) => figli(el, nome)[0] || null;
+const attrW = (el, nome) => el ? el.getAttributeNS(NS_W, nome) : null;
+const acceso = el => !!el && !["0", "false", "off", "none"].includes(attrW(el, "val") || "");
+async function leggiDocx(buf) {
+  const z = await JSZip.loadAsync(buf);
+  const xmlDoc = await z.file("word/document.xml")?.async("string"); if (!xmlDoc) throw new Error("niente document.xml");
+  const dp = new DOMParser(), doc = dp.parseFromString(xmlDoc, "application/xml");
+  const rels = {}; const relX = await z.file("word/_rels/document.xml.rels")?.async("string");
+  if (relX) dp.parseFromString(relX, "application/xml").querySelectorAll("Relationship").forEach(r => rels[r.getAttribute("Id")] = r.getAttribute("Target"));
+  const formati = {}; const numX = await z.file("word/numbering.xml")?.async("string");
+  if (numX) {
+    const nd = dp.parseFromString(numX, "application/xml"), abs = {};
+    Array.from(nd.getElementsByTagNameNS(NS_W, "abstractNum")).forEach(a => { const lv = {}; Array.from(a.getElementsByTagNameNS(NS_W, "lvl")).forEach(l => lv[attrW(l, "ilvl")] = attrW(l.getElementsByTagNameNS(NS_W, "numFmt")[0], "val")); abs[attrW(a, "abstractNumId")] = lv; });
+    Array.from(nd.getElementsByTagNameNS(NS_W, "num")).forEach(n => { const a = n.getElementsByTagNameNS(NS_W, "abstractNumId")[0]; formati[attrW(n, "numId")] = abs[attrW(a, "val")] || {}; });
+  }
+  /* stili di paragrafo che contengono già una numerazione (es. "Elenco puntato") */
+  const numStile = {}; const stX = await z.file("word/styles.xml")?.async("string");
+  if (stX) Array.from(dp.parseFromString(stX, "application/xml").getElementsByTagNameNS(NS_W, "style")).forEach(st => {
+    const np = st.getElementsByTagNameNS(NS_W, "numPr")[0];
+    if (np) numStile[(attrW(st, "styleId") || "").toLowerCase()] = { numId: attrW(np.getElementsByTagNameNS(NS_W, "numId")[0], "val"), ilvl: attrW(np.getElementsByTagNameNS(NS_W, "ilvl")[0], "val") || "0" };
+  });
+  const immagine = async id => { const t = rels[id]; if (!t) return null; const f = z.file("word/" + t.replace(/^\/?word\//, "").replace(/^\.\//, "")); if (!f) return null; const ext = t.split(".").pop().toLowerCase(); if (!["png", "jpg", "jpeg"].includes(ext)) return { nonSupportata: true }; return { ext, dati: await f.async("uint8array") }; };
+  const blocchi = [], contatori = {};
+  async function paragrafo(p) {
+    const pPr = figlio(p, "pPr"), stile = (attrW(figlio(pPr, "pStyle"), "val") || "").toLowerCase();
+    const liv = /heading1|titolo1|^title$|^titolo$/.test(stile) ? 1 : /heading2|titolo2|subtitle|sottotitolo/.test(stile) ? 2 : /heading[3-9]|titolo[3-9]/.test(stile) ? 3 : 0;
+    const allinea = attrW(figlio(pPr, "jc"), "val") || "left";
+    let prefisso = "";
+    const numPr = figlio(pPr, "numPr"), daStile = numStile[stile];
+    if (numPr || daStile || /listbullet|elencopuntato|listnumber|elenconumerato/.test(stile)) {
+      let numId = numPr ? attrW(figlio(numPr, "numId"), "val") : daStile ? daStile.numId : null;
+      const ilvl = (numPr && attrW(figlio(numPr, "ilvl"), "val")) || (daStile && daStile.ilvl) || "0";
+      if (!numId) numId = /number|numerato/.test(stile) ? "_n" : "_b";
+      if (numId === "_n") formati._n = { 0: "decimal" };
+      if (numId && numId !== "0") {
+        const fmt = (formati[numId] || {})[ilvl] || "bullet", k = numId + ":" + ilvl;
+        contatori[k] = (contatori[k] || 0) + 1;
+        prefisso = "    ".repeat(+ilvl) + (fmt === "bullet" ? "•  " : fmt === "lowerLetter" ? String.fromCharCode(96 + contatori[k]) + ")  " : contatori[k] + ".  ");
+      }
+    }
+    const spans = prefisso ? [{ t: prefisso, b: false, i: false }] : [];
+    const imgs = [];
+    async function runs(el) {
+      for (const n of Array.from(el.childNodes)) {
+        if (n.nodeType !== 1) continue;
+        if (n.localName === "r" && n.namespaceURI === NS_W) {
+          const rPr = figlio(n, "rPr"), b = acceso(figlio(rPr, "b")), i = acceso(figlio(rPr, "i"));
+          for (const c of Array.from(n.childNodes)) {
+            if (c.nodeType !== 1) continue;
+            if (c.localName === "t") spans.push({ t: c.textContent, b, i });
+            else if (c.localName === "tab") spans.push({ t: "    ", b, i });
+            else if (c.localName === "br") { if (attrW(c, "type") === "page") spans.push({ pagina: true }); else spans.push({ aCapo: true }); }
+            else if (c.localName === "drawing" || c.localName === "pict") {
+              const blip = c.getElementsByTagNameNS(NS_A, "blip")[0];
+              const id = blip ? blip.getAttributeNS(NS_R, "embed") : null;
+              const ext = c.getElementsByTagNameNS("http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing", "extent")[0];
+              if (id) { const im = await immagine(id); if (im) { if (ext) { im.wPt = +ext.getAttribute("cx") / 12700; im.hPt = +ext.getAttribute("cy") / 12700; } imgs.push(im); } }
+            }
+          }
+        } else if (["hyperlink", "smartTag", "ins", "sdt", "sdtContent", "fldSimple"].includes(n.localName)) await runs(n);
+      }
+    }
+    await runs(p);
+    return { tipo: "p", liv, allinea, spans, imgs };
+  }
+  async function corpo(el) {
+    for (const n of Array.from(el.childNodes)) {
+      if (n.nodeType !== 1) continue;
+      if (n.localName === "p") blocchi.push(await paragrafo(n));
+      else if (n.localName === "tbl") {
+        const righe = [];
+        for (const tr of figli(n, "tr")) {
+          const celle = [];
+          for (const tc of figli(tr, "tc")) { const testi = []; for (const p of figli(tc, "p")) { const pp = await paragrafo(p); testi.push(pp.spans.filter(s => s.t).map(s => s.t).join("")); } celle.push(testi.join("\n").trim()); }
+          righe.push(celle);
+        }
+        blocchi.push({ tipo: "tab", righe });
+      } else if (n.localName === "sdt") { const c = figlio(n, "sdtContent"); if (c) await corpo(c); }
+    }
+  }
+  await corpo(doc.getElementsByTagNameNS(NS_W, "body")[0]);
+  return blocchi;
+}
+async function wordAPdf(buf) {
+  stato("Leggo il file Word…", .1);
+  const blocchi = await leggiDocx(buf);
+  stato("Impagino il PDF…", .5);
+  const { PDFDocument, StandardFonts, rgb } = PDFLib;
+  const pdf = await PDFDocument.create();
+  const F = { r: await pdf.embedFont(StandardFonts.Helvetica), b: await pdf.embedFont(StandardFonts.HelveticaBold), i: await pdf.embedFont(StandardFonts.HelveticaOblique), bi: await pdf.embedFont(StandardFonts.HelveticaBoldOblique) };
+  const font = s => s.b && s.i ? F.bi : s.b ? F.b : s.i ? F.i : F.r;
+  /* caratteri che i font standard del PDF non sanno scrivere */
+  const sost = { "☐": "[ ]", "☑": "[x]", "✔": "v", "✓": "v", "→": "->", "←": "<-", "≤": "<=", "≥": ">=", "≠": "!=", "×": "x", "−": "-", " ": " ", " ": " ", " ": " " };
+  const okChar = {}; let sostituiti = 0;
+  const pulisci = t => Array.from(t).map(ch => {
+    if (ch in okChar) return okChar[ch];
+    let out = ch;
+    try { F.r.encodeText(ch); } catch (e) { out = sost[ch] !== undefined ? sost[ch] : "?"; sostituiti++; }
+    okChar[ch] = out; return out;
+  }).join("");
+  const W = 595.28, H = 841.89, M = 56, LARG = W - 2 * M;
+  let pagina = pdf.addPage([W, H]), y = H - M;
+  const nuovaPagina = () => { pagina = pdf.addPage([W, H]); y = H - M; };
+  const spazio = h => { if (y - h < M) nuovaPagina(); };
+  let immaginiSaltate = 0;
+  function scriviRiga(parti, size, allinea, alt) {
+    spazio(alt);
+    const largh = parti.reduce((s, p) => s + p.w, 0);
+    let x = M + (allinea === "center" ? (LARG - largh) / 2 : allinea === "right" || allinea === "end" ? LARG - largh : 0);
+    y -= size;
+    for (const p of parti) { if (p.t) pagina.drawText(p.t, { x, y, size, font: p.f, color: rgb(0.08, 0.1, 0.15) }); x += p.w; }
+    y -= alt - size;
+  }
+  function impagina(spans, size, allinea) {
+    const alt = size * 1.38;
+    /* parole con il loro stile */
+    const parole = [];
+    for (const s of spans) {
+      if (s.aCapo) { parole.push({ aCapo: true }); continue; }
+      if (s.pagina) { parole.push({ pagina: true }); continue; }
+      const f = font(s), testo = pulisci(s.t || "");
+      testo.split(/(\s+)/).forEach(pz => { if (pz) parole.push({ t: pz, f, w: f.widthOfTextAtSize(pz, size), sp: /^\s+$/.test(pz) }); });
+    }
+    let riga = [], lr = 0;
+    const chiudi = () => { while (riga.length && riga[riga.length - 1].sp) { lr -= riga[riga.length - 1].w; riga.pop(); } scriviRiga(riga, size, allinea, alt); riga = []; lr = 0; };
+    for (const p of parole) {
+      if (p.aCapo) { chiudi(); continue; }
+      if (p.pagina) { if (riga.length) chiudi(); nuovaPagina(); continue; }
+      if (p.sp && !riga.length) continue;
+      if (lr + p.w > LARG && riga.length) chiudi();
+      if (p.w > LARG) { /* parola lunghissima: la spezzo */
+        let resto = p.t; while (resto) { let k = resto.length; while (k > 1 && p.f.widthOfTextAtSize(resto.slice(0, k), size) > LARG) k--; riga.push({ t: resto.slice(0, k), f: p.f, w: p.f.widthOfTextAtSize(resto.slice(0, k), size) }); chiudi(); resto = resto.slice(k); } continue; }
+      if (p.sp && !riga.length) continue;
+      riga.push(p); lr += p.w;
+    }
+    if (riga.length) chiudi(); else if (!parole.length) y -= alt;
+  }
+  for (const [bi, bl] of blocchi.entries()) {
+    if (bi % 20 === 0) stato("Impagino il PDF…", .5 + .4 * bi / blocchi.length);
+    if (bl.tipo === "p") {
+      const size = bl.liv === 1 ? 18 : bl.liv === 2 ? 14.5 : bl.liv === 3 ? 12.5 : 11;
+      const spans = bl.liv ? bl.spans.map(s => ({ ...s, b: true })) : bl.spans;
+      if (bl.liv) y -= 8;
+      const vuoto = !spans.some(s => (s.t && s.t.trim()) || s.pagina);
+      if (vuoto && !bl.imgs.length) { y -= 11 * .9; if (y < M) nuovaPagina(); }
+      else if (!vuoto) impagina(spans, size, bl.allinea);
+      for (const im of bl.imgs) {
+        if (im.nonSupportata) { immaginiSaltate++; continue; }
+        try {
+          const img = im.ext === "png" ? await pdf.embedPng(im.dati) : await pdf.embedJpg(im.dati);
+          let w = Math.min(LARG, im.wPt || img.width * .75), h = img.height * w / img.width;
+          if (h > H - 2 * M) { h = H - 2 * M; w = img.width * h / img.height; }
+          spazio(h + 6); y -= h; pagina.drawImage(img, { x: M + (LARG - w) / 2, y, width: w, height: h }); y -= 8;
+        } catch (e) { immaginiSaltate++; }
+      }
+      y -= bl.liv ? 4 : 5;
+    } else if (bl.tipo === "tab") {
+      const nc = Math.max(1, ...bl.righe.map(r => r.length)), cw = LARG / nc, size = 9.5, alt = size * 1.3, pad = 4;
+      for (const r of bl.righe) {
+        const celle = r.map(t => { const linee = []; for (const par of pulisci(t).split("\n")) { let cur = ""; for (const w of par.split(/\s+/)) { const prova = cur ? cur + " " + w : w; if (F.r.widthOfTextAtSize(prova, size) > cw - 2 * pad && cur) { linee.push(cur); cur = w; } else cur = prova; } linee.push(cur); } return linee; });
+        const hR = Math.max(1, ...celle.map(c => c.length)) * alt + 2 * pad;
+        spazio(hR);
+        celle.forEach((c, k) => {
+          const x = M + k * cw;
+          pagina.drawRectangle({ x, y: y - hR, width: cw, height: hR, borderColor: rgb(.45, .5, .58), borderWidth: .7 });
+          c.forEach((l, j) => { if (l) pagina.drawText(l.length > 400 ? l.slice(0, 400) : l, { x: x + pad, y: y - pad - size - j * alt + 1, size, font: F.r, maxWidth: cw - 2 * pad }); });
+        });
+        y -= hR;
+      }
+      y -= 10;
+    }
+  }
+  stato("Salvo il PDF…", .95);
+  const avvisi = [];
+  if (immaginiSaltate) avvisi.push(`${immaginiSaltate} immagini in un formato non supportato sono state saltate.`);
+  if (sostituiti) avvisi.push("Alcuni simboli speciali sono stati sostituiti.");
+  return { pdf: await pdf.save(), avviso: avvisi.join(" ") };
+}
+</script>
+<script src="a11y.js"></script>
+</body>
+</html>

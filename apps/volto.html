@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Il volto e le proporzioni</title>
+<link rel="stylesheet" href="ptl.css">
+<style>
+:root { --accent: #b45309; }
+svg.foglio { width: 100%; background: #fff; border: 3px solid var(--ink); border-radius: 12px; touch-action: none; user-select: none; display: block; }
+.barra { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.barra .btn { font-size: 19px; padding: 4px 12px; }
+.btn.on { background: var(--giallo); }
+.regole { background: #fff7e6; border: 2px solid #f0c27a; border-radius: 12px; padding: 10px 14px; font-size: 17px; }
+.regole ol { margin: 4px 0 0; padding-left: 1.3em; }
+.due { display: grid; grid-template-columns: minmax(260px, 420px) 1fr; gap: 16px; align-items: start; }
+@media (max-width: 820px) { .due { grid-template-columns: 1fr; } }
+.domanda { font: 400 28px var(--font-hand); }
+</style>
+</head>
+<body>
+<header class="app-bar"><h1>Il volto e le proporzioni</h1><span class="sub">Le misure nascoste del viso e del corpo</span></header>
+<div class="container">
+  <div class="tabs" role="tablist">
+    <button class="tab" id="t-volto" aria-selected="true">🙂 Componi il volto</button>
+    <button class="tab" id="t-corpo" aria-selected="false">🧍 Il corpo in teste</button>
+  </div>
+
+  <section id="s-volto" style="display:grid;gap:10px">
+    <p class="consegna">Trascina occhi, naso, bocca e orecchie al posto giusto, poi premi <b>Controlla</b>.</p>
+    <div class="barra"><button class="btn primary" id="b-ok">Controlla</button><button class="btn" id="b-guide" aria-pressed="false">📏 Linee guida</button><button class="btn" id="b-reset">↺ Rimescola</button></div>
+    <svg class="foglio" id="tela" viewBox="0 0 1000 640" role="img" aria-label="Volto da comporre"></svg>
+    <p class="feedback" id="fb"></p>
+    <div class="regole"><b>Le regole del volto (visto di fronte)</b><ol>
+      <li>Gli <b>occhi</b> stanno a <b>metà</b> della testa, non in alto!</li>
+      <li>Tra i due occhi c'è lo spazio di <b>un occhio</b>; la larghezza del viso è di circa <b>cinque occhi</b>.</li>
+      <li>La base del <b>naso</b> è a metà tra gli occhi e il mento.</li>
+      <li>La <b>bocca</b> è a un terzo della distanza tra naso e mento.</li>
+      <li>Le <b>orecchie</b> vanno dalla linea delle sopracciglia alla base del naso.</li></ol>
+      <span class="nota">Sono misure medie usate dagli artisti: ogni volto vero è un po' diverso, ed è proprio questo che lo rende unico.</span></div>
+  </section>
+
+  <section id="s-corpo" hidden class="due">
+    <svg class="foglio" id="corpo" viewBox="0 0 420 700" role="img" aria-label="Figura umana divisa in teste"></svg>
+    <div style="display:grid;gap:12px">
+      <div class="card" style="display:grid;gap:10px">
+        <p class="domanda" id="cq"></p>
+        <p class="nota" style="margin:0">Tocca il numero giusto sul righello a fianco della figura.</p>
+        <p class="feedback" id="cfb"></p>
+        <div class="row"><button class="btn primary" id="c-avanti">Avanti ➜</button><span class="nota" id="c-punti"></span></div>
+      </div>
+      <div class="regole"><b>Il canone delle 8 teste</b><br>Gli artisti misurano il corpo usando l'altezza della testa come unità. Nel canone ideale un adulto è alto circa <b>8 teste</b> (nella realtà più spesso 7 e mezzo). Un neonato è alto circa <b>4 teste</b>: la testa dei bambini è grande rispetto al corpo.</div>
+    </div>
+  </section>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+/* ---- Volto ---- */
+const CX = 300, CY = 320, RX = 150, RY = 200; // testa: alto 120, mento 520
+const EYE = 60, YO = 320, YN = 420, YB = 420 + (520 - 420) / 3, YS = 300;
+const PARTI = [
+  { id: "occhioS", n: "occhio sinistro", t: { x: CX - EYE, y: YO } },
+  { id: "occhioD", n: "occhio destro", t: { x: CX + EYE, y: YO } },
+  { id: "naso", n: "naso", t: { x: CX, y: YN - 12 } },
+  { id: "bocca", n: "bocca", t: { x: CX, y: YB } },
+  { id: "orecchioS", n: "orecchio sinistro", t: { x: CX - RX - 6, y: (YS + YN) / 2 } },
+  { id: "orecchioD", n: "orecchio destro", t: { x: CX + RX + 6, y: (YS + YN) / 2 } }
+];
+function forma(id) {
+  if (id.startsWith("occhio")) return `<ellipse rx="29" ry="15" fill="#fff" stroke="#1f2a44" stroke-width="3"/><circle r="11" fill="#6b4f2a"/><circle r="5" fill="#111"/><path d="M-30 -22 Q0 -36 30 -22" fill="none" stroke="#5b4636" stroke-width="5" stroke-linecap="round"/>`;
+  if (id === "naso") return `<path d="M-4 -60 L-6 -10 Q-22 4 -14 12 Q0 18 14 12 Q22 4 6 -10" fill="none" stroke="#1f2a44" stroke-width="3" stroke-linecap="round"/>`;
+  if (id === "bocca") return `<path d="M-40 0 Q-20 -10 0 -4 Q20 -10 40 0 Q20 18 0 18 Q-20 18 -40 0Z" fill="#d9776f" stroke="#1f2a44" stroke-width="3"/><path d="M-40 0 Q0 6 40 0" stroke="#1f2a44" stroke-width="2" fill="none"/>`;
+  const s = id === "orecchioS" ? -1 : 1;
+  return `<path d="M0 -58 Q${30 * s} -60 ${30 * s} -14 Q${28 * s} 30 ${4 * s} 58 Q${-6 * s} 30 0 -58Z" fill="#f2c9a5" stroke="#1f2a44" stroke-width="3"/><path d="M${8 * s} -36 Q${20 * s} -30 ${16 * s} 0" fill="none" stroke="#b07a55" stroke-width="2.5"/>`;
+}
+let pos = {}, guide = false, controllato = false;
+function rimescola() { controllato = false; $("fb").textContent = ""; const vass = [[640, 120], [800, 120], [640, 300], [820, 300], [660, 480], [850, 480]].sort(() => Math.random() - .5); PARTI.forEach((p, i) => pos[p.id] = { x: vass[i][0], y: vass[i][1] }); disegnaVolto(); }
+function disegnaVolto() {
+  let h = `<rect x="560" y="20" width="420" height="600" rx="16" fill="#f6f1e6" stroke="#c9bfae" stroke-width="2" stroke-dasharray="8 6"/><text x="770" y="54" text-anchor="middle" font-family="Patrick Hand, cursive" font-size="24" fill="#6b6258">I pezzi del volto</text>`;
+  h += `<path d="M${CX} 104 Q${CX - 175} 104 ${CX - 162} 250 Q${CX - 154} 330 ${CX - 140} 300 L ${CX + 140} 300 Q${CX + 154} 330 ${CX + 162} 250 Q${CX + 175} 104 ${CX} 104Z" fill="#5b4636"/>`;
+  h += `<ellipse cx="${CX}" cy="${CY}" rx="${RX}" ry="${RY}" fill="#f6d2b1" stroke="#1f2a44" stroke-width="3"/><rect x="${CX - 45}" y="510" width="90" height="70" fill="#f6d2b1" stroke="#1f2a44" stroke-width="3"/><ellipse cx="${CX}" cy="${CY}" rx="${RX - 1.5}" ry="${RY - 1.5}" fill="#f6d2b1"/>`;
+  if (guide || controllato) {
+    const ln = (y, t, c) => `<line x1="${CX - RX - 40}" y1="${y}" x2="${CX + RX + 30}" y2="${y}" stroke="${c}" stroke-width="2" stroke-dasharray="8 6"/><text x="${CX - RX - 46}" y="${y + 5}" text-anchor="end" font-family="Arial" font-size="13" fill="${c}">${t}</text>`;
+    h += ln(120, "cima della testa", "#7c3aed") + ln(YO, "metà: occhi", "#dc2626") + ln(YN, "base del naso", "#2563eb") + ln(YB, "bocca (1/3)", "#059669") + ln(520, "mento", "#7c3aed") + ln(YS, "sopracciglia", "#b45309");
+    h += `<line x1="${CX}" y1="110" x2="${CX}" y2="530" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4 4"/>`;
+    for (let i = 0; i <= 5; i++) h += `<line x1="${CX - RX + i * EYE}" y1="${YO - 26}" x2="${CX - RX + i * EYE}" y2="${YO + 26}" stroke="#dc2626" stroke-width="1.5"/>`;
+  }
+  if (controllato) PARTI.forEach(p => h += `<g transform="translate(${p.t.x} ${p.t.y})" opacity=".28">${forma(p.id)}</g>`);
+  PARTI.forEach(p => h += `<g class="parte" data-p="${p.id}" transform="translate(${pos[p.id].x} ${pos[p.id].y})" style="cursor:grab">${forma(p.id)}<rect x="-45" y="-62" width="90" height="124" fill="transparent"/></g>`);
+  $("tela").innerHTML = h;
+}
+const tela = $("tela");
+const ptv = (s, e) => { const p = s.createSVGPoint(); p.x = e.clientX; p.y = e.clientY; return p.matrixTransform(s.getScreenCTM().inverse()); };
+let drag = null;
+tela.addEventListener("pointerdown", e => { const g = e.target.closest(".parte"); if (!g) return; const p = ptv(tela, e), q = pos[g.dataset.p]; drag = { id: g.dataset.p, dx: p.x - q.x, dy: p.y - q.y }; tela.setPointerCapture(e.pointerId); });
+tela.addEventListener("pointermove", e => { if (!drag) return; const p = ptv(tela, e); pos[drag.id] = { x: Math.max(20, Math.min(980, p.x - drag.dx)), y: Math.max(20, Math.min(620, p.y - drag.dy)) }; if (controllato) controllato = false; disegnaVolto(); });
+tela.addEventListener("pointerup", () => drag = null);
+$("b-guide").addEventListener("click", e => { guide = !guide; e.currentTarget.classList.toggle("on", guide); e.currentTarget.setAttribute("aria-pressed", guide); disegnaVolto(); });
+$("b-reset").addEventListener("click", rimescola);
+$("b-ok").addEventListener("click", () => {
+  const err = PARTI.map(p => ({ p, d: Math.hypot(pos[p.id].x - p.t.x, pos[p.id].y - p.t.y) }));
+  const fuori = err.filter(x => x.d > 30);
+  controllato = true; disegnaVolto();
+  const fb = $("fb");
+  if (!fuori.length) { fb.className = "feedback ok"; fb.textContent = "✔ Proporzioni perfette! Le sagome chiare mostrano il canone: combaciano."; return; }
+  const nelViso = q => Math.abs(q.x - CX) < RX && Math.abs(q.y - CY) < RY, occhiAlti = [pos.occhioS, pos.occhioD].some(q => nelViso(q) && q.y < YO - 30);
+  fb.className = "feedback ko";
+  fb.textContent = (occhiAlti ? "Errore classico: gli occhi sono troppo in alto, ricordati che stanno a metà della testa. " : "") + "Da sistemare: " + fuori.map(x => x.p.n).join(", ") + ". Le sagome chiare mostrano dove andrebbero.";
+});
+
+/* ---- Corpo in teste ---- */
+const U = 80, TOP = 30, X0 = 210; // un'unità = 80 px
+const DOM = [
+  { q: "Dove arriva il mento?", r: 1, s: "Il mento chiude la prima testa." },
+  { q: "A quale altezza c'è il petto (i capezzoli)?", r: 2, s: "Il petto è a due teste dalla cima." },
+  { q: "Dov'è l'ombelico?", r: 3, s: "L'ombelico è a circa tre teste." },
+  { q: "Dove si trova il bacino (l'inguine)?", r: 4, s: "Il bacino è a quattro teste: esattamente a metà del corpo!" },
+  { q: "Dove sono le ginocchia?", r: 6, s: "Le ginocchia sono a circa sei teste." },
+  { q: "Dove arrivano i piedi?", r: 8, s: "Nel canone ideale un adulto è alto otto teste." }
+];
+let ci = 0, cOk = 0, cTot = 0, cFatto = false, cScelto = null;
+function disegnaCorpo() {
+  let h = "";
+  for (let i = 0; i < 8; i++) h += `<rect x="20" y="${TOP + i * U}" width="380" height="${U}" fill="${i % 2 ? "#faf6ee" : "#fff"}"/>`;
+  for (let i = 0; i <= 8; i++) {
+    const y = TOP + i * U, giusto = cFatto && i === DOM[ci].r, sbagliato = cFatto && i === cScelto && i !== DOM[ci].r;
+    h += `<line x1="20" y1="${y}" x2="400" y2="${y}" stroke="#c9bfae" stroke-width="1.5" stroke-dasharray="5 5"/>`;
+    if (i > 0) h += `<g class="tacca" data-n="${i}" style="cursor:pointer"><rect x="24" y="${y - 22}" width="60" height="44" rx="10" fill="${giusto ? "#2e9b5f" : sbagliato ? "#d64545" : "#1f2a44"}"/><text x="54" y="${y + 9}" text-anchor="middle" font-family="Arial" font-weight="bold" font-size="24" fill="#fff">${i}</text></g>`;
+  }
+  // figura schematica costruita sulle proporzioni
+  const y = n => TOP + n * U, c = "#e8b38d", sk = "#1f2a44";
+  h += `<g stroke="${sk}" stroke-width="3" fill="${c}" stroke-linejoin="round">
+    <ellipse cx="${X0}" cy="${y(.5)}" rx="31" ry="40"/>
+    <rect x="${X0 - 12}" y="${y(1) - 4}" width="24" height="18"/>
+    <path d="M${X0 - 62} ${y(1.3)} Q${X0} ${y(1.15)} ${X0 + 62} ${y(1.3)} L${X0 + 50} ${y(3)} Q${X0} ${y(3.2)} ${X0 - 50} ${y(3)}Z"/>
+    <path d="M${X0 - 50} ${y(3)} L${X0 + 50} ${y(3)} L${X0 + 58} ${y(4)} L${X0 - 58} ${y(4)}Z"/>
+    <path d="M${X0 - 62} ${y(1.35)} L${X0 - 84} ${y(2.9)} L${X0 - 80} ${y(4.4)} L${X0 - 66} ${y(4.4)} L${X0 - 66} ${y(2.9)} L${X0 - 50} ${y(1.8)}Z"/>
+    <path d="M${X0 + 62} ${y(1.35)} L${X0 + 84} ${y(2.9)} L${X0 + 80} ${y(4.4)} L${X0 + 66} ${y(4.4)} L${X0 + 66} ${y(2.9)} L${X0 + 50} ${y(1.8)}Z"/>
+    <path d="M${X0 - 58} ${y(4)} L${X0 - 4} ${y(4)} L${X0 - 10} ${y(6)} L${X0 - 14} ${y(7.8)} L${X0 - 40} ${y(8)} L${X0 - 34} ${y(7.8)} L${X0 - 42} ${y(6)}Z"/>
+    <path d="M${X0 + 58} ${y(4)} L${X0 + 4} ${y(4)} L${X0 + 10} ${y(6)} L${X0 + 14} ${y(7.8)} L${X0 + 40} ${y(8)} L${X0 + 34} ${y(7.8)} L${X0 + 42} ${y(6)}Z"/></g>
+    <circle cx="${X0 - 26}" cy="${y(2)}" r="3" fill="${sk}"/><circle cx="${X0 + 26}" cy="${y(2)}" r="3" fill="${sk}"/><circle cx="${X0}" cy="${y(3)}" r="3.5" fill="${sk}"/>
+    <circle cx="${X0 - 26}" cy="${y(6)}" r="7" fill="none" stroke="${sk}" stroke-width="2"/><circle cx="${X0 + 26}" cy="${y(6)}" r="7" fill="none" stroke="${sk}" stroke-width="2"/>`;
+  $("corpo").innerHTML = h;
+  $("corpo").querySelectorAll(".tacca").forEach(g => g.addEventListener("click", () => rispondiCorpo(+g.dataset.n)));
+}
+function domandaCorpo() { cFatto = false; cScelto = null; $("cq").textContent = DOM[ci].q; $("cfb").textContent = ""; disegnaCorpo(); }
+function rispondiCorpo(n) {
+  if (cFatto) return; cFatto = true; cScelto = n; cTot++;
+  const d = DOM[ci], ok = n === d.r; if (ok) cOk++;
+  $("cfb").className = "feedback " + (ok ? "ok" : "ko"); $("cfb").textContent = (ok ? "✔ Giusto! " : `✘ Era ${d.r}. `) + d.s;
+  $("c-punti").textContent = `${cOk} su ${cTot}`; disegnaCorpo();
+}
+$("c-avanti").addEventListener("click", () => { ci = (ci + 1) % DOM.length; domandaCorpo(); });
+
+/* ---- Schede ---- */
+["volto", "corpo"].forEach(t => $("t-" + t).addEventListener("click", () => { ["volto", "corpo"].forEach(x => { $("t-" + x).setAttribute("aria-selected", x === t); $("s-" + x).hidden = x !== t; }); }));
+rimescola(); domandaCorpo();
+</script>
+<script src="a11y.js"></script>
+</body>
+</html>

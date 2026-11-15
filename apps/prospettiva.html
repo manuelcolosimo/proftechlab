@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prospettiva passo passo</title>
+<link rel="stylesheet" href="ptl.css">
+<style>
+:root { --accent: #7c3aed; }
+#tela, #es-tela { width: 100%; background: #fff; border: 3px solid var(--ink); border-radius: 12px; touch-action: none; user-select: none; display: block; }
+.barra { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.barra .btn { font-size: 19px; padding: 4px 12px; }
+.btn.on { background: var(--giallo); }
+.cursore { display: flex; gap: 8px; align-items: center; font: 400 20px var(--font-hand); }
+.spiega { background: #f3ecff; border: 2px solid #c4b5fd; border-radius: 12px; padding: 10px 14px; font-size: 17px; }
+.opz { display: flex; gap: 10px; flex-wrap: wrap; }
+.opz button { font: 400 22px var(--font-hand); border: 3px solid var(--ink); border-radius: 12px; background: var(--label); padding: 6px 16px; cursor: pointer; }
+.opz button.giusta { background: #c9f0d8; border-color: var(--ok); } .opz button.sbagliata { background: #f8d0d0; border-color: var(--ko); }
+</style>
+</head>
+<body>
+<header class="app-bar"><h1>Prospettiva passo passo</h1><span class="sub">Linea d'orizzonte e punti di fuga</span></header>
+<div class="container">
+  <div class="tabs" role="tablist">
+    <button class="tab" id="t-centrale" aria-selected="true">⬛ Prospettiva centrale</button>
+    <button class="tab" id="t-accidentale" aria-selected="false">◆ Prospettiva accidentale</button>
+    <button class="tab" id="t-fuga" aria-selected="false">🎯 Trova il punto di fuga</button>
+    <button class="tab" id="t-vista" aria-selected="false">👁️ Da dove guardi?</button>
+  </div>
+
+  <section id="s-disegno" style="display:grid;gap:10px">
+    <p class="spiega" id="spiega"></p>
+    <div class="barra">
+      <button class="btn" id="b-agg">➕ Aggiungi un solido</button>
+      <button class="btn" id="b-del">🗑 Elimina</button>
+      <button class="btn on" id="b-linee" aria-pressed="true">Linee di fuga</button>
+      <button class="btn" id="b-nasc" aria-pressed="false">Spigoli nascosti</button>
+      <label class="cursore">Profondità <input type="range" id="prof" min="5" max="85" value="35"></label>
+      <label class="cursore" id="lab-prof2" hidden>destra <input type="range" id="prof2" min="5" max="85" value="35"></label>
+    </div>
+    <svg id="tela" viewBox="0 0 1000 620" role="img" aria-label="Foglio da disegno in prospettiva"></svg>
+    <p class="feedback" id="dove" style="font-size:22px"></p>
+  </section>
+
+  <section id="s-fuga" hidden style="display:grid;gap:10px">
+    <p class="consegna">Tocca il punto dove si incontrano gli spigoli che vanno in profondità: è il <b>punto di fuga</b>.</p>
+    <svg id="es-tela" viewBox="0 0 1000 620" role="img" aria-label="Esercizio sul punto di fuga"></svg>
+    <div class="row"><p class="feedback" id="fu-fb" style="flex:1"></p><span id="fu-punti" class="nota"></span><button class="btn primary" id="fu-nuovo">Nuovo disegno ➜</button></div>
+  </section>
+
+  <section id="s-vista" hidden style="display:grid;gap:10px">
+    <p class="consegna">Guarda il solido: lo vedi <b>dall'alto</b>, <b>dal basso</b> o <b>all'altezza degli occhi</b>?</p>
+    <svg id="vi-tela" viewBox="0 0 1000 520" style="width:100%;background:#fff;border:3px solid var(--ink);border-radius:12px" role="img" aria-label="Solido da osservare"></svg>
+    <div class="opz" id="vi-opz"></div>
+    <div class="row"><p class="feedback" id="vi-fb" style="flex:1"></p><span id="vi-punti" class="nota"></span><button class="btn primary" id="vi-nuovo">Avanti ➜</button></div>
+  </section>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const W = 1000, H = 620;
+const L = (a, b, t) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+const pts = a => a.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+function inter(p1, p2, p3, p4) { // intersezione di due rette
+  const d = (p1.x - p2.x) * (p3.y - p4.y) - (p1.y - p2.y) * (p3.x - p4.x); if (Math.abs(d) < 1e-6) return p2;
+  const t = ((p1.x - p3.x) * (p3.y - p4.y) - (p1.y - p3.y) * (p3.x - p4.x)) / d; return { x: p1.x + t * (p2.x - p1.x), y: p1.y + t * (p2.y - p1.y) };
+}
+let modo = "centrale", linee = true, nascosti = false;
+const S = {
+  centrale: { oriz: 260, vp: { x: 500 }, solidi: [{ x: 150, y: 330, w: 170, h: 150, d: .35 }, { x: 640, y: 80, w: 150, h: 110, d: .3 }], sel: 0 },
+  accidentale: { oriz: 240, vp1: { x: 60 }, vp2: { x: 940 }, solidi: [{ x: 480, y1: 330, y2: 520, dl: .3, dr: .3 }], sel: 0 }
+};
+const st = () => S[modo];
+const SPIEGA = {
+  centrale: "<b>Prospettiva centrale</b>: un solo punto di fuga sulla linea d'orizzonte. La faccia davanti si disegna con le sue forme vere; gli spigoli che vanno in profondità convergono tutti nel punto di fuga. Trascina il <b>punto di fuga</b> 🔴, la <b>linea d'orizzonte</b> (maniglia a sinistra) e i solidi; con «Profondità» allunghi il solido selezionato.",
+  accidentale: "<b>Prospettiva accidentale</b>: due punti di fuga sulla linea d'orizzonte. Il solido è girato: vediamo uno spigolo davanti e due facce. Gli spigoli verticali restano verticali; quelli a sinistra vanno al punto di fuga di sinistra, quelli a destra a quello di destra. Trascina i punti 🔴, l'orizzonte e lo spigolo del solido."
+};
+/* ---- Geometria dei solidi ---- */
+function centrale(s, o) {
+  const V = { x: o.vp.x, y: o.oriz };
+  const A = { x: s.x, y: s.y }, B = { x: s.x + s.w, y: s.y }, C = { x: s.x + s.w, y: s.y + s.h }, D = { x: s.x, y: s.y + s.h };
+  const [a, b, c, d] = [A, B, C, D].map(p => L(p, V, s.d));
+  const facce = [];
+  if (A.y > V.y) facce.push({ p: [A, B, b, a], c: "#e9ddff", n: "sopra" });
+  if (D.y < V.y) facce.push({ p: [D, C, c, d], c: "#d6c6fb", n: "sotto" });
+  if (A.x > V.x) facce.push({ p: [A, D, d, a], c: "#cdb8fa", n: "sinistra" });
+  if (B.x < V.x) facce.push({ p: [B, C, c, b], c: "#cdb8fa", n: "destra" });
+  facce.push({ p: [A, B, C, D], c: "#f6f1ff", n: "davanti" });
+  const spigoli = [[A, B], [B, C], [C, D], [D, A], [A, a], [B, b], [C, c], [D, d], [a, b], [b, c], [c, d], [d, a]];
+  const vis = new Set(); facce.forEach(f => f.p.forEach((p, i) => vis.add(JSON.stringify([p, f.p[(i + 1) % 4]].map(q => [Math.round(q.x), Math.round(q.y)]).sort()))));
+  return { facce, spigoli, vis, fuga: [A, B, C, D].map(p => [p, V]), top: s.y, bottom: s.y + s.h, presa: [A, B, C, D] };
+}
+function accidentale(s, o) {
+  const V1 = { x: o.vp1.x, y: o.oriz }, V2 = { x: o.vp2.x, y: o.oriz };
+  const T = { x: s.x, y: s.y1 }, B = { x: s.x, y: s.y2 };
+  const Tl = L(T, V1, s.dl), Bl = L(B, V1, s.dl), Tr = L(T, V2, s.dr), Br = L(B, V2, s.dr);
+  const Tb = inter(Tl, V2, Tr, V1), Bb = inter(Bl, V2, Br, V1);
+  const facce = [];
+  if (T.y > o.oriz) facce.push({ p: [T, Tl, Tb, Tr], c: "#e9ddff" });
+  if (B.y < o.oriz) facce.push({ p: [B, Bl, Bb, Br], c: "#d6c6fb" });
+  facce.push({ p: [T, Tl, Bl, B], c: "#cdb8fa" }, { p: [T, Tr, Br, B], c: "#f6f1ff" });
+  const spigoli = [[T, B], [T, Tl], [T, Tr], [B, Bl], [B, Br], [Tl, Bl], [Tr, Br], [Tl, Tb], [Tr, Tb], [Bl, Bb], [Br, Bb], [Tb, Bb]];
+  const vis = new Set(); facce.forEach(f => f.p.forEach((p, i) => vis.add(JSON.stringify([p, f.p[(i + 1) % 4]].map(q => [Math.round(q.x), Math.round(q.y)]).sort()))));
+  return { facce, spigoli, vis, fuga: [[T, V1], [B, V1], [T, V2], [B, V2], [Tl, V2], [Bl, V2], [Tr, V1], [Br, V1]], top: s.y1, bottom: s.y2, presa: [T, B] };
+}
+const geo = (s, o) => modo === "centrale" ? centrale(s, o) : accidentale(s, o);
+function svgSolido(g, scelto, opz) {
+  let h = "";
+  if (opz.linee) g.fuga.forEach(([p, v]) => h += `<line x1="${p.x}" y1="${p.y}" x2="${v.x}" y2="${v.y}" stroke="#a78bfa" stroke-width="1.4" stroke-dasharray="6 5"/>`);
+  g.facce.forEach(f => h += `<polygon points="${pts(f.p)}" fill="${f.c}" stroke="none"/>`);
+  g.spigoli.forEach(([p, q]) => {
+    const k = JSON.stringify([p, q].map(z => [Math.round(z.x), Math.round(z.y)]).sort()), v = g.vis.has(k);
+    if (v) h += `<line x1="${p.x}" y1="${p.y}" x2="${q.x}" y2="${q.y}" stroke="${scelto ? "#6d28d9" : "#1f2a44"}" stroke-width="${scelto ? 4 : 3}" stroke-linecap="round"/>`;
+    else if (opz.nascosti) h += `<line x1="${p.x}" y1="${p.y}" x2="${q.x}" y2="${q.y}" stroke="#1f2a44" stroke-width="1.8" stroke-dasharray="7 6"/>`;
+  });
+  return h;
+}
+function disegna() {
+  const o = st(); let h = "";
+  h += `<line x1="0" y1="${o.oriz}" x2="${W}" y2="${o.oriz}" stroke="#2563eb" stroke-width="2.5"/><text x="58" y="${o.oriz - 10}" font-family="Arial" font-size="17" fill="#2563eb">linea d'orizzonte (altezza degli occhi)</text>`;
+  h += `<g class="mani" data-h="oriz" style="cursor:ns-resize"><rect x="4" y="${o.oriz - 18}" width="44" height="36" rx="8" fill="#2563eb"/><text x="26" y="${o.oriz + 7}" text-anchor="middle" font-size="20" fill="#fff">↕</text></g>`;
+  o.solidi.forEach((s, i) => h += `<g data-s="${i}" style="cursor:move">${svgSolido(geo(s, o), i === o.sel, { linee, nascosti })}</g>`);
+  const vps = modo === "centrale" ? [["vp", o.vp.x, "PF"]] : [["vp1", o.vp1.x, "PF 1"], ["vp2", o.vp2.x, "PF 2"]];
+  vps.forEach(([k, x, t]) => h += `<g data-h="${k}" style="cursor:ew-resize"><circle cx="${x}" cy="${o.oriz}" r="13" fill="#dc2626" stroke="#fff" stroke-width="3"/><text x="${x}" y="${o.oriz + 34}" text-anchor="middle" font-family="Arial" font-weight="bold" font-size="16" fill="#dc2626">${t}</text></g>`);
+  $("tela").innerHTML = h;
+  const s = o.solidi[o.sel];
+  if (s) {
+    const g = geo(s, o);
+    $("dove").textContent = g.top > o.oriz ? "Il solido selezionato è sotto la linea d'orizzonte: lo vedi dall'alto (si vede la faccia di sopra)." : g.bottom < o.oriz ? "Il solido selezionato è sopra la linea d'orizzonte: lo vedi dal basso (si vede la faccia di sotto)." : "La linea d'orizzonte attraversa il solido: è all'altezza degli occhi, non vedi né la faccia di sopra né quella di sotto.";
+    $("prof").value = Math.round((modo === "centrale" ? s.d : s.dl) * 100); if (modo === "accidentale") $("prof2").value = Math.round(s.dr * 100);
+  } else $("dove").textContent = "";
+}
+/* ---- Interazione ---- */
+const svg = $("tela");
+const pt = e => { const p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY; return p.matrixTransform(svg.getScreenCTM().inverse()); };
+let drag = null;
+svg.addEventListener("pointerdown", e => {
+  const o = st(), p = pt(e), h = e.target.closest("[data-h]"), s = e.target.closest("[data-s]");
+  if (h) { drag = { h: h.dataset.h }; }
+  else if (s) { o.sel = +s.dataset.s; const so = o.solidi[o.sel]; drag = { s: o.sel, dx: p.x - so.x, dy: p.y - (modo === "centrale" ? so.y : so.y1), x0: p.x, y0: p.y, resize: false };
+    if (modo === "centrale" && Math.abs(p.x - (so.x + so.w)) < 22 && Math.abs(p.y - (so.y + so.h)) < 22) drag.resize = true;
+    if (modo === "accidentale" && Math.abs(p.y - so.y2) < 20 && Math.abs(p.x - so.x) < 30) drag.basso = true;
+    if (modo === "accidentale" && Math.abs(p.y - so.y1) < 20 && Math.abs(p.x - so.x) < 30) drag.alto = true; }
+  else return;
+  svg.setPointerCapture(e.pointerId); disegna();
+});
+svg.addEventListener("pointermove", e => {
+  if (!drag) return; const o = st(), p = pt(e);
+  if (drag.h === "oriz") o.oriz = Math.max(30, Math.min(H - 30, p.y));
+  else if (drag.h) o[drag.h].x = Math.max(-400, Math.min(W + 400, Math.max(10, Math.min(W - 10, p.x))));
+  else {
+    const s = o.solidi[drag.s];
+    if (modo === "centrale") { if (drag.resize) { s.w = Math.max(40, p.x - s.x); s.h = Math.max(40, p.y - s.y); } else { s.x = p.x - drag.dx; s.y = p.y - drag.dy; } }
+    else if (drag.basso) s.y2 = Math.max(s.y1 + 40, p.y);
+    else if (drag.alto) s.y1 = Math.min(s.y2 - 40, p.y);
+    else { const hgt = s.y2 - s.y1; s.x = p.x - drag.dx; s.y1 = p.y - drag.dy; s.y2 = s.y1 + hgt; }
+  }
+  disegna();
+});
+svg.addEventListener("pointerup", () => drag = null);
+$("prof").addEventListener("input", () => { const s = st().solidi[st().sel]; if (!s) return; if (modo === "centrale") s.d = $("prof").value / 100; else s.dl = $("prof").value / 100; disegna(); });
+$("prof2").addEventListener("input", () => { const s = st().solidi[st().sel]; if (s) { s.dr = $("prof2").value / 100; disegna(); } });
+$("b-agg").addEventListener("click", () => { const o = st(); o.solidi.push(modo === "centrale" ? { x: 380 + Math.random() * 100, y: 380, w: 140, h: 120, d: .3 } : { x: 300 + Math.random() * 300, y1: 120, y2: 230, dl: .3, dr: .3 }); o.sel = o.solidi.length - 1; disegna(); });
+$("b-del").addEventListener("click", () => { const o = st(); if (!o.solidi.length) return; o.solidi.splice(o.sel, 1); o.sel = Math.max(0, o.solidi.length - 1); disegna(); });
+$("b-linee").addEventListener("click", e => { linee = !linee; e.currentTarget.classList.toggle("on", linee); e.currentTarget.setAttribute("aria-pressed", linee); disegna(); });
+$("b-nasc").addEventListener("click", e => { nascosti = !nascosti; e.currentTarget.classList.toggle("on", nascosti); e.currentTarget.setAttribute("aria-pressed", nascosti); disegna(); });
+
+/* ---- Esercizio: trova il punto di fuga ---- */
+let fu = null, fuOk = 0, fuTot = 0;
+function nuovoFuga() {
+  const vp = { x: 200 + Math.random() * 600, y: 120 + Math.random() * 380 }, o = { oriz: vp.y, vp: { x: vp.x } };
+  const solidi = []; for (let i = 0; i < 3; i++) { const w = 90 + Math.random() * 90, hh = 70 + Math.random() * 90; let x, y, ok = false, t = 0; while (!ok && t++ < 50) { x = 30 + Math.random() * (W - 60 - w); y = 30 + Math.random() * (H - 60 - hh); ok = Math.hypot(x + w / 2 - vp.x, y + hh / 2 - vp.y) > 170 && solidi.every(s => Math.abs(s.x - x) > 160 || Math.abs(s.y - y) > 150); } solidi.push({ x, y, w, h: hh, d: .2 + Math.random() * .2 }); }
+  fu = { vp, o, solidi, fatto: false }; disegnaFuga(); $("fu-fb").textContent = "";
+}
+function disegnaFuga(tocco) {
+  const m = modo; modo = "centrale";
+  let h = fu.solidi.map(s => svgSolido(centrale(s, fu.o), false, { linee: fu.fatto, nascosti: false })).join("");
+  if (fu.fatto) h += `<line x1="0" y1="${fu.vp.y}" x2="${W}" y2="${fu.vp.y}" stroke="#2563eb" stroke-width="2"/><circle cx="${fu.vp.x}" cy="${fu.vp.y}" r="12" fill="#dc2626" stroke="#fff" stroke-width="3"/>`;
+  if (tocco) h += `<circle cx="${tocco.x}" cy="${tocco.y}" r="9" fill="none" stroke="#f59e0b" stroke-width="4"/>`;
+  $("es-tela").innerHTML = h; modo = m;
+}
+$("es-tela").addEventListener("pointerdown", e => {
+  if (!fu || fu.fatto) return;
+  const s = $("es-tela"), q = s.createSVGPoint(); q.x = e.clientX; q.y = e.clientY; const p = q.matrixTransform(s.getScreenCTM().inverse());
+  const d = Math.hypot(p.x - fu.vp.x, p.y - fu.vp.y); fu.fatto = true; fuTot++;
+  if (d < 35) { fuOk++; $("fu-fb").className = "feedback ok"; $("fu-fb").textContent = "✔ Centrato! Tutte le linee di fuga si incontrano lì, sulla linea d'orizzonte."; }
+  else { $("fu-fb").className = "feedback ko"; $("fu-fb").textContent = "Non proprio: guarda dove si incontrano i prolungamenti degli spigoli obliqui."; }
+  $("fu-punti").textContent = `${fuOk} su ${fuTot}`; disegnaFuga(p);
+});
+$("fu-nuovo").addEventListener("click", nuovoFuga);
+
+/* ---- Esercizio: da dove guardi? ---- */
+let vi = null, viOk = 0, viTot = 0;
+function nuovoVista() {
+  const caso = Math.floor(Math.random() * 3), oriz = 120 + Math.random() * 280, w = 160 + Math.random() * 80, hh = 120 + Math.random() * 60;
+  const y = caso === 0 ? oriz + 40 + Math.random() * 60 : caso === 1 ? oriz - hh - 40 - Math.random() * 40 : oriz - hh * (.3 + Math.random() * .4);
+  vi = { caso, o: { oriz, vp: { x: 300 + Math.random() * 400 } }, s: { x: 320 + Math.random() * 200 - w / 2, y: Math.max(10, Math.min(500 - hh, y)), w, h: hh, d: .3 }, fatto: false };
+  const g = centrale(vi.s, vi.o); vi.caso = g.top > vi.o.oriz ? 0 : g.bottom < vi.o.oriz ? 1 : 2;
+  disegnaVista(); $("vi-fb").textContent = "";
+  $("vi-opz").innerHTML = ["Dall'alto", "Dal basso", "All'altezza degli occhi"].map((t, i) => `<button data-i="${i}">${t}</button>`).join("");
+  $("vi-opz").querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
+    if (vi.fatto) return; vi.fatto = true; viTot++; const ok = +b.dataset.i === vi.caso; if (ok) viOk++;
+    b.classList.add(ok ? "giusta" : "sbagliata"); $("vi-opz").querySelector(`[data-i="${vi.caso}"]`).classList.add("giusta");
+    $("vi-fb").className = "feedback " + (ok ? "ok" : "ko");
+    $("vi-fb").textContent = ["Si vede la faccia di sopra: il solido è sotto la linea d'orizzonte.", "Si vede la faccia di sotto: il solido è sopra la linea d'orizzonte.", "Non si vedono né sopra né sotto: la linea d'orizzonte taglia il solido."][vi.caso];
+    $("vi-punti").textContent = `${viOk} su ${viTot}`; disegnaVista();
+  }));
+}
+function disegnaVista() {
+  const m = modo; modo = "centrale";
+  let h = svgSolido(centrale(vi.s, vi.o), false, { linee: false, nascosti: false });
+  if (vi.fatto) h = `<line x1="0" y1="${vi.o.oriz}" x2="${W}" y2="${vi.o.oriz}" stroke="#2563eb" stroke-width="2.5" stroke-dasharray="10 6"/><text x="10" y="${vi.o.oriz - 8}" font-family="Arial" font-size="17" fill="#2563eb">linea d'orizzonte</text>` + h;
+  $("vi-tela").innerHTML = h; modo = m;
+}
+$("vi-nuovo").addEventListener("click", nuovoVista);
+
+/* ---- Schede ---- */
+function vai(t) {
+  ["centrale", "accidentale", "fuga", "vista"].forEach(x => $("t-" + x).setAttribute("aria-selected", x === t));
+  $("s-disegno").hidden = !(t === "centrale" || t === "accidentale"); $("s-fuga").hidden = t !== "fuga"; $("s-vista").hidden = t !== "vista";
+  if (t === "centrale" || t === "accidentale") { modo = t; $("spiega").innerHTML = SPIEGA[t]; $("lab-prof2").hidden = t !== "accidentale"; $("prof").previousSibling.textContent = t === "accidentale" ? "Profondità sinistra " : "Profondità "; disegna(); }
+  if (t === "fuga" && !fu) nuovoFuga();
+  if (t === "vista" && !vi) nuovoVista();
+}
+["centrale", "accidentale", "fuga", "vista"].forEach(t => $("t-" + t).addEventListener("click", () => vai(t)));
+vai("centrale");
+</script>
+<script src="a11y.js"></script>
+</body>
+</html>

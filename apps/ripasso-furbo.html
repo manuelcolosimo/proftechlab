@@ -341,6 +341,18 @@ $("elimina-mazzo").addEventListener("click", () => {
   dati.mazzi = dati.mazzi.filter(x => x.id !== m.id); corrente = dati.mazzi[0] ? dati.mazzi[0].id : null; salva(); confermaElimina = false; $("elimina-mazzo").textContent = "🗑 Elimina il mazzo"; vai("mazzi");
 });
 salva(); disegnaMazzi();
+/* Arrivo da Caccia alle parole chiave o da Dal testo alla mappa: #studia-<id del mazzo> */
+(function () {
+  const h = decodeURIComponent(location.hash.slice(1));
+  if (!h.startsWith("studia-")) return;
+  const m = mazzo(h.slice(7)); history.replaceState(null, "", location.pathname);
+  if (!m) return;
+  corrente = m.id; sess = null; vai("studia");
+  if (m.fonte && m.fonte.startsWith("testo-")) {
+    const a = document.createElement("a"); a.href = "parole-chiave.html#scheda-" + encodeURIComponent(m.fonte.slice(6)); a.className = "btn"; a.textContent = "🧭 Torna alla scheda del testo";
+    a.style.cssText = "justify-self:start;text-decoration:none"; $("s-studia").prepend(a);
+  }
+})();
 </script>
 <script src="a11y.js"></script>
 </body>

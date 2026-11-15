@@ -18,3 +18,11 @@ Non serve nessun comando di build.
 ## Da sapere
 - Se cambi indirizzo del sito, gli utenti ritrovano i loro dati solo sullo stesso indirizzo e sullo stesso browser.
 - Prima di cambi importanti, scarica una copia della cartella (backup).
+
+## Profili docente / studente (v0.12)
+- Al primo accesso il sito chiede "Sono uno studente" / "Sono un docente".
+- Docente: entra con la password dei docenti (predefinita: ProfTechLab2026 — cambiala!). Vede la Cassetta e lo strumento "🔑 Codici studenti".
+- Studente: non vede la Cassetta; ogni app si apre con un codice di 4 cifre che cambia ogni giorno (c'è anche un codice unico per tutte le app).
+- Per cambiare password: Cassetta → Codici studenti → "Cambia password docenti" → copia la riga generata e sostituiscila in config.js su GitHub.
+- Per cambiare tutti i codici futuri: modifica il valore "segretoCodici" in config.js.
+- È un lucchetto didattico, non una protezione informatica.

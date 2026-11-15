@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Detective dei materiali</title>
+<link rel="stylesheet" href="ptl.css">
+<style>
+:root { --accent: var(--tec); }
+.codice { display: inline-grid; justify-items: center; align-content: center; width: 120px; height: 120px; position: relative; font: 700 22px var(--font-body); }
+.codice svg { position: absolute; inset: 0; }
+.codice b { position: relative; font-size: 30px; line-height: 1; }
+.codice span { position: relative; font-size: 17px; }
+.opz { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.opz button { font: 400 20px var(--font-hand); border: 2px solid var(--ink); border-radius: 12px; background: #fff; padding: 10px; cursor: pointer; display: grid; justify-items: center; gap: 2px; }
+.opz button .e { font-size: 30px; }
+.opz button.giusta { background: var(--ok); color: #fff; } .opz button.sbagliata { background: #f6d2d2; }
+table { width: 100%; border-collapse: collapse; background: #fff; font-size: 15px; }
+th, td { border: 1px solid #c9d4e3; padding: 6px 8px; text-align: left; vertical-align: top; }
+th { background: #eef6ee; position: sticky; top: 0; }
+.tabella-wrap { max-height: 60vh; overflow: auto; border: 2px solid var(--ink); border-radius: 10px; }
+.indagine { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+.reperto { background: #fff; border: 2px solid var(--squares); border-radius: 10px; padding: 8px 10px; display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; }
+.reperto button { border: 0; background: none; font-size: 20px; cursor: pointer; color: var(--ko); }
+.barre { display: grid; gap: 4px; }
+.barra-r { display: grid; grid-template-columns: 110px 1fr 30px; gap: 6px; align-items: center; font-size: 15px; }
+.barra-r .tr { height: 14px; background: #e8eef5; border-radius: 99px; overflow: hidden; } .barra-r .tr div { height: 100%; border-radius: 99px; }
+.avviso { background: #fff2cc; border: 2px solid #b8860b; border-radius: 10px; padding: 8px 12px; font-size: 15px; }
+@media (max-width: 860px) { .indagine { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header class="app-bar"><h1>Detective dei materiali</h1><span class="sub">I codici sugli imballaggi · Tecnologia</span></header>
+<div class="container">
+  <div class="tabs">
+    <button class="tab" id="tab-gioco" aria-selected="true">🔎 Gioco dei codici</button>
+    <button class="tab" id="tab-indagine" aria-selected="false">📦 Indagine in classe</button>
+    <button class="tab" id="tab-tabella" aria-selected="false">📋 Tabella dei codici</button>
+  </div>
+
+  <section id="s-gioco" class="card" style="display:grid;gap:12px">
+    <div class="livelli" id="livelli"></div>
+    <p class="nota" id="contatore"></p>
+    <p class="consegna" id="consegna"></p>
+    <div id="mostra" style="display:flex;justify-content:center"></div>
+    <div class="opz" id="opz"></div>
+    <p class="feedback" id="feedback" aria-live="polite"></p>
+  </section>
+
+  <section id="s-indagine" hidden class="indagine">
+    <div class="card" style="display:grid;gap:10px">
+      <p class="consegna">Porta da casa confezioni vuote e pulite e cerca il codice: di solito è vicino al simbolo con le tre frecce o in una tabellina "raccolta".</p>
+      <div class="row"><label>Oggetto <input type="text" id="ind-ogg" placeholder="es. vasetto dello yogurt" style="width:220px"></label></div>
+      <div class="row"><label>Codice trovato <input type="text" id="ind-cod" placeholder="es. PP 5 oppure PAP 21" style="width:200px" list="lista-codici"></label><datalist id="lista-codici"></datalist></div>
+      <div class="row"><button class="btn primary" id="ind-add">🔎 Analizza</button></div>
+      <div id="ind-esito"></div>
+      <p class="avviso">♻️ La raccolta indicata è quella più comune, ma ogni comune ha le sue regole: controlla sempre il calendario o l'app del tuo comune.</p>
+    </div>
+    <div class="card" style="display:grid;gap:10px">
+      <b style="font-family:var(--font-hand);font-size:26px;font-weight:400">Il registro dell'indagine</b>
+      <div class="barre" id="ind-barre"></div>
+      <div id="ind-lista" style="display:grid;gap:6px"></div>
+      <div class="row"><button class="btn" id="ind-copia">📋 Copia i risultati</button><button class="btn" id="ind-svuota">🗑 Svuota il registro</button></div>
+      <p class="feedback" id="ind-msg"></p>
+    </div>
+  </section>
+
+  <section id="s-tabella" hidden class="card" style="display:grid;gap:10px">
+    <div class="row"><input type="text" id="cerca" placeholder="Cerca: PET, 21, alluminio…" style="width:min(360px,100%)" aria-label="Cerca nella tabella"></div>
+    <div class="tabella-wrap"><table><thead><tr><th>Codice</th><th>Materiale</th><th>Famiglia</th><th>Esempi</th></tr></thead><tbody id="tbody"></tbody></table></div>
+    <p class="nota">Fonte: Decisione 97/129/CE della Commissione europea, che stabilisce numeri e sigle per identificare i materiali degli imballaggi. Il numero 7 (O, «altre plastiche») non è nella Decisione ma si trova spesso sulle confezioni. Per gli imballaggi compositi si scrive C/ seguito dalla sigla del materiale prevalente (per esempio C/PAP 84).</p>
+  </section>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const pick = a => a[rnd(0, a.length - 1)];
+const esc = t => String(t).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const FAM = {
+  plastica: { nome: "Plastica", e: "🧴", col: "#f5c400", rac: "Plastica" },
+  carta: { nome: "Carta e cartone", e: "📦", col: "#2f6fd6", rac: "Carta e cartone" },
+  metallo: { nome: "Metallo", e: "🥫", col: "#8a8f98", rac: "Metalli: in molti comuni insieme alla plastica o al vetro" },
+  legno: { nome: "Legno", e: "🪵", col: "#a46b38", rac: "Legno: centro di raccolta, oppure secondo le regole del comune" },
+  tessile: { nome: "Tessuto", e: "🧵", col: "#d64545", rac: "Tessili: contenitori per abiti usati se riutilizzabili, altrimenti secondo il comune" },
+  vetro: { nome: "Vetro", e: "🫙", col: "#2e9b5f", rac: "Vetro" },
+  composito: { nome: "Composito", e: "🧃", col: "#8e5bd0", rac: "Composito: si segue il materiale prevalente e le regole del comune (i cartoni per bevande spesso vanno con la carta)" }
+};
+/* [numero, sigla, materiale, famiglia, esempi] – Decisione 97/129/CE (il 7 è d'uso comune ma non è nella Decisione) */
+const CODICI = [
+  [1, "PET", "Polietilene tereftalato", "plastica", "bottiglie di acqua e bibite"],
+  [2, "HDPE", "Polietilene ad alta densità", "plastica", "flaconi di detersivo e shampoo"],
+  [3, "PVC", "Polivinilcloruro", "plastica", "alcune pellicole e blister"],
+  [4, "LDPE", "Polietilene a bassa densità", "plastica", "sacchetti, pellicole morbide"],
+  [5, "PP", "Polipropilene", "plastica", "vasetti dello yogurt, tappi"],
+  [6, "PS", "Polistirene (polistirolo)", "plastica", "vaschette, bicchierini, imballi espansi"],
+  [7, "O", "Altre plastiche (non nella Decisione)", "plastica", "materiali misti o diversi dai precedenti"],
+  [20, "PAP", "Cartone ondulato", "carta", "scatoloni da spedizione"],
+  [21, "PAP", "Cartone non ondulato", "carta", "scatole dei cereali, dei biscotti"],
+  [22, "PAP", "Carta", "carta", "sacchetti di carta, carta da pacchi"],
+  [40, "FE", "Acciaio", "metallo", "barattoli di pelati, scatolette"],
+  [41, "ALU", "Alluminio", "metallo", "lattine, vaschette, fogli di alluminio"],
+  [50, "FOR", "Legno", "legno", "cassette della frutta, pallet"],
+  [51, "FOR", "Sughero", "legno", "tappi di sughero"],
+  [60, "TEX", "Cotone", "tessile", "sacchetti di cotone"],
+  [61, "TEX", "Iuta", "tessile", "sacchi di iuta"],
+  [70, "GL", "Vetro incolore", "vetro", "barattoli e bottiglie trasparenti"],
+  [71, "GL", "Vetro verde", "vetro", "bottiglie verdi"],
+  [72, "GL", "Vetro marrone", "vetro", "bottiglie scure"],
+  [81, "C/PAP", "Carta e cartone + plastica", "composito", "bicchieri di carta plastificata"],
+  [82, "C/PAP", "Carta e cartone + alluminio", "composito", "carta accoppiata con alluminio"],
+  [83, "C/PAP", "Carta e cartone + latta", "composito", "contenitori di cartone con fondo in latta"],
+  [84, "C/PAP", "Carta e cartone + plastica + alluminio", "composito", "cartoni per bevande (tipo Tetra Pak)"],
+  [90, "C/…", "Plastica + alluminio", "composito", "buste di patatine e snack"],
+  [91, "C/…", "Plastica + latta", "composito", "contenitori misti plastica e latta"],
+  [92, "C/…", "Plastica + metalli vari", "composito", "imballaggi misti"],
+  [95, "C/GL", "Vetro + plastica", "composito", "contenitori misti vetro e plastica"],
+  [96, "C/GL", "Vetro + alluminio", "composito", "contenitori misti vetro e alluminio"]
+];
+const etich = c => `${c[1]} ${c[0]}`;
+function svgCodice(c) {
+  return `<div class="codice" role="img" aria-label="Simbolo con il codice ${c[1]} ${c[0]}"><svg viewBox="0 0 120 120"><g fill="none" stroke="#1f2a44" stroke-width="6" stroke-linejoin="round"><path d="M60 14 L100 84 L20 84 Z"/></g><polygon points="56,10 70,22 52,26" fill="#1f2a44"/><polygon points="104,88 86,94 90,76" fill="#1f2a44"/><polygon points="14,88 26,74 32,92" fill="#1f2a44"/></svg><b style="margin-top:14px">${c[0]}</b><span style="margin-top:34px">${c[1]}</span></div>`;
+}
+/* Ricerca di un codice scritto dallo studente: "PP 5", "05", "pap21", "C/PAP 84"… */
+function trova(t) {
+  const s = String(t).toUpperCase().replace(/\s+/g, " ").trim();
+  const num = (s.match(/\d+/) || [])[0];
+  const sig = s.replace(/[\d\s]/g, "").replace(/^C\//, "C/");
+  if (num !== undefined) { const c = CODICI.find(x => x[0] === +num); if (c) return c; }
+  if (sig) { const c = CODICI.filter(x => x[1].replace("…", "") === sig || x[1] === sig); if (c.length === 1) return c[0]; }
+  return null;
+}
+
+/* ---------- Gioco ---------- */
+const LIV = [
+  { t: "Che famiglia di materiale?", tipo: "famiglia", pool: CODICI.filter(c => c[3] !== "composito") },
+  { t: "Plastiche: quale sigla?", tipo: "plastica" },
+  { t: "Che oggetto è?", tipo: "esempio", pool: CODICI.filter(c => c[0] !== 7) },
+  { t: "I compositi", tipo: "famiglia", pool: CODICI }
+];
+const PER = 6;
+let prog = []; try { prog = JSON.parse(localStorage.getItem("detective-prog")) || []; } catch (e) {}
+let liv = Math.min(prog.length, LIV.length - 1), dom = 0, sf = null, bloccato = false;
+const fb = (t, c) => { $("feedback").innerHTML = t; $("feedback").className = "feedback " + c; };
+function disegnaLiv() {
+  $("livelli").innerHTML = LIV.map((l, i) => `<button title="${l.t}" class="${prog.includes(i) ? "fatto" : ""} ${i === liv ? "attivo" : ""}" ${i > 0 && !prog.includes(i - 1) && !prog.includes(i) ? "disabled" : ""} aria-label="Livello ${i + 1}: ${l.t}">${i + 1}</button>`).join("");
+  $("livelli").querySelectorAll("button").forEach((b, i) => b.addEventListener("click", () => { liv = i; dom = 0; nuova(); }));
+}
+function nuova() {
+  const L = LIV[liv]; bloccato = false;
+  if (L.tipo === "famiglia") {
+    const c = liv === 3 && Math.random() < .6 ? pick(CODICI.filter(x => x[3] === "composito")) : pick(L.pool);
+    sf = { c, giusta: c[3] };
+    $("consegna").innerHTML = "Su una confezione trovi questo simbolo. <b>Di che famiglia di materiale è?</b>";
+    $("mostra").innerHTML = svgCodice(c);
+    $("opz").innerHTML = Object.entries(FAM).map(([k, f]) => `<button data-v="${k}"><span class="e">${f.e}</span>${f.nome}</button>`).join("");
+  }
+  if (L.tipo === "plastica") {
+    const c = pick(CODICI.filter(x => x[3] === "plastica" && x[0] !== 7)); sf = { c, giusta: c[1] };
+    $("consegna").innerHTML = `Il numero ${c[0]} dentro le frecce: <b>quale sigla gli corrisponde?</b><br><span class="nota">${c[2]}</span>`;
+    $("mostra").innerHTML = svgCodice([c[0], "?"]);
+    const opz = new Set([c[1]]); while (opz.size < 4) opz.add(pick(["PET", "HDPE", "PVC", "LDPE", "PP", "PS"]));
+    $("opz").innerHTML = [...opz].sort(() => Math.random() - .5).map(v => `<button data-v="${v}">${v}</button>`).join("");
+  }
+  if (L.tipo === "esempio") {
+    const c = pick(L.pool); sf = { c, giusta: c[4] };
+    $("consegna").innerHTML = `Su quale di questi oggetti è più probabile trovare il codice <b>${etich(c)}</b>?`;
+    $("mostra").innerHTML = svgCodice(c);
+    const opz = new Set([c[4]]); while (opz.size < 3) { const x = pick(L.pool); if (x[3] !== c[3] || x[0] !== c[0]) opz.add(x[4]); }
+    $("opz").innerHTML = [...opz].sort(() => Math.random() - .5).map(v => `<button data-v="${esc(v)}">${esc(v)}</button>`).join("");
+  }
+  $("opz").querySelectorAll("button").forEach(b => b.addEventListener("click", () => rispondi(b)));
+  $("contatore").textContent = `Livello ${liv + 1} · ${L.t} · domanda ${dom + 1} di ${PER}`;
+  fb("", ""); disegnaLiv();
+}
+function rispondi(b) {
+  if (bloccato) return; bloccato = true;
+  const ok = b.dataset.v === sf.giusta, c = sf.c;
+  $("opz").querySelectorAll("button").forEach(x => { if (x.dataset.v === sf.giusta) x.classList.add("giusta"); else if (x === b) x.classList.add("sbagliata"); });
+  const info = `<b>${etich(c)}</b> = ${esc(c[2])} (${FAM[c[3]].nome.toLowerCase()}). Esempi: ${esc(c[4])}.`;
+  if (!ok) { fb("✘ " + info, "ko"); setTimeout(nuova, 2600); return; }
+  dom++;
+  if (dom >= PER) {
+    if (!prog.includes(liv)) prog.push(liv); try { localStorage.setItem("detective-prog", JSON.stringify(prog)); } catch (e) {}
+    fb("🎉 Livello completato! " + info, "ok"); disegnaLiv();
+    if (liv < LIV.length - 1) setTimeout(() => { liv++; dom = 0; nuova(); }, 2400);
+  } else { fb("✔ " + info, "ok"); setTimeout(nuova, 2000); }
+}
+
+/* ---------- Indagine ---------- */
+let reperti = []; try { reperti = JSON.parse(localStorage.getItem("detective-reperti")) || []; } catch (e) {}
+const salvaR = () => { try { localStorage.setItem("detective-reperti", JSON.stringify(reperti)); } catch (e) {} };
+$("lista-codici").innerHTML = CODICI.map(c => `<option value="${etich(c)}">`).join("");
+function disegnaInd() {
+  const conta = {}; reperti.forEach(r => conta[r.fam] = (conta[r.fam] || 0) + 1);
+  const max = Math.max(1, ...Object.values(conta));
+  $("ind-barre").innerHTML = Object.keys(FAM).filter(k => conta[k]).map(k => `<div class="barra-r"><span>${FAM[k].e} ${FAM[k].nome}</span><div class="tr"><div style="width:${conta[k] / max * 100}%;background:${FAM[k].col}"></div></div><span>${conta[k]}</span></div>`).join("") || `<span class="nota">Ancora nessun reperto.</span>`;
+  $("ind-lista").innerHTML = reperti.map((r, i) => `<div class="reperto"><span style="font-size:24px">${FAM[r.fam].e}</span><span><b>${esc(r.ogg)}</b> · ${esc(r.cod)}<br><span class="nota">${esc(r.mat)}</span></span><button data-i="${i}" aria-label="Elimina">🗑</button></div>`).join("");
+  $("ind-lista").querySelectorAll("button").forEach(b => b.addEventListener("click", () => { reperti.splice(+b.dataset.i, 1); salvaR(); disegnaInd(); }));
+}
+$("ind-add").addEventListener("click", () => {
+  const ogg = $("ind-ogg").value.trim() || "Oggetto senza nome", c = trova($("ind-cod").value);
+  if (!c) { $("ind-esito").innerHTML = `<p class="feedback ko">Codice non riconosciuto. Prova a scrivere solo il numero (es. 5) o la sigla (es. PET), oppure guarda la Tabella dei codici.</p>`; return; }
+  const f = FAM[c[3]];
+  $("ind-esito").innerHTML = `<div style="display:flex;gap:12px;align-items:center">${svgCodice(c)}<div><b style="font-size:19px">${esc(c[2])}</b><br>Famiglia: ${f.e} ${f.nome}<br>Raccolta più comune: ${esc(f.rac)}</div></div>`;
+  reperti.unshift({ ogg: ogg.slice(0, 60), cod: etich(c), mat: c[2], fam: c[3] }); salvaR(); disegnaInd();
+  $("ind-ogg").value = ""; $("ind-cod").value = ""; $("ind-ogg").focus();
+});
+$("ind-copia").addEventListener("click", async () => {
+  const t = "Indagine sui materiali degli imballaggi\n" + reperti.map(r => `- ${r.ogg}: ${r.cod} (${r.mat})`).join("\n");
+  try { await navigator.clipboard.writeText(t); $("ind-msg").textContent = "✔ Risultati copiati."; $("ind-msg").className = "feedback ok"; } catch (e) { $("ind-msg").textContent = "Copia non riuscita."; $("ind-msg").className = "feedback ko"; }
+});
+let confSvuota = false;
+$("ind-svuota").addEventListener("click", () => { if (!confSvuota) { confSvuota = true; $("ind-svuota").textContent = "Tocca ancora per confermare"; setTimeout(() => { confSvuota = false; $("ind-svuota").textContent = "🗑 Svuota il registro"; }, 3000); return; } reperti = []; salvaR(); disegnaInd(); confSvuota = false; $("ind-svuota").textContent = "🗑 Svuota il registro"; });
+
+/* ---------- Tabella ---------- */
+function disegnaTab() {
+  const q = $("cerca").value.trim().toLowerCase();
+  $("tbody").innerHTML = CODICI.filter(c => !q || (etich(c) + " " + c[2] + " " + FAM[c[3]].nome + " " + c[4]).toLowerCase().includes(q)).map(c => `<tr><td><b>${c[1]} ${c[0]}</b></td><td>${esc(c[2])}</td><td>${FAM[c[3]].e} ${FAM[c[3]].nome}</td><td>${esc(c[4])}</td></tr>`).join("");
+}
+$("cerca").addEventListener("input", disegnaTab);
+
+function setTab(t) { ["gioco", "indagine", "tabella"].forEach(x => { $("tab-" + x).setAttribute("aria-selected", x === t); $("s-" + x).hidden = x !== t; }); }
+["gioco", "indagine", "tabella"].forEach(x => $("tab-" + x).addEventListener("click", () => setTab(x)));
+disegnaTab(); disegnaInd(); nuova();
+</script>
+<script src="a11y.js"></script>
+</body>
+</html>
