@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>La griglia del disegnatore</title>
+<link rel="stylesheet" href="ptl.css">
+<style>
+:root { --accent: #0f766e; }
+.due { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
+@media (max-width: 760px) { .due { grid-template-columns: 1fr; } }
+.pann { display: grid; gap: 6px; }
+.pann h2 { margin: 0; font: 400 26px var(--font-hand); }
+.tela { position: relative; border: 3px solid var(--ink); border-radius: 10px; overflow: hidden; background: #fff; touch-action: none; }
+.tela canvas { display: block; width: 100%; }
+.tela canvas + canvas { position: absolute; inset: 0; height: 100%; }
+.barra { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.barra .btn { font-size: 17px; padding: 4px 10px; }
+.btn.on { background: var(--giallo); }
+.cursore { display: flex; gap: 6px; align-items: center; font: 400 19px var(--font-hand); }
+.spiega { background: #ecfdf5; border: 2px solid #99f6e4; border-radius: 12px; padding: 8px 12px; font-size: 16px; }
+.passi-cella { display: flex; gap: 6px; align-items: center; font: 700 18px var(--font-body); }
+#stampa { display: none; }
+@media print {
+  body > *:not(#stampa) { display: none !important; }
+  #stampa { display: block; }
+  #stampa .pag { page-break-after: always; text-align: center; font-family: Arial, sans-serif; }
+  #stampa img { max-width: 18cm; max-height: 24cm; }
+}
+</style>
+</head>
+<body>
+<header class="app-bar"><h1>La griglia del disegnatore</h1><span class="sub">Copiare dal vero e dalle opere con la quadrettatura</span></header>
+<div class="container" style="display:grid;gap:12px">
+  <p class="spiega"><b>Come funziona.</b> Una griglia divide il modello in tanti quadretti piccoli e facili da guardare. Disegni un quadretto alla volta nella stessa posizione della griglia vuota: alla fine il disegno ha le proporzioni giuste. È un metodo antico: i pittori del Rinascimento <b>quadrettavano</b> i disegni preparatori per riportarli ingranditi sul muro, e Albrecht Dürer disegnava dal vero guardando attraverso un telaio con una rete di fili.</p>
+  <div class="barra">
+    <button class="btn primary" id="b-foto">📷 Foto del modello</button><button class="btn" id="b-esempio">🍎 Modello d'esempio</button>
+    <label class="cursore">Quadretti per riga <input type="range" id="col" min="3" max="12" value="6"> <b id="col-n">6</b></label>
+  </div>
+  <div class="barra">
+    <button class="btn" id="b-bn" aria-pressed="false">⚫⚪ Bianco e nero</button>
+    <button class="btn" id="b-contorni" aria-pressed="false">✏️ Solo contorni</button>
+    <button class="btn" id="b-cella" aria-pressed="false">🔍 Una cella alla volta</button>
+    <span class="passi-cella" id="nav-cella" hidden><button class="btn" id="c-prec" aria-label="Cella precedente">◀</button><span id="c-nome"></span><button class="btn" id="c-succ" aria-label="Cella successiva">▶</button></span>
+  </div>
+  <div class="due">
+    <div class="pann"><h2>Il modello</h2><div class="tela"><canvas id="mod" aria-label="Modello con la griglia"></canvas></div><span class="nota">Tocca un quadretto: si illumina anche nel tuo disegno.</span></div>
+    <div class="pann"><h2>Il mio disegno</h2><div class="tela" id="tela-dis"><canvas id="dis-fondo" aria-hidden="true"></canvas><canvas id="dis" aria-label="Foglio quadrettato per disegnare con il dito o la penna"></canvas></div>
+      <div class="barra"><button class="btn on" id="t-matita" aria-pressed="true">✏️ Matita</button><button class="btn" id="t-gomma" aria-pressed="false">🧽 Gomma</button><label class="cursore">Tratto <input type="range" id="spess" min="1" max="10" value="3"></label></div>
+      <div class="barra"><button class="btn" id="b-annulla">↶ Annulla</button><button class="btn" id="b-pulisci">🗑 Cancella tutto</button><button class="btn" id="b-confronta" aria-pressed="false">👻 Confronta con il modello</button><button class="btn" id="b-salva">💾 Salva</button></div>
+    </div>
+  </div>
+  <div class="card barra"><b>Per disegnare su carta:</b><label class="cursore">quadretti da <select id="cm"><option value="1">1 cm</option><option value="2" selected>2 cm</option><option value="3">3 cm</option><option value="4">4 cm</option></select></label><button class="btn primary" id="b-stampa">🖨 Stampa modello e griglia vuota</button><span class="nota" id="nota-stampa"></span></div>
+  <p class="feedback" id="fb"></p>
+</div>
+<div id="stampa"></div>
+<input type="file" id="file" accept="image/*" hidden>
+<script>
+const $ = id => document.getElementById(id);
+const ESEMPIO = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600"><rect width="800" height="600" fill="#f4ead8"/><rect y="420" width="800" height="180" fill="#b7895c"/><path d="M0 420 H800" stroke="#7a5534" stroke-width="6"/>
+<path d="M300 140 h50 v60 q70 40 70 120 v110 q0 20 -20 20 h-150 q-20 0 -20 -20 v-110 q0 -80 70 -120z" fill="#3f7d5a" stroke="#1f2a44" stroke-width="5"/><rect x="295" y="120" width="60" height="26" rx="6" fill="#8a5a2b" stroke="#1f2a44" stroke-width="5"/>
+<ellipse cx="560" cy="440" rx="95" ry="85" fill="#d64545" stroke="#1f2a44" stroke-width="5"/><path d="M560 360 q6 -40 30 -50" stroke="#5b3a1e" stroke-width="8" fill="none" stroke-linecap="round"/><path d="M575 335 q40 -30 70 0 q-40 20 -70 0z" fill="#4c9a5b" stroke="#1f2a44" stroke-width="4"/>
+<path d="M120 380 h130 l-15 110 q-50 25 -100 0z" fill="#e8eef7" stroke="#1f2a44" stroke-width="5"/><path d="M250 400 q50 10 30 50 q-15 20 -40 15" fill="none" stroke="#1f2a44" stroke-width="6"/><ellipse cx="185" cy="380" rx="65" ry="12" fill="#c8d6ea" stroke="#1f2a44" stroke-width="4"/>
+<ellipse cx="560" cy="530" rx="110" ry="14" fill="#00000022"/><ellipse cx="185" cy="500" rx="80" ry="10" fill="#00000022"/></svg>`;
+let img = null, col = 6, bn = false, contorni = false, unaCella = false, cella = 0, confronta = false, strumento = "matita";
+let tratti = [], corrente = null, imgContorni = null;
+const righe = () => img ? Math.max(1, Math.round(col * img.height / img.width)) : 4;
+const nomeCella = i => String.fromCharCode(65 + Math.floor(i / col)) + (i % col + 1);
+function caricaSrc(src) { const im = new Image(); im.onload = () => { img = im; imgContorni = null; tratti = []; cella = 0; tutto(); $("fb").className = "feedback"; $("fb").textContent = "Ora disegna nel foglio a destra, un quadretto alla volta: parti da quello in alto a sinistra (A1)."; }; im.src = src; }
+function riduci(file) { return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => { const im = new Image(); im.onload = () => { const k = Math.min(1, 1200 / Math.max(im.width, im.height)), c = document.createElement("canvas"); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k); c.getContext("2d").drawImage(im, 0, 0, c.width, c.height); res(c.toDataURL("image/jpeg", .85)); }; im.onerror = rej; im.src = r.result; }; r.readAsDataURL(file); }); }
+/* Contorni: filtro di Sobel sulla luminosità */
+function calcolaContorni() {
+  const c = document.createElement("canvas"); c.width = img.width; c.height = img.height; const x = c.getContext("2d"); x.drawImage(img, 0, 0);
+  const d = x.getImageData(0, 0, c.width, c.height), W = c.width, H = c.height, g = new Float32Array(W * H);
+  for (let i = 0; i < W * H; i++) g[i] = .299 * d.data[i * 4] + .587 * d.data[i * 4 + 1] + .114 * d.data[i * 4 + 2];
+  const out = x.createImageData(W, H);
+  for (let y = 1; y < H - 1; y++) for (let xx = 1; xx < W - 1; xx++) {
+    const i = y * W + xx, gx = -g[i - W - 1] - 2 * g[i - 1] - g[i + W - 1] + g[i - W + 1] + 2 * g[i + 1] + g[i + W + 1], gy = -g[i - W - 1] - 2 * g[i - W] - g[i - W + 1] + g[i + W - 1] + 2 * g[i + W] + g[i + W + 1];
+    const v = Math.hypot(gx, gy) > 110 ? 30 : 255; out.data[i * 4] = out.data[i * 4 + 1] = out.data[i * 4 + 2] = v; out.data[i * 4 + 3] = 255;
+  }
+  x.putImageData(out, 0, 0); imgContorni = c;
+}
+function griglia(x, W, H, R, evid, etichette) {
+  const cw = W / col, ch = H / R;
+  x.lineWidth = Math.max(1.5, W / 500); x.strokeStyle = "rgba(220,38,38,.85)";
+  for (let i = 0; i <= col; i++) { x.beginPath(); x.moveTo(i * cw, 0); x.lineTo(i * cw, H); x.stroke(); }
+  for (let j = 0; j <= R; j++) { x.beginPath(); x.moveTo(0, j * ch); x.lineTo(W, j * ch); x.stroke(); }
+  if (evid != null) { x.lineWidth = Math.max(4, W / 160); x.strokeStyle = "#f59e0b"; x.strokeRect((evid % col) * cw, Math.floor(evid / col) * ch, cw, ch); }
+  if (etichette) { x.font = `bold ${Math.max(12, Math.min(cw, ch) * .2)}px Arial`; x.textBaseline = "top"; for (let j = 0; j < R; j++) for (let i = 0; i < col; i++) { const t = nomeCella(j * col + i), px = i * cw + 4, py = j * ch + 3, w = x.measureText(t).width; x.fillStyle = "rgba(255,255,255,.75)"; x.fillRect(px - 2, py - 1, w + 4, Math.min(cw, ch) * .22 + 2); x.fillStyle = "#b91c1c"; x.fillText(t, px, py); } }
+}
+function disegnaModello(per) {
+  const cv = per || $("mod"), x = cv.getContext("2d");
+  if (!img) { cv.width = 800; cv.height = 600; x.fillStyle = "#f6f1e6"; x.fillRect(0, 0, 800, 600); x.fillStyle = "#6b6258"; x.font = "34px 'Patrick Hand', cursive"; x.textAlign = "center"; x.fillText("Fotografa un oggetto o un'opera", 400, 300); x.textAlign = "left"; return; }
+  cv.width = img.width; cv.height = img.height; const R = righe();
+  if (contorni) { if (!imgContorni) calcolaContorni(); x.drawImage(imgContorni, 0, 0); }
+  else { x.filter = bn ? "grayscale(1)" : "none"; x.drawImage(img, 0, 0); x.filter = "none"; }
+  if (unaCella && !per) { const cw = cv.width / col, ch = cv.height / R, cx = (cella % col) * cw, cy = Math.floor(cella / col) * ch; x.fillStyle = "rgba(246,241,230,.94)"; x.beginPath(); x.rect(0, 0, cv.width, cv.height); x.rect(cx + cw, cy, -cw, ch); x.fill("evenodd"); }
+  griglia(x, cv.width, cv.height, R, per ? null : cella, true);
+}
+function dimDisegno() { const W = 1000, H = img ? Math.round(W * img.height / img.width) : 750; return [W, H]; }
+function disegnaFoglio() {
+  const [W, H] = dimDisegno(), f = $("dis-fondo"), d = $("dis");
+  if (f.width !== W || f.height !== H) { f.width = d.width = W; f.height = d.height = H; }
+  const x = f.getContext("2d"); x.fillStyle = "#fff"; x.fillRect(0, 0, W, H);
+  if (confronta && img) { x.globalAlpha = .28; x.drawImage(img, 0, 0, W, H); x.globalAlpha = 1; }
+  griglia(x, W, H, righe(), cella, true);
+  const y = d.getContext("2d"); y.clearRect(0, 0, W, H); y.lineCap = y.lineJoin = "round";
+  tratti.forEach(t => traccia(y, t, W, H));
+}
+function traccia(y, t, W, H) {
+  if (t.p.length < 1) return; y.save(); y.globalCompositeOperation = t.g ? "destination-out" : "source-over"; y.strokeStyle = "#1f2937"; y.lineWidth = t.s * (t.g ? 4 : 1.6);
+  y.beginPath(); y.moveTo(t.p[0][0] * W, t.p[0][1] * H); t.p.forEach(([a, b]) => y.lineTo(a * W, b * H)); if (t.p.length === 1) y.lineTo(t.p[0][0] * W + .1, t.p[0][1] * H); y.stroke(); y.restore();
+}
+function tutto() { $("col-n").textContent = col; $("nav-cella").hidden = !unaCella; $("c-nome").textContent = "Quadretto " + nomeCella(cella); disegnaModello(); disegnaFoglio(); notaStampa(); }
+/* ---- Interazione ---- */
+const pos = (cv, e) => { const r = cv.getBoundingClientRect(); return [Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)), Math.max(0, Math.min(1, (e.clientY - r.top) / r.height))]; };
+$("mod").addEventListener("click", e => { if (!img) return; const [u, v] = pos($("mod"), e); cella = Math.min(righe() - 1, Math.floor(v * righe())) * col + Math.min(col - 1, Math.floor(u * col)); tutto(); });
+const dis = $("dis");
+dis.addEventListener("pointerdown", e => { dis.setPointerCapture(e.pointerId); corrente = { p: [pos(dis, e)], s: +$("spess").value, g: strumento === "gomma" }; tratti.push(corrente); disegnaFoglio(); });
+dis.addEventListener("pointermove", e => { if (!corrente) return; corrente.p.push(pos(dis, e)); const y = dis.getContext("2d"); y.lineCap = y.lineJoin = "round"; traccia(y, { p: corrente.p.slice(-2), s: corrente.s, g: corrente.g }, dis.width, dis.height); });
+dis.addEventListener("pointerup", () => { corrente = null; });
+const toggle = (id, f) => $(id).addEventListener("click", () => { const v = f(); $(id).classList.toggle("on", v); $(id).setAttribute("aria-pressed", v); tutto(); });
+toggle("b-bn", () => { bn = !bn; if (bn) { contorni = false; $("b-contorni").classList.remove("on"); } return bn; });
+toggle("b-contorni", () => { contorni = !contorni; if (contorni) { bn = false; $("b-bn").classList.remove("on"); } if (contorni && !img) { contorni = false; } return contorni; });
+toggle("b-cella", () => (unaCella = !unaCella));
+toggle("b-confronta", () => (confronta = !confronta));
+$("c-prec").onclick = () => { cella = (cella - 1 + col * righe()) % (col * righe()); tutto(); };
+$("c-succ").onclick = () => { cella = (cella + 1) % (col * righe()); tutto(); };
+$("col").addEventListener("input", () => { col = +$("col").value; cella = 0; tutto(); });
+const strum = s => { strumento = s; ["matita", "gomma"].forEach(k => { $("t-" + k).classList.toggle("on", k === s); $("t-" + k).setAttribute("aria-pressed", k === s); }); };
+$("t-matita").onclick = () => strum("matita"); $("t-gomma").onclick = () => strum("gomma");
+$("b-annulla").onclick = () => { tratti.pop(); disegnaFoglio(); };
+$("b-pulisci").onclick = () => { if ($("b-pulisci").dataset.conf !== "1") { $("b-pulisci").dataset.conf = "1"; $("b-pulisci").textContent = "Sicuro?"; setTimeout(() => { $("b-pulisci").dataset.conf = ""; $("b-pulisci").textContent = "🗑 Cancella tutto"; }, 3000); return; } tratti = []; $("b-pulisci").dataset.conf = ""; $("b-pulisci").textContent = "🗑 Cancella tutto"; disegnaFoglio(); };
+$("b-foto").onclick = () => $("file").click();
+$("file").addEventListener("change", async e => { const f = e.target.files[0]; e.target.value = ""; if (!f) return; try { caricaSrc(await riduci(f)); } catch (err) { $("fb").className = "feedback ko"; $("fb").textContent = "Non riesco ad aprire questa immagine."; } });
+$("b-esempio").onclick = () => { const c = document.createElement("canvas"), im = new Image(); im.onload = () => { c.width = 800; c.height = 600; c.getContext("2d").drawImage(im, 0, 0); caricaSrc(c.toDataURL("image/png")); }; im.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(ESEMPIO); };
+$("b-salva").onclick = async () => {
+  const [W, H] = dimDisegno(), c = document.createElement("canvas"); c.width = W; c.height = H; const x = c.getContext("2d"); x.fillStyle = "#fff"; x.fillRect(0, 0, W, H); griglia(x, W, H, righe(), null, false); x.drawImage(dis, 0, 0);
+  const blob = await new Promise(r => c.toBlob(r, "image/png")); let r = null;
+  try { if (window.parent !== window && typeof window.parent.ptlSalva === "function") r = await window.parent.ptlSalva("il-mio-disegno.png", blob); } catch (e) {}
+  if (r !== "saved" && r !== "declined") { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "il-mio-disegno.png"; a.click(); }
+};
+function notaStampa() { const cm = +$("cm").value, w = col * cm, h = Math.round(img ? cm * col * img.height / img.width : righe() * cm); $("nota-stampa").textContent = `Griglia vuota: ${w} × ${h} cm` + (w > 19 || h > 27 ? " — troppo grande per un A4: scegli quadretti più piccoli o meno quadretti." : ""); }
+$("cm").addEventListener("change", notaStampa);
+$("b-stampa").onclick = () => {
+  if (!img) { $("fb").className = "feedback ko"; $("fb").textContent = "Prima scegli un modello."; return; }
+  const cm = +$("cm").value, R = righe(), c = document.createElement("canvas"); disegnaModello(c);
+  const q = (img.height / R) / (img.width / col), h = 10 * q; // celle con le stesse proporzioni del modello
+  let g = `<svg xmlns="http://www.w3.org/2000/svg" width="${col * cm}cm" height="${(R * cm * q).toFixed(2)}cm" viewBox="0 0 ${col * 10} ${R * h}"><rect width="${col * 10}" height="${R * h}" fill="#fff" stroke="#888" stroke-width=".4"/>`;
+  for (let i = 1; i < col; i++) g += `<line x1="${i * 10}" y1="0" x2="${i * 10}" y2="${R * h}" stroke="#999" stroke-width=".3"/>`;
+  for (let j = 1; j < R; j++) g += `<line x1="0" y1="${j * h}" x2="${col * 10}" y2="${j * h}" stroke="#999" stroke-width=".3"/>`;
+  for (let j = 0; j < R; j++) for (let i = 0; i < col; i++) g += `<text x="${i * 10 + .8}" y="${j * h + 2.4}" font-size="2" font-family="Arial" fill="#aaa">${nomeCella(j * col + i)}</text>`;
+  g += "</svg>";
+  $("stampa").innerHTML = `<div class="pag"><h2>Il modello</h2><img src="${c.toDataURL("image/jpeg", .9)}" alt="Modello quadrettato"></div><div class="pag"><h2>La mia griglia (quadretti da ${cm} cm)</h2>${g}<p>Nome: ____________________ Classe: ______</p></div>`;
+  window.print();
+};
+tutto();
+</script>
+<script src="a11y.js"></script>
+</body>
+</html>

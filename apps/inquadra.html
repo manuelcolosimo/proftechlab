@@ -29,13 +29,16 @@
 .foto canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .foto .row button { font-size: 15px; border: 1.5px solid var(--ink); border-radius: 8px; background: #fff; padding: 2px 8px; cursor: pointer; }
 .check label { display: flex; gap: 8px; align-items: center; font-size: 17px; }
+.tela-aurea { position: relative; background: #f3f4f6; border: 3px solid var(--ink); border-radius: 14px; overflow: hidden; min-height: 300px; touch-action: none; }
+.tela-aurea canvas { width: 100%; display: block; cursor: crosshair; }
+.tela-aurea .vuoto { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; padding: 20px; gap: 10px; font: 400 22px var(--font-hand); }
 .privacy { background: #fff7ed; border: 2px solid #fdba74; border-radius: 12px; padding: 8px 12px; font-size: 16px; }
 </style>
 </head>
 <body>
 <header class="app-bar"><h1>Inquadra!</h1><span class="sub">Sfide di composizione fotografica</span></header>
 <div class="container">
-  <div class="tabs" role="tablist"><button class="tab" id="t-scatta" aria-selected="true">📷 Scatta</button><button class="tab" id="t-album" aria-selected="false">🖼️ Il mio album</button></div>
+  <div class="tabs" role="tablist"><button class="tab" id="t-scatta" aria-selected="true">📷 Scatta</button><button class="tab" id="t-aurea" aria-selected="false">📐 Caccia alla sezione aurea</button><button class="tab" id="t-album" aria-selected="false">🖼️ Il mio album</button></div>
   <section id="s-scatta" class="layout">
     <div style="display:grid;gap:10px">
       <div class="mirino" id="mirino"><video id="video" playsinline muted hidden></video><img id="anteprima" hidden alt="Foto da analizzare"><canvas id="guida"></canvas>
@@ -50,12 +53,35 @@
       <p class="privacy">🔒 Fotografa oggetti, ambienti e natura. Le persone si fotografano solo con il loro permesso (e mai i compagni senza il permesso del docente). Le foto restano solo su questo dispositivo.</p>
     </div>
   </section>
+  <section id="s-aurea" hidden class="layout">
+    <div style="display:grid;gap:10px">
+      <div class="tela-aurea"><canvas id="ca" aria-label="Foto dell'opera con il rettangolo da misurare"></canvas>
+        <div class="vuoto" id="vuoto-a"><span>Carica la foto di un'opera (dal libro, da un sito di un museo, o scattala) e poi trascina il dito per disegnare un rettangolo sopra una parte dell'opera.</span><div class="scelte" style="justify-content:center"><button id="b-file-a">🖼 Carica la foto dell'opera</button></div></div></div>
+      <div class="scelte"><button id="b-file-a2">🖼 Cambia foto</button><button id="b-spir">🌀 Gira la spirale</button><button id="b-tutta">⬜ Misura tutta l'opera</button><button id="b-canc-a">✖ Cancella rettangolo</button></div>
+      <p class="feedback" id="fb-a" style="font-size:19px" aria-live="polite"></p>
+    </div>
+    <div style="display:grid;gap:12px">
+      <div class="sfida"><h3>Che cos'è la sezione aurea?</h3>
+        <p style="margin:0">Dividi un segmento in due parti: la parte grande sta alla piccola come il tutto sta alla parte grande. Questo rapporto vale circa <b>1,618</b> e si chiama <b>numero aureo</b> (φ, «fi»).</p>
+        <svg viewBox="0 0 320 70" role="img" aria-label="Segmento diviso in sezione aurea: parte grande 61,8 per cento, parte piccola 38,2 per cento"><line x1="10" y1="30" x2="310" y2="30" stroke="#1f2937" stroke-width="4"/><line x1="10" y1="20" x2="10" y2="40" stroke="#1f2937" stroke-width="3"/><line x1="195.4" y1="16" x2="195.4" y2="44" stroke="#ea580c" stroke-width="4"/><line x1="310" y1="20" x2="310" y2="40" stroke="#1f2937" stroke-width="3"/><text x="100" y="60" font-size="15" text-anchor="middle">61,8%</text><text x="252" y="60" font-size="15" text-anchor="middle">38,2%</text></svg>
+        <p style="margin:0">Un <b>rettangolo aureo</b> ha il lato lungo 1,618 volte il lato corto. Togliendo un quadrato resta un altro rettangolo aureo, e così via: unendo gli archi nasce la <b>spirale aurea</b>.</p>
+      </div>
+      <div class="sfida"><h3>Fai il detective, non il tifoso</h3>
+        <p style="margin:0">Su libri e siti si leggono molte «prove» della sezione aurea (Partenone, Gioconda…), ma spesso sono forzate: basta scegliere i bordi giusti per trovarla ovunque. Misura tu e decidi.</p>
+        <div class="check"><b>Prova così:</b>
+          <label><input type="checkbox"> Misura prima tutta l'opera: il quadro è un rettangolo aureo?</label>
+          <label><input type="checkbox"> Disegna un rettangolo su una parte precisa (una facciata, un volto, una finestra).</label>
+          <label><input type="checkbox"> Le linee arancioni (a 38% e 62%) cadono su qualcosa di importante: orizzonte, figura, occhi?</label>
+          <label><input type="checkbox"> Scrivi sul quaderno: c'è o non c'è? Quanto vale il rapporto?</label></div>
+      </div>
+    </div>
+  </section>
   <section id="s-album" hidden style="display:grid;gap:12px">
     <p class="consegna">Le tue foto. Attiva la griglia per controllare la composizione.</p>
     <div class="album" id="album"></div>
   </section>
 </div>
-<input type="file" id="file" accept="image/*" hidden>
+<input type="file" id="file" accept="image/*" hidden><input type="file" id="file-a" accept="image/*" hidden>
 <script>
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -69,9 +95,33 @@ const SFIDE = [
   { t: "Il dettaglio", g: "nessuna", d: "Avvicinati tanto da riempire tutta l'inquadratura con un particolare: la trama del legno, una foglia, le punte delle matite.", c: ["Il particolare riempie tutta la foto?", "Si vede bene la trama o la superficie?"] },
   { t: "Ripetizione e ritmo", g: "terzi", d: "Fotografa oggetti uguali che si ripetono: sedie in fila, libri, mattoni. La ripetizione crea un ritmo visivo.", c: ["Ci sono almeno 4 oggetti che si ripetono?", "Riempiono buona parte della foto?"] },
   { t: "Lo spazio vuoto", g: "terzi", d: "Metti un soggetto piccolo in un grande spazio vuoto (un muro, il cielo, il pavimento): lo spazio vuoto lo fa risaltare.", c: ["Il soggetto è piccolo?", "Intorno c'è tanto spazio vuoto e semplice?"] },
+  { t: "La sezione aurea", g: "spirale", d: "Dividi l'immagine con il rapporto aureo: le linee stanno a circa 38% e 62% (non a un terzo esatto). Metti il soggetto dove la spirale si arrotola. Tocca di nuovo «Spirale aurea» per girarla.", c: ["Il soggetto è dove si chiude la spirale?", "Le linee importanti seguono le linee auree?"] },
   { t: "Colori complementari", g: "nessuna", d: "Cerca due colori complementari vicini (rosso e verde, giallo e viola, blu e arancione): si fanno risaltare a vicenda.", c: ["Ci sono due colori complementari?", "Sono vicini e ben visibili?"] }
 ];
-let cur = 0, griglia = "terzi", stream = null, fatte = [];
+const PHI = (1 + Math.sqrt(5)) / 2;
+let cur = 0, griglia = "terzi", stream = null, fatte = [], spirOr = 0;
+/* Spirale aurea: punti normalizzati (0..1) in un rettangolo orizzontale; or = 0..3 ribalta/capovolge */
+function spirale(or) {
+  let x = 0, y = 0, w = PHI, h = 1; const P = [];
+  const arco = (cx, cy, r, a0, a1) => { for (let k = 0; k <= 16; k++) { const a = (a0 + (a1 - a0) * k / 16) * Math.PI / 180; P.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]); } };
+  for (let i = 0; i < 12; i++) {
+    const d = i % 4;
+    if (d === 0) { const q = h; arco(x + q, y + h, q, 180, 270); x += q; w -= q; }
+    else if (d === 1) { const q = w; arco(x, y + q, q, 270, 360); y += q; h -= q; }
+    else if (d === 2) { const q = h; arco(x + w - q, y, q, 0, 90); w -= q; }
+    else { const q = w; arco(x + w, y + h - q, q, 90, 180); h -= q; }
+  }
+  return P.map(([a, b]) => { let u = a / PHI, v = b; if (or & 1) u = 1 - u; if (or & 2) v = 1 - v; return [u, v]; });
+}
+/* disegna griglia aurea e spirale dentro il riquadro (bx,by,bw,bh) */
+function disegnaAurea(x, bx, by, bw, bh, conSpirale, or) {
+  const L = (a, b, c, d) => { x.beginPath(); x.moveTo(a, b); x.lineTo(c, d); x.stroke(); };
+  const g = 1 / PHI / PHI; // 0,382
+  [g, 1 - g].forEach(f => { L(bx + bw * f, by, bx + bw * f, by + bh); L(bx, by + bh * f, bx + bw, by + bh * f); });
+  if (!conSpirale) return;
+  const P = spirale(or), vert = bh > bw;
+  x.beginPath(); P.forEach(([u, v], i) => { const px = vert ? bx + v * bw : bx + u * bw, py = vert ? by + u * bh : by + v * bh; i ? x.lineTo(px, py) : x.moveTo(px, py); }); x.stroke();
+}
 try { fatte = JSON.parse(localStorage.getItem("inquadra-fatte")) || []; } catch (e) {}
 /* ---- Archivio foto (IndexedDB, solo su questo dispositivo) ---- */
 let dbp = null;
@@ -85,12 +135,13 @@ function disegnaGriglia(cv, tipo) {
   x.strokeStyle = "rgba(255,255,255,.85)"; x.lineWidth = 3; x.shadowColor = "rgba(0,0,0,.6)"; x.shadowBlur = 4;
   const L = (a, b, c, d) => { x.beginPath(); x.moveTo(a, b); x.lineTo(c, d); x.stroke(); };
   if (tipo === "terzi") { [1, 2].forEach(i => { L(W * i / 3, 0, W * i / 3, H); L(0, H * i / 3, W, H * i / 3); }); x.fillStyle = "rgba(255,215,0,.9)"; [1, 2].forEach(i => [1, 2].forEach(j => { x.beginPath(); x.arc(W * i / 3, H * j / 3, 10, 0, 7); x.fill(); })); }
+  if (tipo === "aurea" || tipo === "spirale") { x.strokeStyle = "rgba(255,190,90,.95)"; disegnaAurea(x, 0, 0, W, H, tipo === "spirale", spirOr); }
   if (tipo === "diagonali") { L(0, 0, W, H); L(W, 0, 0, H); }
   if (tipo === "centro") { L(W / 2, 0, W / 2, H); L(0, H / 2, W, H / 2); x.beginPath(); x.arc(W / 2, H / 2, Math.min(W, H) * .08, 0, 7); x.stroke(); }
 }
 function griglie() {
-  $("griglie").innerHTML = [["terzi", "Terzi"], ["diagonali", "Diagonali"], ["centro", "Centro"], ["nessuna", "Nessuna"]].map(([k, t]) => `<button data-g="${k}" aria-pressed="${k === griglia}">${t}</button>`).join("");
-  $("griglie").querySelectorAll("button").forEach(b => b.onclick = () => { griglia = b.dataset.g; griglie(); disegnaGriglia($("guida"), griglia); });
+  $("griglie").innerHTML = [["terzi", "Terzi"], ["aurea", "Sezione aurea"], ["spirale", "Spirale aurea"], ["diagonali", "Diagonali"], ["centro", "Centro"], ["nessuna", "Nessuna"]].map(([k, t]) => `<button data-g="${k}" aria-pressed="${k === griglia}">${t}</button>`).join("");
+  $("griglie").querySelectorAll("button").forEach(b => b.onclick = () => { if (b.dataset.g === "spirale" && griglia === "spirale") spirOr = (spirOr + 1) % 4; griglia = b.dataset.g; griglie(); disegnaGriglia($("guida"), griglia); });
 }
 window.addEventListener("resize", () => disegnaGriglia($("guida"), griglia));
 /* ---- Sfide ---- */
@@ -132,7 +183,42 @@ async function album() {
   $("album").querySelectorAll("[data-del]").forEach(b => b.onclick = async () => { if (b.dataset.conf !== "1") { b.dataset.conf = "1"; b.textContent = "Sicuro?"; return; } await tx("readwrite", s => s.delete(+b.dataset.del)); album(); });
 }
 /* ---- Schede ---- */
-["scatta", "album"].forEach(t => $("t-" + t).addEventListener("click", () => { ["scatta", "album"].forEach(x => { $("t-" + x).setAttribute("aria-selected", x === t); $("s-" + x).hidden = x !== t; }); if (t === "album") album(); else disegnaGriglia($("guida"), griglia); }));
+["scatta", "aurea", "album"].forEach(t => $("t-" + t).addEventListener("click", () => { ["scatta", "aurea", "album"].forEach(x => { $("t-" + x).setAttribute("aria-selected", x === t); $("s-" + x).hidden = x !== t; }); if (t === "album") album(); else if (t === "aurea") disegnaA(); else disegnaGriglia($("guida"), griglia); }));
+/* ---- Caccia alla sezione aurea ---- */
+let imA = null, boxA = null, orA = 0, trasc = null;
+const RAPPORTI = [[1, "un quadrato (1 : 1)"], [4 / 3, "il formato 4 : 3 (1,33)"], [Math.SQRT2, "il foglio A4 (1,41)"], [1.5, "il formato 3 : 2 (1,5)"], [PHI, "la sezione aurea (1,618)"], [16 / 9, "il formato 16 : 9 (1,78)"], [2, "un doppio quadrato (2 : 1)"]];
+const fmt = n => n.toFixed(2).replace(".", ",");
+function disegnaA() {
+  const cv = $("ca"); if (!imA) { cv.width = 10; cv.height = 10; return; }
+  const W = cv.parentElement.clientWidth || 600, k = Math.min(W / imA.width, 520 / imA.height);
+  cv.width = Math.round(imA.width * k * 2); cv.height = Math.round(imA.height * k * 2); cv.style.width = imA.width * k + "px"; cv.style.margin = "0 auto";
+  const x = cv.getContext("2d"); x.drawImage(imA, 0, 0, cv.width, cv.height);
+  if (!boxA) return;
+  const sx = cv.width / imA.width, b = { x: boxA.x * sx, y: boxA.y * sx, w: boxA.w * sx, h: boxA.h * sx };
+  x.fillStyle = "rgba(0,0,0,.35)"; x.beginPath(); x.rect(0, 0, cv.width, cv.height); x.rect(b.x + b.w, b.y, -b.w, b.h); x.fill("evenodd");
+  x.lineWidth = 4; x.strokeStyle = "#fff"; x.shadowColor = "rgba(0,0,0,.7)"; x.shadowBlur = 4; x.strokeRect(b.x, b.y, b.w, b.h);
+  x.strokeStyle = "#fb923c"; x.lineWidth = 3; disegnaAurea(x, b.x, b.y, b.w, b.h, true, orA); x.shadowBlur = 0;
+}
+function giudica() {
+  if (!boxA || boxA.w < 8 || boxA.h < 8) { $("fb-a").className = "feedback"; $("fb-a").textContent = ""; return; }
+  const r = Math.max(boxA.w, boxA.h) / Math.min(boxA.w, boxA.h), err = Math.abs(r - PHI) / PHI;
+  const vic = RAPPORTI.reduce((a, c) => Math.abs(c[0] - r) < Math.abs(a[0] - r) ? c : a);
+  let t = `Rapporto tra lato lungo e lato corto: ${fmt(r)}. `;
+  if (err <= .03) { $("fb-a").className = "feedback ok"; t += "✔ È un rettangolo aureo (scarto " + Math.round(err * 100) + "%)."; }
+  else if (err <= .07) { $("fb-a").className = "feedback"; t += "Quasi aureo (scarto " + Math.round(err * 100) + "%): controlla di aver preso i bordi giusti."; }
+  else { $("fb-a").className = "feedback ko"; t += "✖ Non è aureo: è più vicino a " + vic[1] + "."; }
+  $("fb-a").textContent = t;
+}
+function puntoA(e) { const cv = $("ca"), r = cv.getBoundingClientRect(), k = imA.width / r.width; return { x: Math.max(0, Math.min(imA.width, (e.clientX - r.left) * k)), y: Math.max(0, Math.min(imA.height, (e.clientY - r.top) * k)) }; }
+$("ca").addEventListener("pointerdown", e => { if (!imA) return; $("ca").setPointerCapture(e.pointerId); trasc = puntoA(e); boxA = { x: trasc.x, y: trasc.y, w: 0, h: 0 }; });
+$("ca").addEventListener("pointermove", e => { if (!trasc) return; const p = puntoA(e); boxA = { x: Math.min(p.x, trasc.x), y: Math.min(p.y, trasc.y), w: Math.abs(p.x - trasc.x), h: Math.abs(p.y - trasc.y) }; disegnaA(); giudica(); });
+$("ca").addEventListener("pointerup", () => { trasc = null; if (boxA && (boxA.w < 8 || boxA.h < 8)) boxA = null; disegnaA(); giudica(); });
+$("b-file-a").onclick = $("b-file-a2").onclick = () => $("file-a").click();
+$("file-a").addEventListener("change", async e => { const f = e.target.files[0]; e.target.value = ""; if (!f) return; const url = await riduci(f), im = new Image(); im.onload = () => { imA = im; boxA = null; $("vuoto-a").hidden = true; disegnaA(); $("fb-a").className = "feedback"; $("fb-a").textContent = "Trascina il dito sulla foto per disegnare il rettangolo da misurare."; }; im.src = url; });
+$("b-spir").onclick = () => { orA = (orA + 1) % 4; disegnaA(); };
+$("b-tutta").onclick = () => { if (!imA) return; boxA = { x: 0, y: 0, w: imA.width, h: imA.height }; disegnaA(); giudica(); };
+$("b-canc-a").onclick = () => { boxA = null; disegnaA(); giudica(); };
+window.addEventListener("resize", disegnaA);
 griglie(); sfida(); disegnaGriglia($("guida"), griglia);
 </script>
 <script src="a11y.js"></script>

@@ -31,6 +31,12 @@
 .luce div { position: absolute; width: 56%; aspect-ratio: 1; border-radius: 50%; mix-blend-mode: screen; }
 .cursore { display: grid; grid-template-columns: 90px 1fr 50px; gap: 8px; align-items: center; }
 .cursore input { width: 100%; }
+.scala { display: grid; grid-template-columns: repeat(9, 1fr); gap: 4px; }
+.scala button, .scala div { aspect-ratio: 1; border: 2px solid var(--ink); border-radius: 8px; cursor: pointer; padding: 0; font: 700 14px var(--font-body); }
+.scala.fissa div { cursor: default; display: grid; place-items: end center; padding-bottom: 2px; }
+.scala button.scelto { outline: 5px solid var(--giallo); outline-offset: 1px; }
+#bn-col, #bn-grigi { grid-template-columns: repeat(6, 1fr); }
+.q-grigio { display: block; width: 46px; height: 46px; border-radius: 4px; }
 .spiega { background: #fff7d6; border: 2px dashed var(--ink); border-radius: 10px; padding: 8px 12px; }
 </style>
 </head>
@@ -41,6 +47,7 @@
     <button class="tab" id="t-cerchio" aria-selected="true">🎨 Cerchio cromatico</button>
     <button class="tab" id="t-mescola" aria-selected="false">🖌️ Mescola le tempere</button>
     <button class="tab" id="t-luce" aria-selected="false">💡 I colori della luce</button>
+    <button class="tab" id="t-valore" aria-selected="false">⚪⚫ Chiaro e scuro</button>
     <button class="tab" id="t-sfide" aria-selected="false">🎯 Sfide</button>
   </div>
 
@@ -69,6 +76,41 @@
       <div class="cursore"><b style="color:#00c">Blu</b><input type="range" id="c-b" min="0" max="255" value="255"><span id="v-b"></span></div>
       <div class="row"><span>Al centro:</span><span id="centro" style="width:60px;height:36px;border:2px solid var(--ink);border-radius:8px;display:inline-block"></span><b id="centro-n"></b></div>
       <p class="spiega">Con la luce i colori si <b>sommano</b>: rosso + verde = giallo, verde + blu = ciano, rosso + blu = magenta, tutti e tre = bianco. Schermi, LIM e tablet creano ogni colore con puntini rossi, verdi e blu (RGB). Le stampanti invece usano gli inchiostri ciano, magenta, giallo e nero (CMYK).</p>
+    </div>
+  </section>
+
+  <section id="s-valore" hidden style="display:grid;gap:16px">
+    <div class="card scheda-col">
+      <h2 style="margin:0;font:400 30px var(--font-hand)">I colori acromatici</h2>
+      <div class="coppia" style="height:64px"><div style="background:#fff">bianco</div><div style="background:#bdbdbd">grigi</div><div style="background:#777;color:#fff">grigi</div><div style="background:#111;color:#fff">nero</div></div>
+      <p style="margin:0"><b>Bianco, nero e grigi</b> sono colori <b>acromatici</b> (dal greco: «senza colore»): non hanno una tinta, cambiano solo la luminosità. Una superficie bianca riflette quasi tutta la luce, una nera la assorbe quasi tutta. I grigi stanno in mezzo. Tutti gli altri colori (rosso, blu, verde…) sono <b>cromatici</b>.</p>
+    </div>
+    <div class="card scheda-col">
+      <h2 style="margin:0;font:400 30px var(--font-hand)">Costruisci la scala di valore</h2>
+      <p class="consegna" style="margin:0">Il <b>valore</b> (o tono) è quanto un colore è chiaro o scuro. Metti in ordine i grigi dal più chiaro al più scuro: tocca un quadratino e poi quello con cui scambiarlo.</p>
+      <div class="scala" id="scala-gioco"></div>
+      <div class="row"><button class="btn primary" id="sc-ok">Controlla</button><button class="btn" id="sc-mescola">🔀 Mescola di nuovo</button></div>
+      <p class="feedback" id="sc-fb" aria-live="polite"></p>
+    </div>
+    <div class="card scheda-col">
+      <h2 style="margin:0;font:400 30px var(--font-hand)">La scala di valore di un colore</h2>
+      <p class="consegna" style="margin:0">Scegli un colore: aggiungendo <b>bianco</b> ottieni le <b>tinte</b> (più chiare), aggiungendo <b>nero</b> le <b>ombre</b> (più scure).</p>
+      <div class="filtri" id="sv-col"></div>
+      <div class="scala fissa" id="sv-scala"></div>
+      <div class="nota" style="display:flex;justify-content:space-between"><span>+ bianco ⬅</span><span>colore puro</span><span>➡ + nero</span></div>
+    </div>
+    <div class="card scheda-col">
+      <h2 style="margin:0;font:400 30px var(--font-hand)">Ogni colore ha il suo valore</h2>
+      <p class="consegna" style="margin:0">Una foto in bianco e nero mostra solo i valori. Indovina: quale di questi colori diventa il grigio <b>più chiaro</b>? E il <b>più scuro</b>? Poi premi il pulsante.</p>
+      <div class="scala fissa" id="bn-col"></div>
+      <div class="scala fissa" id="bn-grigi" hidden></div>
+      <div class="row"><button class="btn" id="bn-mostra">⚫ Mostra in bianco e nero</button></div>
+      <p class="spiega" id="bn-spiega" hidden>Il <b>giallo</b> è il colore puro più chiaro, il <b>viola</b> e il <b>blu</b> i più scuri. Per questo, nei disegni, il giallo funziona bene per le zone in luce e il viola per le ombre.</p>
+    </div>
+    <div class="card scheda-col">
+      <h2 style="margin:0;font:400 30px var(--font-hand)">L'occhio si fa ingannare</h2>
+      <div class="coppia" style="height:120px"><div style="background:#fff"><span class="q-grigio" style="background:#808080"></span></div><div style="background:#111"><span class="q-grigio" style="background:#808080"></span></div></div>
+      <p style="margin:0">I due quadratini al centro sono <b>esattamente lo stesso grigio</b>, eppure su sfondo nero sembra più chiaro. Si chiama <b>contrasto simultaneo</b>: il valore di un colore dipende anche da quello che ha intorno.</p>
     </div>
   </section>
 
@@ -209,8 +251,38 @@ function suggerisci(c, t) {
   return "La luminosità va bene: cambia le proporzioni dei colori.";
 }
 
+/* ---- Chiaro e scuro ---- */
+const lin = v => v <= .04045 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4), enc = v => v <= .0031308 ? 12.92 * v : 1.055 * Math.pow(v, 1 / 2.4) - .055;
+const grigioL = L => { const Y = L > 8 ? Math.pow((L + 16) / 116, 3) : L / 903.3; const g = Math.round(enc(Y) * 255); return `rgb(${g},${g},${g})`; }; // L* 0..100, passi uguali per l'occhio
+const luminanza = h => { const n = parseInt(h.slice(1), 16), c = [n >> 16, n >> 8 & 255, n & 255].map(v => lin(v / 255)); return .2126 * c[0] + .7152 * c[1] + .0722 * c[2]; };
+const GRIGI = Array.from({ length: 9 }, (_, i) => grigioL(100 - i * 12.5));
+let ordine = [], scelto = null;
+function mescolaScala() { do { ordine = [...GRIGI.keys()].sort(() => Math.random() - .5); } while (ordine.every((v, i) => v === i)); scelto = null; $("sc-fb").textContent = ""; scala(); }
+function scala() {
+  $("scala-gioco").innerHTML = ordine.map((g, i) => `<button data-p="${i}" class="${scelto === i ? "scelto" : ""}" style="background:${GRIGI[g]}" aria-label="Grigio in posizione ${i + 1}"></button>`).join("");
+  $("scala-gioco").querySelectorAll("button").forEach(b => b.onclick = () => { const i = +b.dataset.p; if (scelto === null) scelto = i; else { [ordine[scelto], ordine[i]] = [ordine[i], ordine[scelto]]; scelto = null; } scala(); });
+}
+$("sc-mescola").onclick = mescolaScala;
+$("sc-ok").onclick = () => {
+  const giusti = ordine.filter((g, i) => g === i).length;
+  if (giusti === 9) { $("sc-fb").className = "feedback ok"; $("sc-fb").textContent = "✔ Perfetto! Hai costruito una scala di valore a 9 gradini: ogni gradino è scuro più o meno quanto il precedente."; }
+  else { const inv = ordine.every((g, i) => g === 8 - i); $("sc-fb").className = "feedback ko"; $("sc-fb").textContent = inv ? "Hai messo la scala al contrario: deve partire dal più chiaro." : `${giusti} su 9 al posto giusto. Strizza gli occhi: aiuta a vedere solo chiaro e scuro.`; }
+};
+let svSel = 0;
+function scalaColore() {
+  $("sv-col").innerHTML = COL.map((c, i) => `<button data-c="${i}" aria-pressed="${i === svSel}" style="background:${c};width:38px;height:38px;padding:0" title="${NOMI[i]}" aria-label="${NOMI[i]}"></button>`).join("");
+  $("sv-col").querySelectorAll("button").forEach(b => b.onclick = () => { svSel = +b.dataset.c; scalaColore(); });
+  const base = ryb2rgb(...rybDiI(svSel)), passi = [.8, .6, .4, .2, 0, -.2, -.4, -.6, -.8];
+  $("sv-scala").innerHTML = passi.map(t => `<div style="background:${hex(base.map(v => t > 0 ? v + (1 - v) * t : v * (1 + t)))}"></div>`).join("");
+}
+const BN = [0, 2, 4, 6, 8, 10];
+$("bn-col").innerHTML = BN.map(i => `<div style="background:${COL[i]}" title="${NOMI[i]}"><span style="background:#fff;border-radius:4px;padding:0 3px;font-size:11px">${NOMI[i]}</span></div>`).join("");
+$("bn-grigi").innerHTML = BN.map(i => { const g = Math.round(enc(luminanza(COL[i])) * 255); return `<div style="background:rgb(${g},${g},${g})"></div>`; }).join("");
+$("bn-mostra").onclick = () => { const h = !$("bn-grigi").hidden; $("bn-grigi").hidden = h; $("bn-spiega").hidden = h; $("bn-mostra").textContent = h ? "⚫ Mostra in bianco e nero" : "🙈 Nascondi"; };
+mescolaScala(); scalaColore();
+
 /* ---- Schede ---- */
-const TAB = ["cerchio", "mescola", "luce", "sfide"];
+const TAB = ["cerchio", "mescola", "luce", "valore", "sfide"];
 TAB.forEach(t => $("t-" + t).addEventListener("click", () => { TAB.forEach(x => { $("t-" + x).setAttribute("aria-selected", x === t); $("s-" + x).hidden = x !== t; }); }));
 disegnaRuota(); info(); aggiornaMix(); luce(); sfida(0);
 </script>

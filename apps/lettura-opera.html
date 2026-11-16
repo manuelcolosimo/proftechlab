@@ -99,6 +99,14 @@ function disegnaPulito() { ctx.drawImage(immagine, 0, 0, cv.width, cv.height); }
 /* ---- Passi ---- */
 const EMOZIONI = ["calma", "allegria", "tristezza", "paura", "mistero", "energia", "nostalgia", "stupore", "solitudine", "festa"];
 const LINEE = [["orizzontali", "calma, stabilità"], ["verticali", "forza, slancio"], ["diagonali", "movimento, dinamismo"], ["curve", "morbidezza, armonia"]];
+const GENERI = ["ritratto", "autoritratto", "paesaggio", "natura morta", "scena di vita quotidiana", "soggetto religioso", "soggetto mitologico", "soggetto storico", "veduta di città", "opera astratta"];
+const num = v => parseFloat(String(v || "").replace(",", "."));
+function dimTesto() { const a = num(S.info.alt), b = num(S.info.base); return a > 0 && b > 0 ? `${String(a).replace(".", ",")} × ${String(b).replace(".", ",")} cm` : ""; }
+function confronto() {
+  const a = num(S.info.alt), b = num(S.info.base); if (!(a > 0 && b > 0)) return "";
+  const fogli = a * b / (29.7 * 21), alt = a >= 155 ? "più alta di un ragazzo di 1,55 m" : a >= 75 ? "alta più o meno come un banco o un po' di più" : "più bassa di un banco di scuola";
+  return `📏 È ${alt}: la sua superficie è grande come circa ${fogli < 1 ? "meno di un foglio A4" : Math.round(fogli) + " fogli A4"}.`;
+}
 const PASSI = [
   { id: "opera", t: "1 · L'opera" }, { id: "impressione", t: "2 · Prima impressione" }, { id: "vedo", t: "3 · Cosa vedo" },
   { id: "composizione", t: "4 · Composizione" }, { id: "colore", t: "5 · Colore e luce" }, { id: "significato", t: "6 · Significato" }, { id: "scheda", t: "7 · La mia scheda" }
@@ -112,7 +120,11 @@ function pannello() {
     <p class="aiuto">Puoi fotografare un'opera dal libro di arte, da un museo o caricare un'immagine. Rispetta i diritti: usa le immagini solo in classe.</p>
     <label class="campo">Titolo<input data-i="titolo" value="${esc(S.info.titolo)}"></label><label class="campo">Autore<input data-i="autore" value="${esc(S.info.autore)}"></label>
     <div class="row"><label class="campo" style="flex:1">Anno o secolo<input data-i="anno" value="${esc(S.info.anno)}"></label><label class="campo" style="flex:1">Tecnica<input data-i="tecnica" value="${esc(S.info.tecnica)}" placeholder="es. olio su tela"></label></div>
-    <span class="nota">Se non li conosci, puoi cercarli dopo.</span>`;
+    <div><b>Genere</b><div class="chips" data-gen>${GENERI.map(g => `<button type="button" data-v="${esc(g)}" aria-pressed="${S.info.genere === g}">${esc(g)}</button>`).join("")}</div></div>
+    <div class="row"><label class="campo" style="flex:1">Altezza (cm)<input data-i="alt" inputmode="decimal" value="${esc(S.info.alt)}" placeholder="es. 77"></label><label class="campo" style="flex:1">Base (cm)<input data-i="base" inputmode="decimal" value="${esc(S.info.base)}" placeholder="es. 53"></label></div>
+    <p class="nota" id="confronto" style="margin:0">${confronto()}</p>
+    <div class="row"><label class="campo" style="flex:2">Museo o luogo in cui si trova<input data-i="museo" value="${esc(S.info.museo)}" placeholder="es. Museo del Louvre"></label><label class="campo" style="flex:1">Città<input data-i="citta" value="${esc(S.info.citta)}" placeholder="es. Parigi"></label></div>
+    <span class="nota">Se non li conosci, puoi cercarli dopo (sul libro o sul sito del museo). Le dimensioni si scrivono sempre <b>altezza × base</b>.</span>`;
   if (P === "impressione") h = `<p class="consegna">Guarda l'opera per 30 secondi in silenzio. Che cosa ti fa provare?</p>${chips(EMOZIONI, S.emozioni, 3, "emozioni")}<span class="nota">Scegline al massimo tre.</span>
     <label class="campo">Perché? Che cosa te lo fa pensare?<textarea data-c="perche">${esc(S.perche)}</textarea></label>`;
   if (P === "vedo") h = `<p class="consegna">Tocca l'opera per segnare quello che vedi (almeno 3 elementi).</p><p class="aiuto">Persone, animali, oggetti, paesaggio, edifici… Scrivi accanto a ogni numero che cosa hai segnato.</p>
@@ -133,7 +145,7 @@ function pannello() {
     <label class="campo">Se fossi l'artista, che titolo le daresti?<input data-c="mioTitolo" value="${esc(S.mioTitolo)}"></label>
     <p class="aiuto">Collega quello che hai osservato: le emozioni (passo 2), i colori e la luce (passo 5), la composizione (passo 4).</p>`;
   if (P === "scheda") {
-    h = `<div class="scheda" id="scheda"><h2>${esc(S.info.titolo || "Opera senza titolo")}</h2><p>${[S.info.autore, S.info.anno, S.info.tecnica].filter(Boolean).map(esc).join(" · ") || "<i>autore, anno e tecnica da cercare</i>"}</p>
+    h = `<div class="scheda" id="scheda"><h2>${esc(S.info.titolo || "Opera senza titolo")}</h2><p>${[S.info.autore, S.info.anno, S.info.tecnica].filter(Boolean).map(esc).join(" · ") || "<i>autore, anno e tecnica da cercare</i>"}</p><p>${[S.info.genere && "Genere: " + S.info.genere, dimTesto(), [S.info.museo, S.info.citta].filter(Boolean).join(", ")].filter(Boolean).map(esc).join(" · ")}</p>
       <h3>Prima impressione</h3><p>${S.emozioni.map(esc).join(", ") || "—"}${S.perche ? ": " + esc(S.perche) : ""}</p>
       <h3>Che cosa vedo</h3><p>${S.pins.map((p, i) => `${i + 1}. ${esc(p.t || "…")}`).join(" · ") || "—"}</p>
       <h3>Composizione</h3><p>${[S.simm && "opera " + S.simm, S.linee.length && "linee " + S.linee.join(", "), S.focale && "punto focale segnato con la stella"].filter(Boolean).join(" · ") || "—"}</p>
@@ -146,7 +158,8 @@ function pannello() {
 }
 function colleghi() {
   const p = $("pannello");
-  p.querySelectorAll("[data-i]").forEach(i => i.addEventListener("input", () => { S.info[i.dataset.i] = i.value; salva(); }));
+  p.querySelectorAll("[data-i]").forEach(i => i.addEventListener("input", () => { S.info[i.dataset.i] = i.value; salva(); const c = $("confronto"); if (c && (i.dataset.i === "alt" || i.dataset.i === "base")) c.textContent = confronto(); }));
+  p.querySelectorAll("[data-gen] button").forEach(b => b.addEventListener("click", () => { S.info.genere = S.info.genere === b.dataset.v ? "" : b.dataset.v; salva(); pannello(); }));
   p.querySelectorAll("[data-c]").forEach(i => i.addEventListener("input", () => { S[i.dataset.c] = i.value; salva(); }));
   p.querySelectorAll("[data-chips]").forEach(box => box.querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
     const k = box.dataset.chips, a = S[k], v = b.dataset.v, j = a.indexOf(v);
@@ -160,7 +173,7 @@ function colleghi() {
   on("b-prec", () => { S.passo--; salva(); pannello(); });
   on("b-succ", () => { if (S.passo === 0 && !immagine) { alertMsg("Prima scegli un'opera."); return; } S.passo++; salva(); pannello(); window.scrollTo({ top: 0, behavior: "smooth" }); });
   on("b-carica", () => $("file").click());
-  on("b-esempio", async () => { S.img = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(ESEMPIO); S.info = { titolo: "Tramonto sulla collina (esempio)", autore: "Prof Tech Lab", anno: "2026", tecnica: "illustrazione digitale" }; await caricaImmagine(S.img); salva(); disegnaQuadro(); pannello(); });
+  on("b-esempio", async () => { S.img = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(ESEMPIO); S.info = { titolo: "Tramonto sulla collina (esempio)", autore: "Prof Tech Lab", anno: "2026", tecnica: "illustrazione digitale", genere: "paesaggio", alt: "65", base: "90", museo: "Museo immaginario della classe", citta: "" }; await caricaImmagine(S.img); salva(); disegnaQuadro(); pannello(); });
   on("b-stampa", () => window.print());
   on("b-copia", async () => { try { await navigator.clipboard.writeText($("scheda").innerText); $("s-fb").className = "feedback ok"; $("s-fb").textContent = "✔ Testo copiato."; } catch (e) { $("s-fb").textContent = "Copia non disponibile qui."; } });
   on("b-nuova", () => { const tmp = S.passo; S = { img: null, info: { titolo: "", autore: "", anno: "", tecnica: "" }, emozioni: [], perche: "", pins: [], focale: null, simm: "", linee: [], griglia: "", colori: [], tono: "", luce: "", direz: "", chiaro: "", messaggio: "", mioTitolo: "", passo: 0 }; immagine = null; salva(); disegnaQuadro(); pannello(); });

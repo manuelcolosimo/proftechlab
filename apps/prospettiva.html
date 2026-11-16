@@ -24,6 +24,8 @@
   <div class="tabs" role="tablist">
     <button class="tab" id="t-centrale" aria-selected="true">⬛ Prospettiva centrale</button>
     <button class="tab" id="t-accidentale" aria-selected="false">◆ Prospettiva accidentale</button>
+    <button class="tab" id="t-giotto" aria-selected="false">🏛️ Prima delle regole: Giotto</button>
+    <button class="tab" id="t-aerea" aria-selected="false">🌫️ Prospettiva aerea</button>
     <button class="tab" id="t-fuga" aria-selected="false">🎯 Trova il punto di fuga</button>
     <button class="tab" id="t-vista" aria-selected="false">👁️ Da dove guardi?</button>
   </div>
@@ -40,6 +42,21 @@
     </div>
     <svg id="tela" viewBox="0 0 1000 620" role="img" aria-label="Foglio da disegno in prospettiva"></svg>
     <p class="feedback" id="dove" style="font-size:22px"></p>
+  </section>
+
+  <section id="s-giotto" hidden style="display:grid;gap:10px">
+    <p class="spiega"><b>Prospettiva intuitiva.</b> Tra la fine del Duecento e l'inizio del Trecento Giotto (Assisi, Cappella degli Scrovegni a Padova) dipinge stanze e edifici come <b>scatole</b> in cui le figure possono muoversi. Dà profondità «a occhio», con l'esperienza, senza una regola geometrica: gli spigoli che vanno in profondità <b>non si incontrano in un solo punto</b>. La regola del punto di fuga unico arriverà circa un secolo dopo, con <b>Brunelleschi</b> (inizio Quattrocento), spiegata da Leon Battista Alberti (1435) e usata da Masaccio nella <i>Trinità</i>.</p>
+    <div class="barra"><button class="btn on" id="g-giotto" aria-pressed="true">🏛️ Intuitiva (come Giotto)</button><button class="btn" id="g-bru" aria-pressed="false">📐 Geometrica (Brunelleschi)</button><button class="btn" id="g-linee" aria-pressed="false">📏 Prolunga le linee</button></div>
+    <svg id="g-tela" viewBox="0 0 1000 620" style="width:100%;background:#fff;border:3px solid var(--ink);border-radius:12px" role="img" aria-label="Stanza disegnata in prospettiva"></svg>
+    <p class="feedback" id="g-fb" style="font-size:19px"></p>
+    <div class="spiega"><b>Osserva e confronta:</b> 1) Prolunga le linee: in quanti punti si incontrano? 2) Guarda le file di piastrelle: nella versione intuitiva sono tutte alte uguali e il pavimento sembra «salire»; in quella geometrica si stringono man mano che si allontanano. 3) Quale delle due ti sembra più profonda?</div>
+  </section>
+
+  <section id="s-aerea" hidden style="display:grid;gap:10px">
+    <p class="spiega"><b>Prospettiva aerea.</b> Leonardo da Vinci osservò che tra i nostri occhi e le cose lontane c'è tanta aria, che non è perfettamente trasparente. Per questo, più un oggetto è lontano, più appare <b>chiaro</b>, <b>azzurrino</b>, con <b>contorni sfumati</b> e <b>pochi dettagli</b>. Nei suoi quadri (per esempio lo sfondo della <i>Gioconda</i> e della <i>Vergine delle rocce</i>) usa questo effetto per dare profondità anche senza linee di fuga.</p>
+    <svg id="a-tela" viewBox="0 0 1000 500" style="width:100%;border:3px solid var(--ink);border-radius:12px;touch-action:manipulation" role="img" aria-label="Paesaggio con quattro catene di montagne"></svg>
+    <div class="barra"><label class="cursore">Quanta aria? <input type="range" id="a-aria" min="0" max="100" value="80"></label><button class="btn" id="a-gioca">🎨 Dipingi tu</button></div>
+    <p class="feedback" id="a-fb" style="font-size:19px"></p>
   </section>
 
   <section id="s-fuga" hidden style="display:grid;gap:10px">
@@ -213,15 +230,86 @@ function disegnaVista() {
 }
 $("vi-nuovo").addEventListener("click", nuovoVista);
 
+/* ---- Giotto e Brunelleschi ---- */
+let gModo = "giotto", gLinee = false;
+function disegnaGiotto() {
+  const VP = { x: 500, y: 290 }, k = .3, back = [[0, 0], [W, 0], [W, H], [0, H]].map(([x, y]) => ({ x: VP.x + (x - VP.x) * k, y: VP.y + (y - VP.y) * k }));
+  const n = 8, line = (a, b, c = "#1f2a44", w = 2.5, extra = "") => `<line x1="${a.x.toFixed(1)}" y1="${a.y.toFixed(1)}" x2="${b.x.toFixed(1)}" y2="${b.y.toFixed(1)}" stroke="${c}" stroke-width="${w}" ${extra}/>`;
+  let h = "", punti = [];
+  // pareti
+  h += `<polygon points="0,0 ${back[0].x},${back[0].y} ${back[3].x},${back[3].y} 0,${H}" fill="#f2e3c6"/><polygon points="${W},0 ${back[1].x},${back[1].y} ${back[2].x},${back[2].y} ${W},${H}" fill="#f2e3c6"/>`;
+  h += `<polygon points="0,0 ${W},0 ${back[1].x},${back[1].y} ${back[0].x},${back[0].y}" fill="#3b5ba5"/>`;
+  h += `<polygon points="${back.map(p => p.x + "," + p.y).join(" ")}" fill="#e8d3a8" stroke="#1f2a44" stroke-width="3"/>`;
+  h += `<polygon points="0,${H} ${W},${H} ${back[2].x},${back[2].y} ${back[3].x},${back[3].y}" fill="#d9b88f"/>`;
+  // stelle sul soffitto (come agli Scrovegni)
+  for (let i = 0; i < 14; i++) { const x = 80 + (i * 137) % 840, y = 12 + (i * 53) % 60; if (y < back[0].y - 10 + (Math.abs(x - 500) > 300 ? -40 : 0)) h += `<text x="${x}" y="${y + 10}" font-size="16" fill="#f8d34a">★</text>`; }
+  // pavimento: linee di profondità
+  for (let i = 0; i <= n; i++) {
+    const A = { x: i * W / n, y: H };
+    let B;
+    if (gModo === "bru") { B = { x: VP.x + (A.x - VP.x) * k, y: back[2].y }; if (gLinee && i !== n / 2) { h += line(B, VP, "#dc2626", 1.4, 'stroke-dasharray="6 5"'); } }
+    else if (i === 0 || i === n) continue;
+    else { // intuitiva: ogni coppia converge in un punto diverso sull'asse centrale (a «spina di pesce»)
+      const d = Math.abs(i - n / 2), P = { x: 500, y: 330 - d * 26 }; const t = (back[2].y - H) / (P.y - H); B = { x: A.x + (P.x - A.x) * t, y: back[2].y };
+      if (gLinee && d) { h += line(B, P, "#dc2626", 1.4, 'stroke-dasharray="6 5"'); punti.push(P); }
+    }
+    h += line(A, B, "#7a4f2a", 2);
+  }
+  // pavimento: file di piastrelle (trasversali)
+  for (let r = 1; r < 6; r++) {
+    let y;
+    if (gModo === "bru") { const sc = 1 / (1 + r / 6 * (1 / k - 1)); y = VP.y + (H - VP.y) * sc; }
+    else y = H - r * (H - back[2].y) / 6;
+    const xl = gModo === "bru" ? VP.x - (VP.x) * (y - VP.y) / (H - VP.y) : (y - H) / (back[2].y - H) * back[3].x, xr = W - xl;
+    h += line({ x: xl, y }, { x: xr, y }, "#7a4f2a", 2);
+  }
+  // spigoli della stanza
+  back.forEach((b, i) => { const c = [[0, 0], [W, 0], [W, H], [0, H]][i]; h += line({ x: c[0], y: c[1] }, b, "#1f2a44", 3); });
+  if (gModo === "bru" && gLinee) { back.forEach(b => h += line(b, VP, "#dc2626", 1.4, 'stroke-dasharray="6 5"')); h += `<circle cx="${VP.x}" cy="${VP.y}" r="12" fill="#dc2626" stroke="#fff" stroke-width="3"/>`; }
+  if (gModo === "giotto" && gLinee) {
+    // spigoli: nella versione intuitiva il fondo non è in scala esatta, si incontrano in punti diversi
+    punti.filter((p, i, a) => a.findIndex(q => q.y === p.y) === i).forEach(p => h += `<circle cx="${p.x}" cy="${p.y}" r="9" fill="#dc2626" stroke="#fff" stroke-width="2"/>`);
+  }
+  $("g-tela").innerHTML = h;
+  $("g-fb").className = "feedback"; $("g-fb").textContent = !gLinee ? "Premi «Prolunga le linee» per scoprire dove si incontrano." : gModo === "bru" ? "Tutte le linee di profondità si incontrano in un solo punto di fuga, all'altezza degli occhi: è la regola di Brunelleschi." : "Le linee si incontrano in tanti punti diversi, uno sopra l'altro lungo il centro (a «spina di pesce»): lo spazio è credibile, ma non segue una regola unica.";
+}
+const gBtn = () => { $("g-giotto").classList.toggle("on", gModo === "giotto"); $("g-bru").classList.toggle("on", gModo === "bru"); $("g-giotto").setAttribute("aria-pressed", gModo === "giotto"); $("g-bru").setAttribute("aria-pressed", gModo === "bru"); $("g-linee").classList.toggle("on", gLinee); $("g-linee").setAttribute("aria-pressed", gLinee); disegnaGiotto(); };
+$("g-giotto").onclick = () => { gModo = "giotto"; gBtn(); }; $("g-bru").onclick = () => { gModo = "bru"; gBtn(); }; $("g-linee").onclick = () => { gLinee = !gLinee; gBtn(); };
+
+/* ---- Prospettiva aerea ---- */
+const VICINO = [47, 93, 58], CIELO = [207, 227, 245];
+const TONI = ["#2f5d3a", "#4f7a63", "#7f9fa3", "#a8c1d6", "#c4d8ea"]; // dal più vicino al più lontano
+let aGioco = null;
+const mixc = (a, b, t) => `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * t)).join(",")})`;
+function cresta(i) { const base = 160 + i * 75; let d = `M0 500 L0 ${base}`; for (let x = 0; x <= 1000; x += 20) { const y = base - 40 * Math.sin(x / (90 + i * 30) + i * 1.7) - 25 * Math.sin(x / (37 + i * 11) + i) - (i === 0 ? 60 * Math.exp(-Math.pow((x - 640) / 140, 2)) : 0); d += ` L${x} ${y.toFixed(1)}`; } return d + " L1000 500 Z"; }
+function disegnaAerea() {
+  const aria = $("a-aria").value / 100; let h = `<defs>${[0, 1, 2, 3].map(i => `<filter id="sf${i}"><feGaussianBlur stdDeviation="${aGioco ? 0 : ((3 - i) * 1.3 * aria).toFixed(2)}"/></filter>`).join("")}<linearGradient id="cielo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9ec3e6"/><stop offset="1" stop-color="#e6f0f8"/></linearGradient></defs><rect width="1000" height="500" fill="url(#cielo)"/>`;
+  [0, 1, 2, 3].forEach(i => { // 0 = più lontana
+    const col = aGioco ? TONI[aGioco[i]] : mixc(VICINO, CIELO, aria * (3 - i) / 3.6);
+    h += `<path d="${cresta(i)}" fill="${col}" filter="url(#sf${i})" data-c="${i}" style="${aGioco ? "cursor:pointer" : ""}" stroke="${aGioco ? "#1f2a44" : "none"}" stroke-width="${aGioco ? 2 : 0}"/>`;
+    if (!aGioco && i === 3) for (let x = 60; x < 1000; x += 140) h += `<g transform="translate(${x} ${430 + (x % 3) * 8})"><rect x="-4" y="0" width="8" height="26" fill="#5b3a1e"/><circle r="22" cy="-6" fill="#2b4f2f"/></g>`;
+  });
+  $("a-tela").innerHTML = h;
+  if (aGioco) $("a-tela").querySelectorAll("[data-c]").forEach(e => e.addEventListener("click", () => { const i = +e.dataset.c; aGioco[i] = (aGioco[i] + 1) % TONI.length; disegnaAerea(); controllaAerea(); }));
+}
+function controllaAerea() {
+  const ok = [0, 1, 2].every(i => aGioco[i] > aGioco[i + 1]);
+  $("a-fb").className = "feedback " + (ok ? "ok" : ""); $("a-fb").textContent = ok ? "✔ Perfetto: più la montagna è lontana, più è chiara e azzurra. Ora il paesaggio ha profondità!" : "Tocca ogni catena di montagne per cambiarle colore: le più lontane devono essere le più chiare e azzurre.";
+}
+$("a-aria").addEventListener("input", () => { if (aGioco) { aGioco = null; $("a-gioca").classList.remove("on"); } disegnaAerea(); $("a-fb").className = "feedback"; $("a-fb").textContent = $("a-aria").value < 15 ? "Senza aria tutte le montagne hanno lo stesso colore: il paesaggio sembra piatto, come un ritaglio di carta." : "Più aria c'è, più le montagne lontane diventano chiare, azzurre e sfumate."; });
+$("a-gioca").onclick = () => { aGioco = aGioco ? null : [0, 0, 0, 0].map(() => Math.floor(Math.random() * TONI.length)); $("a-gioca").classList.toggle("on", !!aGioco); disegnaAerea(); if (aGioco) controllaAerea(); else $("a-fb").textContent = ""; };
+
 /* ---- Schede ---- */
 function vai(t) {
-  ["centrale", "accidentale", "fuga", "vista"].forEach(x => $("t-" + x).setAttribute("aria-selected", x === t));
+  ["giotto", "aerea"].forEach(x => $("s-" + x).hidden = x !== t);
+  if (t === "giotto") disegnaGiotto(); if (t === "aerea") disegnaAerea();
+  ["centrale", "accidentale", "giotto", "aerea", "fuga", "vista"].forEach(x => $("t-" + x).setAttribute("aria-selected", x === t));
   $("s-disegno").hidden = !(t === "centrale" || t === "accidentale"); $("s-fuga").hidden = t !== "fuga"; $("s-vista").hidden = t !== "vista";
   if (t === "centrale" || t === "accidentale") { modo = t; $("spiega").innerHTML = SPIEGA[t]; $("lab-prof2").hidden = t !== "accidentale"; $("prof").previousSibling.textContent = t === "accidentale" ? "Profondità sinistra " : "Profondità "; disegna(); }
   if (t === "fuga" && !fu) nuovoFuga();
   if (t === "vista" && !vi) nuovoVista();
 }
-["centrale", "accidentale", "fuga", "vista"].forEach(t => $("t-" + t).addEventListener("click", () => vai(t)));
+["centrale", "accidentale", "giotto", "aerea", "fuga", "vista"].forEach(t => $("t-" + t).addEventListener("click", () => vai(t)));
 vai("centrale");
 </script>
 <script src="a11y.js"></script>

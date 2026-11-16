@@ -24,6 +24,8 @@ svg.foglio { width: 100%; background: #fff; border: 3px solid var(--ink); border
   <div class="tabs" role="tablist">
     <button class="tab" id="t-volto" aria-selected="true">🙂 Componi il volto</button>
     <button class="tab" id="t-corpo" aria-selected="false">🧍 Il corpo in teste</button>
+    <button class="tab" id="t-canoni" aria-selected="false">📐 I canoni a confronto</button>
+    <button class="tab" id="t-cubista" aria-selected="false">🎭 Volto cubista</button>
   </div>
 
   <section id="s-volto" style="display:grid;gap:10px">
@@ -51,6 +53,22 @@ svg.foglio { width: 100%; background: #fff; border: 3px solid var(--ink); border
       </div>
       <div class="regole"><b>Il canone delle 8 teste</b><br>Gli artisti misurano il corpo usando l'altezza della testa come unità. Nel canone ideale un adulto è alto circa <b>8 teste</b> (nella realtà più spesso 7 e mezzo). Un neonato è alto circa <b>4 teste</b>: la testa dei bambini è grande rispetto al corpo.</div>
     </div>
+  </section>
+
+  <section id="s-canoni" hidden style="display:grid;gap:10px">
+    <p class="consegna">Nelle diverse epoche gli artisti hanno usato regole (<b>canoni</b>) diverse per misurare il corpo. Tocca una figura per leggere la sua regola.</p>
+    <div class="barra"><button class="btn" id="b-sovr" aria-pressed="false">👥 Sovrapponi le figure</button></div>
+    <svg class="foglio" id="canoni" viewBox="0 0 1000 720" role="img" aria-label="Quattro figure umane costruite con canoni diversi"></svg>
+    <div class="regole" id="canone-info"></div>
+  </section>
+
+  <section id="s-cubista" hidden style="display:grid;gap:10px">
+    <div class="regole"><b>Il volto cubista</b><br>Dal 1907 Pablo Picasso e Georges Braque inventano il <b>Cubismo</b>: invece di mostrare un soggetto da un solo punto di vista, lo scompongono e lo mostrano <b>da più punti di vista nello stesso momento</b>. Nei ritratti di Picasso il volto è insieme di fronte e di profilo: un occhio frontale accanto a un naso visto di lato, piani di colori diversi, forme geometriche.<br><b>La sfida:</b> crea un volto con almeno un pezzo <b>di fronte</b> e uno <b>di profilo</b>, e dividi il viso in due piani di colore.</div>
+    <div class="barra" id="cu-pezzi"></div>
+    <div class="barra"><span>Piano sinistro:</span><span id="cu-c1" class="barra"></span><span>Piano destro:</span><span id="cu-c2" class="barra"></span></div>
+    <div class="barra"><button class="btn" id="cu-ruota">↻ Ruota</button><button class="btn" id="cu-spec">⇋ Specchia</button><button class="btn" id="cu-piu">➕ Più grande</button><button class="btn" id="cu-meno">➖ Più piccolo</button><button class="btn" id="cu-del">🗑 Elimina</button><button class="btn primary" id="cu-ok">Controlla</button><button class="btn" id="cu-png">💾 Salva immagine</button></div>
+    <svg class="foglio" id="cubo" viewBox="0 0 1000 640" role="img" aria-label="Foglio per comporre un volto cubista"></svg>
+    <p class="feedback" id="cu-fb"></p>
   </section>
 </div>
 <script>
@@ -152,8 +170,109 @@ function rispondiCorpo(n) {
 }
 $("c-avanti").addEventListener("click", () => { ci = (ci + 1) % DOM.length; domandaCorpo(); });
 
+/* ---- Canoni a confronto ---- */
+// altezze in frazioni dell'altezza totale (0 = piedi, 1 = cima della testa)
+const CANONI = [
+  { id: "egizio", n: "Canone egizio", col: "#b45309", griglia: 19, etich: "quadrati", f: { mento: .87, spalle: 16 / 19, petto: .76, ombelico: .6, inguine: .5, ginocchio: 6 / 19, dita: .4 }, sw: .27,
+    d: "Gli Egizi disegnavano su una <b>griglia di quadrati</b>. Nell'Antico e nel Medio Regno la figura in piedi misura <b>18 quadrati</b> dai piedi all'attaccatura dei capelli: ginocchio a 6, glutei a 9, gomito a 12, spalle a 16. La griglia permetteva di copiare e ingrandire le figure tutte uguali. Le figure seguono anche la <b>legge della frontalità</b>: testa e gambe di profilo, occhio e spalle di fronte.",
+    linee: [[6, "ginocchio · 6"], [9, "glutei · 9"], [12, "gomito · 12"], [16, "spalle · 16"], [18, "capelli · 18"]] },
+  { id: "policleto", n: "Canone di Policleto", col: "#2563eb", griglia: 7, etich: "teste", f: { mento: 6 / 7, spalle: .81, petto: 5 / 7, ombelico: .59, inguine: .5, ginocchio: .27, dita: .39 }, sw: .26,
+    d: "Lo scultore greco <b>Policleto</b> (V secolo a.C.) scrisse un trattato, il <i>Canone</i>, e lo applicò al <b>Doriforo</b>. Ogni parte del corpo è in un rapporto preciso con le altre: l'altezza è circa <b>7 volte la testa</b>. Il corpo è robusto, con il peso su una gamba sola (<b>ponderazione</b> o chiasmo).",
+    linee: [[1, ""], [2, ""], [3, ""], [4, ""], [5, ""], [6, ""]] },
+  { id: "lisippo", n: "Canone di Lisippo (8 teste)", col: "#7c3aed", griglia: 8, etich: "teste", f: { mento: 7 / 8, spalle: .82, petto: .75, ombelico: .625, inguine: .5, ginocchio: .25, dita: .38 }, sw: .23,
+    d: "Un secolo dopo, <b>Lisippo</b> allunga la figura: la testa è più piccola e il corpo è alto circa <b>8 teste</b>, più snello ed elegante. È il canone ripreso nel Rinascimento (pensa all'<i>Uomo vitruviano</i> di Leonardo) e ancora oggi usato nelle scuole di disegno.",
+    linee: [[1, ""], [2, ""], [3, ""], [4, ""], [5, ""], [6, ""], [7, ""]] },
+  { id: "modulor", n: "Modulor di Le Corbusier", col: "#059669", griglia: 0, f: { mento: .875, spalle: .81, petto: .74, ombelico: 113 / 183, inguine: .48, ginocchio: .27, dita: .4 }, sw: .25, braccio: 226 / 183,
+    d: "L'architetto <b>Le Corbusier</b> (1948) inventa il <b>Modulor</b> per progettare case su misura d'uomo. Un uomo alto <b>183 cm</b> ha l'ombelico a <b>113 cm</b> e con il braccio alzato arriva a <b>226 cm</b> (il doppio di 113). Il rapporto 183 : 113 è circa 1,618: la <b>sezione aurea</b>! Da queste misure ricava le altezze di sedie, tavoli, finestre e soffitti.",
+    linee: [] }
+];
+let canSel = 0, sovr = false;
+function figura(c, cx, base, H, stile) {
+  const Y = f => base - f * H, F = c.f, sw = c.sw * H / 2, hw = (1 - F.mento) * H * .38, hh = (1 - F.mento) * H;
+  const st = stile || `fill="#f2c9a5" stroke="#1f2a44" stroke-width="2.5"`;
+  let h = `<g ${st} stroke-linejoin="round">`;
+  h += `<ellipse cx="${cx}" cy="${Y(1) + hh / 2}" rx="${hw}" ry="${hh / 2}"/>`;
+  h += `<rect x="${cx - hw * .4}" y="${Y(F.mento) - 2}" width="${hw * .8}" height="${Y(F.spalle) - Y(F.mento) + 6}"/>`;
+  h += `<path d="M${cx - sw} ${Y(F.spalle)} L${cx + sw} ${Y(F.spalle)} L${cx + sw * .78} ${Y(F.ombelico)} L${cx + sw * .85} ${Y(F.inguine)} L${cx - sw * .85} ${Y(F.inguine)} L${cx - sw * .78} ${Y(F.ombelico)}Z"/>`;
+  const gamba = s => `<path d="M${cx + s * 3} ${Y(F.inguine)} L${cx + s * sw * .85} ${Y(F.inguine)} L${cx + s * sw * .55} ${Y(F.ginocchio)} L${cx + s * sw * .5} ${Y(.02)} L${cx + s * sw * .95} ${Y(0)} L${cx + s * sw * .2} ${Y(0)} L${cx + s * sw * .22} ${Y(F.ginocchio)}Z"/>`;
+  h += gamba(-1) + gamba(1);
+  const braccioGiu = s => `<path d="M${cx + s * sw} ${Y(F.spalle)} L${cx + s * (sw + H * .035)} ${Y(F.spalle) + 6} L${cx + s * (sw + H * .05)} ${Y(F.dita)} L${cx + s * (sw + H * .015)} ${Y(F.dita)} L${cx + s * (sw * .92)} ${Y(F.ombelico)}Z"/>`;
+  h += braccioGiu(-1) + (c.braccio ? `<path d="M${cx + sw} ${Y(F.spalle)} L${cx + sw + H * .035} ${Y(F.spalle) + 4} L${cx + sw * .75} ${Y(c.braccio)} L${cx + sw * .45} ${Y(c.braccio)} L${cx + sw * .7} ${Y(F.spalle) - 20}Z"/>` : braccioGiu(1));
+  return h + `</g>`;
+}
+function disegnaCanoni() {
+  const base = 690, H = 520; let h = "";
+  if (sovr) {
+    CANONI.forEach((c, i) => h += figura(c, 500, base, H, `fill="none" stroke="${c.col}" stroke-width="${i === canSel ? 5 : 3}" opacity="${i === canSel ? 1 : .75}"`));
+    CANONI.forEach((c, i) => h += `<g data-c="${i}" style="cursor:pointer"><rect x="${720}" y="${60 + i * 50}" width="260" height="40" rx="8" fill="${i === canSel ? c.col : "#fff"}" stroke="${c.col}" stroke-width="3"/><text x="${850}" y="${86 + i * 50}" text-anchor="middle" font-family="Arial" font-size="17" fill="${i === canSel ? "#fff" : c.col}">${c.n}</text></g>`);
+    h += `<line x1="250" y1="${base - H}" x2="690" y2="${base - H}" stroke="#94a3b8" stroke-dasharray="5 5"/><line x1="250" y1="${base}" x2="690" y2="${base}" stroke="#94a3b8"/><text x="255" y="${base - H - 8}" font-family="Arial" font-size="14" fill="#64748b">stessa altezza: guarda come cambia la testa</text>`;
+  } else CANONI.forEach((c, i) => {
+    const cx = 125 + i * 250, Hc = c.braccio ? H / c.braccio : H, sel = i === canSel;
+    h += `<g data-c="${i}" style="cursor:pointer"><rect x="${cx - 118}" y="20" width="236" height="690" rx="12" fill="${sel ? "#fff7e6" : "#fff"}" stroke="${sel ? c.col : "#e5e7eb"}" stroke-width="${sel ? 4 : 2}"/>`;
+    if (c.griglia === 19) { const u = H / 19; for (let k = 0; k <= 19; k++) h += `<line x1="${cx - 95}" y1="${base - k * u}" x2="${cx + 95}" y2="${base - k * u}" stroke="#fcd9b0" stroke-width="1.2"/>`; for (let k = -5; k <= 5; k++) h += `<line x1="${cx + k * u}" y1="${base - H}" x2="${cx + k * u}" y2="${base}" stroke="#fcd9b0" stroke-width="1.2"/>`; }
+    else if (c.griglia) { const u = H / c.griglia; for (let k = 0; k <= c.griglia; k++) h += `<line x1="${cx - 100}" y1="${base - H + k * u}" x2="${cx + 100}" y2="${base - H + k * u}" stroke="${c.col}" stroke-width="1.3" stroke-dasharray="5 5" opacity=".6"/>` + (k < c.griglia ? `<text x="${cx - 106}" y="${base - H + k * u + u / 2 + 5}" font-family="Arial" font-size="13" fill="${c.col}">${k + 1}</text>` : ""); }
+    else { [[183, "183"], [113, "113"], [226, "226"]].forEach(([v, t]) => { const y = base - v / 183 * Hc; h += `<line x1="${cx - 100}" y1="${y}" x2="${cx + 100}" y2="${y}" stroke="${c.col}" stroke-width="1.5" stroke-dasharray="5 5"/><text x="${cx - 104}" y="${y - 4}" font-family="Arial" font-size="14" font-weight="bold" fill="${c.col}">${t}</text>`; }); }
+    h += figura(c, cx, base, Hc);
+    if (c.griglia === 19) c.linee.forEach(([k, t]) => { const y = base - k * H / 19; h += `<line x1="${cx + 40}" y1="${y}" x2="${cx + 95}" y2="${y}" stroke="${c.col}" stroke-width="2"/><text x="${cx + 96}" y="${y + 4}" font-family="Arial" font-size="12" font-weight="bold" fill="${c.col}" stroke="#fff" stroke-width="4" paint-order="stroke" text-anchor="end" dy="-6">${t}</text>`; });
+    h += `<text x="${cx}" y="48" text-anchor="middle" font-family="Patrick Hand, cursive" font-size="22" fill="${c.col}">${c.n.replace(" (8 teste)", "")}</text>`;
+    h += `<text x="${cx}" y="${base + 18}" text-anchor="middle" font-family="Arial" font-size="14" fill="#475569">${c.griglia === 19 ? "18 quadrati + testa" : c.griglia ? c.griglia + " teste" : "183 · 113 · 226 cm"}</text></g>`;
+  });
+  $("canoni").innerHTML = h;
+  $("canoni").querySelectorAll("[data-c]").forEach(g => g.addEventListener("click", () => { canSel = +g.dataset.c; disegnaCanoni(); }));
+  const c = CANONI[canSel]; $("canone-info").innerHTML = `<b style="color:${c.col}">${c.n}</b><br>${c.d}`;
+}
+$("b-sovr").addEventListener("click", e => { sovr = !sovr; e.currentTarget.classList.toggle("on", sovr); e.currentTarget.setAttribute("aria-pressed", sovr); disegnaCanoni(); });
+
+/* ---- Volto cubista ---- */
+const PEZZI = [
+  { k: "occhioF", n: "👁 occhio di fronte", v: "f", svg: `<ellipse rx="42" ry="22" fill="#fff" stroke="#111" stroke-width="5"/><circle r="15" fill="#2b6cb0"/><circle r="7" fill="#111"/>` },
+  { k: "occhioP", n: "◁ occhio di profilo", v: "p", svg: `<path d="M-30 0 L28 -22 Q14 0 28 22Z" fill="#fff" stroke="#111" stroke-width="5"/><circle cx="12" r="9" fill="#111"/>` },
+  { k: "nasoP", n: "👃 naso di profilo", v: "p", svg: `<path d="M-10 -80 L40 30 Q20 46 -6 38" fill="none" stroke="#111" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6" cy="30" r="5" fill="#111"/>` },
+  { k: "nasoF", n: "▽ naso di fronte", v: "f", svg: `<path d="M-6 -70 L-8 10 M6 -70 L8 10 M-24 20 Q0 40 24 20" fill="none" stroke="#111" stroke-width="6" stroke-linecap="round"/>` },
+  { k: "boccaF", n: "👄 bocca di fronte", v: "f", svg: `<path d="M-50 0 Q-25 -18 0 -6 Q25 -18 50 0 Q25 26 0 26 Q-25 26 -50 0Z" fill="#e53e3e" stroke="#111" stroke-width="5"/><line x1="-50" y1="0" x2="50" y2="0" stroke="#111" stroke-width="3"/>` },
+  { k: "boccaP", n: "◀ bocca di profilo", v: "p", svg: `<path d="M30 -16 L-14 -6 L4 0 L-14 8 L30 16Z" fill="#e53e3e" stroke="#111" stroke-width="5" stroke-linejoin="round"/>` },
+  { k: "orecchio", n: "👂 orecchio", v: "p", svg: `<path d="M0 -50 Q36 -50 34 -6 Q32 40 2 50 Q-10 20 0 -50Z" fill="#f6ad55" stroke="#111" stroke-width="5"/>` },
+  { k: "ciglio", n: "〰 sopracciglio", v: "", svg: `<path d="M-50 10 Q0 -24 50 0" fill="none" stroke="#111" stroke-width="10" stroke-linecap="round"/>` },
+  { k: "capelli", n: "🌀 ciocca", v: "", svg: `<path d="M-60 30 Q-60 -50 0 -50 Q60 -50 60 0 Q30 -20 0 10 Q-30 -20 -60 30Z" fill="#2d3748" stroke="#111" stroke-width="4"/>` }
+];
+const TINTE = ["#f6c26b", "#f28b82", "#81c995", "#8ab4f8", "#c58af9", "#fdd663", "#ffffff", "#a0a0a0"];
+let cu = { pezzi: [], sel: -1, c1: "#f6c26b", c2: "#8ab4f8" };
+$("cu-pezzi").innerHTML = PEZZI.map((p, i) => `<button class="btn" data-pz="${i}">${p.n}</button>`).join("");
+$("cu-pezzi").querySelectorAll("[data-pz]").forEach(b => b.onclick = () => { const p = PEZZI[+b.dataset.pz]; cu.pezzi.push({ k: p.k, x: 300 + Math.random() * 400, y: 200 + Math.random() * 240, r: 0, s: 1, m: 1 }); cu.sel = cu.pezzi.length - 1; disegnaCubo(); });
+function tinte(box, chiave) { $(box).innerHTML = TINTE.map(c => `<button data-t="${c}" aria-label="colore ${c}" aria-pressed="${cu[chiave] === c}" style="width:30px;height:30px;border-radius:50%;border:${cu[chiave] === c ? 4 : 2}px solid #1f2a44;background:${c};cursor:pointer"></button>`).join(""); $(box).querySelectorAll("button").forEach(b => b.onclick = () => { cu[chiave] = b.dataset.t; tinte(box, chiave); disegnaCubo(); }); }
+function disegnaCubo() {
+  let h = `<rect width="1000" height="640" fill="#fdf6e3"/>`;
+  h += `<path d="M500 60 L330 120 L290 300 L340 500 L480 590 L500 590 L540 420 L470 300 L540 160Z" fill="${cu.c1}" stroke="#111" stroke-width="5" stroke-linejoin="round"/>`;
+  h += `<path d="M500 60 L540 160 L470 300 L540 420 L500 590 L620 560 L700 420 L720 230 L640 100Z" fill="${cu.c2}" stroke="#111" stroke-width="5" stroke-linejoin="round"/>`;
+  h += `<rect x="450" y="580" width="110" height="60" fill="${cu.c1}" stroke="#111" stroke-width="5"/>`;
+  cu.pezzi.forEach((p, i) => { const d = PEZZI.find(q => q.k === p.k); h += `<g data-i="${i}" transform="translate(${p.x} ${p.y}) rotate(${p.r}) scale(${p.s * p.m} ${p.s})" style="cursor:grab">${d.svg}<rect x="-60" y="-60" width="120" height="120" fill="transparent"/>${i === cu.sel ? `<rect x="-64" y="-64" width="128" height="128" fill="none" stroke="#dc2626" stroke-width="${3 / p.s}" stroke-dasharray="8 6"/>` : ""}</g>`; });
+  $("cubo").innerHTML = h;
+}
+const cubo = $("cubo"); let cuDrag = null;
+cubo.addEventListener("pointerdown", e => { const g = e.target.closest("[data-i]"); if (!g) { cu.sel = -1; disegnaCubo(); return; } cu.sel = +g.dataset.i; const p = ptv(cubo, e), q = cu.pezzi[cu.sel]; cuDrag = { dx: p.x - q.x, dy: p.y - q.y }; cubo.setPointerCapture(e.pointerId); disegnaCubo(); });
+cubo.addEventListener("pointermove", e => { if (!cuDrag || cu.sel < 0) return; const p = ptv(cubo, e), q = cu.pezzi[cu.sel]; q.x = Math.max(0, Math.min(1000, p.x - cuDrag.dx)); q.y = Math.max(0, Math.min(640, p.y - cuDrag.dy)); disegnaCubo(); });
+cubo.addEventListener("pointerup", () => cuDrag = null);
+const cuMod = f => () => { const q = cu.pezzi[cu.sel]; if (!q) { $("cu-fb").className = "feedback"; $("cu-fb").textContent = "Prima tocca un pezzo per selezionarlo."; return; } f(q); disegnaCubo(); };
+$("cu-ruota").onclick = cuMod(q => q.r = (q.r + 15) % 360); $("cu-spec").onclick = cuMod(q => q.m *= -1);
+$("cu-piu").onclick = cuMod(q => q.s = Math.min(2.5, q.s + .15)); $("cu-meno").onclick = cuMod(q => q.s = Math.max(.4, q.s - .15));
+$("cu-del").onclick = () => { if (cu.sel < 0) return; cu.pezzi.splice(cu.sel, 1); cu.sel = -1; disegnaCubo(); };
+$("cu-ok").onclick = () => {
+  const v = cu.pezzi.map(p => PEZZI.find(q => q.k === p.k).v), f = v.includes("f"), pr = v.includes("p"), fb = $("cu-fb");
+  if (!cu.pezzi.length) { fb.className = "feedback ko"; fb.textContent = "Il volto è ancora vuoto: aggiungi i pezzi con i pulsanti in alto."; return; }
+  if (f && pr && cu.c1 !== cu.c2) { fb.className = "feedback ok"; fb.textContent = "✔ Volto cubista! Hai unito punti di vista diversi (di fronte e di profilo) e piani di colore diversi, proprio come Picasso."; }
+  else { fb.className = "feedback ko"; fb.textContent = !f ? "Manca un pezzo visto di fronte (occhio, naso o bocca frontale)." : !pr ? "Manca un pezzo visto di profilo: il cuore del Cubismo è mescolare i punti di vista." : "Scegli due colori diversi per i due piani del volto."; }
+};
+$("cu-png").onclick = async () => {
+  cu.sel = -1; disegnaCubo();
+  const xml = new XMLSerializer().serializeToString($("cubo")).replace("<svg", '<svg width="1000" height="640"'), img = new Image();
+  img.onload = () => { const c = document.createElement("canvas"); c.width = 1000; c.height = 640; c.getContext("2d").drawImage(img, 0, 0); c.toBlob(async blob => { let r = null; try { if (window.parent !== window && typeof window.parent.ptlSalva === "function") r = await window.parent.ptlSalva("volto-cubista.png", blob); } catch (e) {} if (r !== "saved" && r !== "declined") { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "volto-cubista.png"; a.click(); } }, "image/png"); };
+  img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(xml);
+};
+tinte("cu-c1", "c1"); tinte("cu-c2", "c2");
+cu.pezzi = [{ k: "occhioF", x: 420, y: 270, r: 0, s: 1, m: 1 }, { k: "nasoP", x: 560, y: 330, r: 0, s: 1, m: 1 }]; disegnaCubo();
+
 /* ---- Schede ---- */
-["volto", "corpo"].forEach(t => $("t-" + t).addEventListener("click", () => { ["volto", "corpo"].forEach(x => { $("t-" + x).setAttribute("aria-selected", x === t); $("s-" + x).hidden = x !== t; }); }));
+["volto", "corpo", "canoni", "cubista"].forEach(t => $("t-" + t).addEventListener("click", () => { if (t === "canoni") disegnaCanoni(); ["volto", "corpo", "canoni", "cubista"].forEach(x => { $("t-" + x).setAttribute("aria-selected", x === t); $("s-" + x).hidden = x !== t; }); }));
 rimescola(); domandaCorpo();
 </script>
 <script src="a11y.js"></script>
